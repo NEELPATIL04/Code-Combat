@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Login.css';
 
 const Login = () => {
@@ -7,6 +8,7 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -42,6 +44,9 @@ const Login = () => {
 
     return (
         <div className="login-container">
+            <button className="back-btn" onClick={() => navigate('/')}>
+                ← Back to Home
+            </button>
             <div className="login-card">
                 <h1>Login</h1>
                 <form onSubmit={handleSubmit}>
