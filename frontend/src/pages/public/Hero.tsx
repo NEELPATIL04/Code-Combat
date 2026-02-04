@@ -1,11 +1,21 @@
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
 import './Hero.css';
 
-const Hero = () => {
+interface Star {
+    id: number;
+    left: string;
+    top: string;
+    size: number;
+    delay: number;
+    duration: number;
+}
+
+const Hero: React.FC = () => {
     const navigate = useNavigate();
 
-    // Generate random stars for the breathing star effect
-    const stars = Array.from({ length: 200 }, (_, i) => ({
+    const stars: Star[] = Array.from({ length: 200 }, (_, i) => ({
         id: i,
         left: `${Math.random() * 100}%`,
         top: `${Math.random() * 100}%`,
@@ -16,7 +26,6 @@ const Hero = () => {
 
     return (
         <div className="hero-page">
-            {/* Breathing Stars Background */}
             <div className="stars-container">
                 {stars.map(star => (
                     <div
@@ -34,20 +43,18 @@ const Hero = () => {
                 ))}
             </div>
 
-            {/* Subtle gradient overlay */}
             <div className="gradient-overlay"></div>
 
-            {/* Navigation */}
             <nav className="nav">
                 <div className="nav-inner">
                     <a href="/" className="nav-logo">
                         <svg className="logo-icon" width="28" height="28" viewBox="0 0 28 28" fill="none">
-                            <circle cx="14" cy="14" r="12" stroke="url(#logoGrad)" strokeWidth="1.5"/>
-                            <circle cx="14" cy="14" r="5" fill="url(#logoGrad)"/>
+                            <circle cx="14" cy="14" r="12" stroke="url(#logoGrad)" strokeWidth="1.5" />
+                            <circle cx="14" cy="14" r="5" fill="url(#logoGrad)" />
                             <defs>
                                 <linearGradient id="logoGrad" x1="0" y1="0" x2="28" y2="28">
-                                    <stop offset="0%" stopColor="#FDE68A"/>
-                                    <stop offset="100%" stopColor="#F59E0B"/>
+                                    <stop offset="0%" stopColor="#FDE68A" />
+                                    <stop offset="100%" stopColor="#F59E0B" />
                                 </linearGradient>
                             </defs>
                         </svg>
@@ -55,17 +62,13 @@ const Hero = () => {
                     </a>
 
                     <div className="nav-links">
-                        <button 
-                            className="nav-btn"
-                            onClick={() => navigate('/login')}
-                        >
-                            Login
+                        <button className="nav-btn" onClick={() => navigate('/login')}>
+                            Login <ArrowRight size={16} />
                         </button>
                     </div>
                 </div>
             </nav>
 
-            {/* Hero Content */}
             <section className="hero">
                 <h1 className="hero-title">
                     Battles that spark with
@@ -77,15 +80,11 @@ const Hero = () => {
                     The coding features you need to transport your skills from the little leagues to the big time.
                 </p>
 
-                <button 
-                    className="hero-cta"
-                    onClick={() => navigate('/login')}
-                >
-                    Get Started
+                <button className="hero-cta" onClick={() => navigate('/login')}>
+                    Get Started <ArrowRight size={18} />
                 </button>
             </section>
 
-            {/* Product Preview - Peeking at bottom */}
             <div className="preview-section">
                 <div className="preview-container">
                     <div className="preview-frame">
@@ -97,7 +96,6 @@ const Hero = () => {
                             </div>
                         </div>
                         <div className="preview-content">
-                            {/* Your product screenshot goes here */}
                             <div className="preview-placeholder">
                                 <div className="placeholder-text">Your Product Screenshot</div>
                             </div>
