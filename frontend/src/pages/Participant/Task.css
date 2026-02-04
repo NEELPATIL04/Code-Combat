@@ -1,181 +1,264 @@
-.task-container {
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    background-color: #0f172a;
-    color: #f8fafc;
-    font-family: 'Fira Code', 'Courier New', monospace;
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+.task-page {
+    min-height: 100vh;
+    background: #000000;
+    color: #ffffff;
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-.task-header {
-    height: 60px;
-    background: #1e293b;
-    border-bottom: 1px solid #334155;
+.nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    padding: 16px 32px;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.nav-inner {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 2rem;
 }
 
-.brand {
-    font-weight: 700;
-    color: #3b82f6;
-    letter-spacing: 1px;
+.nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: #fff;
+    font-weight: 600;
 }
 
-.divider {
-    margin: 0 10px;
-    color: #475569;
+.nav-logo span {
+    background: linear-gradient(90deg, #FDE68A 0%, #FBBF24 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
-.current-task {
-    color: #94a3b8;
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.challenge-name {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.95rem;
 }
 
 .timer {
-    font-size: 1.2rem;
-    color: #ef4444;
-    margin-right: 2rem;
-    font-weight: 700;
-    text-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
-}
-
-.exit-btn {
-    background: transparent;
-    border: 1px solid #475569;
-    color: #94a3b8;
-    padding: 6px 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.exit-btn:hover {
-    border-color: #ef4444;
-    color: #ef4444;
-}
-
-.task-layout {
-    flex-grow: 1;
     display: flex;
-    overflow: hidden;
-}
-
-.problem-pane {
-    width: 40%;
-    border-right: 1px solid #334155;
-    display: flex;
-    flex-direction: column;
-}
-
-.editor-pane {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.pane-header {
-    background: #0f172a;
-    padding: 10px 20px;
-    font-size: 0.8rem;
-    color: #64748b;
-    border-bottom: 1px solid #334155;
-    letter-spacing: 1px;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
     font-weight: 600;
+    color: #FDE68A;
+    font-family: 'JetBrains Mono', monospace;
 }
 
-.pane-content {
-    padding: 2rem;
-    overflow-y: auto;
-    line-height: 1.6;
-}
-
-.pane-content h1 {
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
-}
-
-.pane-content code {
-    display: block;
-    background: #1e293b;
-    padding: 10px;
-    border-radius: 4px;
-    margin: 10px 0 20px;
-    border: 1px solid #334155;
-    color: #10b981;
-}
-
-.editor-area {
-    flex-grow: 1;
-    background: #020617;
-    /* Darker for editor */
+.abort-btn {
     display: flex;
-    font-size: 1rem;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    font-family: inherit;
+    font-size: 0.9rem;
+    border-radius: 100px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.abort-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+}
+
+.task-content {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    padding: 88px 32px 32px;
+    height: 100vh;
+    box-sizing: border-box;
+}
+
+.problem-section,
+.editor-section {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.section-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.section-header h1 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 500;
+}
+
+.difficulty-badge {
+    padding: 4px 12px;
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.problem-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.description {
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.7;
+    margin: 0 0 24px;
+}
+
+.example-block {
+    margin-bottom: 20px;
+}
+
+.example-block h3 {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 8px;
+}
+
+.example-block code {
+    display: block;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    color: #fff;
+}
+
+.editor-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+}
+
+.file-tab {
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.file-tab.active {
+    background: rgba(253, 230, 138, 0.1);
+    color: #FDE68A;
+}
+
+.editor-body {
+    flex: 1;
+    display: flex;
+    overflow: auto;
+    padding: 16px;
 }
 
 .line-numbers {
-    width: 50px;
-    background: #0f172a;
-    border-right: 1px solid #1e293b;
-    padding: 20px 0;
+    width: 40px;
     text-align: right;
-    color: #475569;
-    user-select: none;
+    padding-right: 16px;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    margin-right: 16px;
+    color: rgba(255, 255, 255, 0.3);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
 }
 
-.line-numbers div {
-    padding-right: 10px;
-    height: 24px;
-    line-height: 24px;
-}
-
-.code-content {
-    padding: 20px;
-    color: #e2e8f0;
-    font-family: 'Fira Code', 'Courier New', monospace;
-    line-height: 24px;
+.code-area {
+    flex: 1;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .keyword {
-    color: #c084fc;
+    color: #c792ea;
 }
 
 .function {
-    color: #60a5fa;
+    color: #82aaff;
+}
+
+.number {
+    color: #f78c6c;
 }
 
 .comment {
-    color: #64748b;
-    font-style: italic;
+    color: #546e7a;
 }
 
 .editor-footer {
-    height: 60px;
-    background: #1e293b;
-    border-top: 1px solid #334155;
+    padding: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     justify-content: flex-end;
+    gap: 12px;
+}
+
+.run-btn,
+.submit-btn {
+    display: flex;
     align-items: center;
-    padding: 0 2rem;
-    gap: 1rem;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 100px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 .run-btn {
-    padding: 8px 20px;
-    background: transparent;
-    border: 1px solid #3b82f6;
-    color: #3b82f6;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 600;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+.run-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .submit-btn {
-    padding: 8px 20px;
-    background: #10b981;
-    border: none;
-    color: white;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 600;
-    box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #10b981;
+}
+
+.submit-btn:hover {
+    background: rgba(16, 185, 129, 0.25);
 }
