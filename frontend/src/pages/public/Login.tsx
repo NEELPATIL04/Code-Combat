@@ -1,6 +1,6 @@
-import React, { useState, FormEvent, ChangeEvent } from 'react';
+import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, KeyRound, ArrowRight, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import './Login.css';
 
 interface Star {
@@ -13,8 +13,10 @@ interface Star {
 }
 
 interface LoginResponse {
+    message: string;
     role: string;
-    message?: string;
+    username: string;
+    token: string;
 }
 
 const Login: React.FC = () => {
@@ -23,6 +25,11 @@ const Login: React.FC = () => {
     const [password, setPassword] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
+    const [typedText, setTypedText] = useState<string>('');
+    const [isDeleting, setIsDeleting] = useState<boolean>(false);
+    const [wordIndex, setWordIndex] = useState<number>(0);
+
+    const words = ['Commander', 'Player'];
 
     const stars: Star[] = Array.from({ length: 150 }, (_, i) => ({
         id: i,
@@ -33,13 +40,44 @@ const Login: React.FC = () => {
         duration: Math.random() * 3 + 2
     }));
 
+    // Typing animation effect
+    useEffect(() => {
+        const currentWord = words[wordIndex];
+        const typingSpeed = isDeleting ? 50 : 100;
+        const pauseTime = isDeleting ? 500 : 2000;
+
+        const timer = setTimeout(() => {
+            if (!isDeleting) {
+                // Typing forward
+                if (typedText.length < currentWord.length) {
+                    setTypedText(currentWord.substring(0, typedText.length + 1));
+                } else {
+                    // Pause before deleting
+                    setTimeout(() => setIsDeleting(true), pauseTime);
+                }
+            } else {
+                // Deleting
+                if (typedText.length > 0) {
+                    setTypedText(currentWord.substring(0, typedText.length - 1));
+                } else {
+                    // Move to next word
+                    setIsDeleting(false);
+                    setWordIndex((prev) => (prev + 1) % words.length);
+                }
+            }
+        }, typingSpeed);
+
+        return () => clearTimeout(timer);
+    }, [typedText, isDeleting, wordIndex, words]);
+
     const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
         setLoading(true);
         setError('');
 
         try {
-            const response = await fetch('/api/login', {
+            // Call backend API for authentication
+            const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password }),
@@ -51,21 +89,32 @@ const Login: React.FC = () => {
                 throw new Error(data.message || 'Authentication Failed');
             }
 
-            const { role } = data;
-            if (role === 'admin') {
+            // Store authentication data in localStorage
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('username', data.username);
+            localStorage.setItem('role', data.role);
+
+            console.log('✅ Login successful:', {
+                username: data.username,
+                role: data.role
+            });
+
+            // Redirect based on user role
+            if (data.role === 'admin' || data.role === 'super_admin') {
                 navigate('/admin');
             } else {
                 navigate('/task');
             }
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Login failed');
+            console.error('❌ Login error:', err);
+            setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="login-page">
+        <div className="login-page dark">
             <div className="stars-container">
                 {stars.map(star => (
                     <div
@@ -85,10 +134,11 @@ const Login: React.FC = () => {
 
             <div className="gradient-overlay"></div>
 
-            <nav className="nav">
-                <div className="nav-inner">
-                    <a href="/" className="nav-logo">
-                        <svg className="logo-icon" width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <div className="login-container">
+                {/* Left Side - Logo and Welcome with Typing Animation */}
+                <div className="login-left">
+                    <div className="logo-section">
+                        <svg className="logo-icon" width="32" height="32" viewBox="0 0 28 28" fill="none">
                             <circle cx="14" cy="14" r="12" stroke="url(#logoGrad)" strokeWidth="1.5" />
                             <circle cx="14" cy="14" r="5" fill="url(#logoGrad)" />
                             <defs>
@@ -98,55 +148,65 @@ const Login: React.FC = () => {
                                 </linearGradient>
                             </defs>
                         </svg>
-                        <span>Code Combat</span>
-                    </a>
+                        <span className="logo-text">Code Combat</span>
+                    </div>
+
+                    <div className="welcome-content">
+                        <h1 className="welcome-title">
+                            Welcome,
+                            <br />
+                            <span className="typed-text">
+                                {typedText}
+                                <span className="cursor">|</span>
+                            </span>
+                        </h1>
+                    </div>
                 </div>
-            </nav>
 
-            <section className="login-section">
-                <h1 className="login-title">
-                    Welcome back,
-                    <br />
-                    <span className="title-highlight">Commander.</span>
-                </h1>
+                {/* Right Side - Login Form */}
+                <div className="login-right">
+                    <form className="login-form" onSubmit={handleSubmit}>
+                        <p className="form-subtitle">
+                            Enter your credentials to access the battle arena.
+                        </p>
 
-                <p className="login-subtitle">
-                    Enter your credentials to access the battle arena.
-                </p>
+                        <div className="input-group">
+                            <label>CODENAME</label>
+                            <input
+                                type="text"
+                                value={username}
+                                onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+                                placeholder="Enter your codename"
+                                required
+                            />
+                        </div>
+                        <div className="input-group">
+                            <label>ACCESS KEY</label>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                                placeholder="Enter your passkey"
+                                required
+                            />
+                        </div>
 
-                <form className="login-form" onSubmit={handleSubmit}>
-                    <div className="input-group">
-                        <label><User size={14} /> CODENAME</label>
-                        <input
-                            type="text"
-                            value={username}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
-                            placeholder="Enter your codename"
-                            required
-                        />
-                    </div>
-                    <div className="input-group">
-                        <label><KeyRound size={14} /> ACCESS KEY</label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                            placeholder="Enter your passkey"
-                            required
-                        />
-                    </div>
+                        {error && <div className="error-message">{error}</div>}
 
-                    {error && <div className="error-message">{error}</div>}
+                        <button type="submit" className="login-cta" disabled={loading}>
+                            {loading ? (
+                                <><Loader2 size={18} className="spin" /> Authenticating...</>
+                            ) : (
+                                <>Enter Arena</>
+                            )}
+                        </button>
+                    </form>
 
-                    <button type="submit" className="login-cta" disabled={loading}>
-                        {loading ? (
-                            <><Loader2 size={18} className="spin" /> Authenticating...</>
-                        ) : (
-                            <>Enter Arena <ArrowRight size={18} /></>
-                        )}
-                    </button>
-                </form>
-            </section>
+                    <p className="copyright-text">
+                        © 2024 Code Combat. All rights reserved.
+                    </p>
+                </div>
+            </div>
         </div>
     );
 };

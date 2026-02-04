@@ -17,6 +17,7 @@ const pool = new Pool({
   max: 20,                      // Maximum number of connections in the pool
   idleTimeoutMillis: 30000,     // Close idle connections after 30 seconds
   connectionTimeoutMillis: 2000, // Error if connection takes more than 2 seconds
+  ssl: false,                   // Disable SSL for local development
 });
 
 /**

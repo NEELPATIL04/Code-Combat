@@ -5,8 +5,8 @@ import { hashPassword } from '../utils/password.util';
 
 /**
  * Database Seed Script
- * Creates initial data in the database
- * Currently seeds one super admin user
+ * Creates initial test data in the database
+ * Creates admin and player accounts for testing
  *
  * Run this script with: npm run db:seed
  *
@@ -17,46 +17,67 @@ async function seed() {
   console.log('');
 
   try {
-    // Check if super admin already exists
-    const [existingAdmin] = await db
-      .select()
-      .from(users)
-      .where(eq(users.username, 'superadmin'))
-      .limit(1);
+    // Hash the test password (1234)
+    console.log('🔐 Hashing passwords...');
+    const testPassword = await hashPassword('1234');
 
-    if (existingAdmin) {
-      console.log('ℹ️  Super admin already exists. Skipping seed.');
-      console.log(`   Username: ${existingAdmin.username}`);
-      console.log(`   Role: ${existingAdmin.role}`);
-      return;
+    // Define test users
+    const testUsers = [
+      {
+        username: 'admin',
+        email: 'admin@codecombat.com',
+        password: testPassword,
+        role: 'admin' as const,
+      },
+      {
+        username: 'player1',
+        email: 'player1@codecombat.com',
+        password: testPassword,
+        role: 'player' as const,
+      },
+      {
+        username: 'player2',
+        email: 'player2@codecombat.com',
+        password: testPassword,
+        role: 'player' as const,
+      },
+    ];
+
+    console.log('👥 Creating test users...');
+    const createdUsers = [];
+
+    for (const userData of testUsers) {
+      // Check if user already exists
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, userData.username))
+        .limit(1);
+
+      if (existingUser) {
+        console.log(`   ⏭️  ${userData.username} already exists, skipping...`);
+        createdUsers.push(existingUser);
+      } else {
+        const [newUser] = await db
+          .insert(users)
+          .values(userData)
+          .returning();
+        console.log(`   ✅ Created ${userData.username} (${userData.role})`);
+        createdUsers.push(newUser);
+      }
     }
 
-    // Hash the default password
-    console.log('🔐 Hashing password...');
-    const hashedPassword = await hashPassword('superadmin123');
-
-    // Create super admin user
-    console.log('👤 Creating super admin user...');
-    const [newAdmin] = await db
-      .insert(users)
-      .values({
-        username: 'superadmin',
-        email: 'superadmin@codecombat.com',
-        password: hashedPassword,
-        role: 'super_admin',
-      })
-      .returning();
-
     console.log('');
-    console.log('✅ Super admin created successfully!');
-    console.log('='.repeat(50));
-    console.log('📋 Login Credentials:');
-    console.log(`   Username: ${newAdmin.username}`);
-    console.log('   Password: superadmin123');
-    console.log(`   Role: ${newAdmin.role}`);
-    console.log('='.repeat(50));
+    console.log('✅ Database seeding completed!');
+    console.log('='.repeat(60));
+    console.log('📋 Test User Credentials (Password: 1234 for all):');
+    console.log('='.repeat(60));
+    createdUsers.forEach(user => {
+      console.log(`   Username: ${user.username.padEnd(15)} | Role: ${user.role}`);
+    });
+    console.log('='.repeat(60));
     console.log('');
-    console.log('⚠️  IMPORTANT: Change this password in production!');
+    console.log('⚠️  IMPORTANT: These are test credentials. Change in production!');
     console.log('');
 
   } catch (error) {

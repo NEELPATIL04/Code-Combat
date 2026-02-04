@@ -35,10 +35,10 @@ export function validateLogin(
     return;
   }
 
-  // Validate password length
-  if (password.length < 6 || password.length > 100) {
+  // Validate password length (allow 4+ for testing, but 8+ recommended for production)
+  if (password.length < 4 || password.length > 100) {
     res.status(400).json({
-      message: 'Password must be 6-100 characters'
+      message: 'Password must be 4-100 characters'
     });
     return;
   }
