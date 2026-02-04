@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(exit)",
+      "Bash(npm install:*)",
+      "Bash(npx tsx:*)"
+    ]
+  }
+}
