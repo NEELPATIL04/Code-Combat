@@ -1,6 +1,6 @@
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import { Shield, Ban, Trash2, Plus, X } from 'lucide-react';
-import AdminLayout from '../../../components/layout/AdminLayout';
+
 import { userAPI } from '../../../utils/api';
 
 interface User {
@@ -130,7 +130,7 @@ const ManageUsers: React.FC = () => {
     };
 
     return (
-        <AdminLayout>
+        <div>
             <div className="max-w-[1000px]">
                 <header className="mb-8 flex justify-between items-end">
                     <div>
@@ -188,8 +188,8 @@ const ManageUsers: React.FC = () => {
                                     </select>
                                     <button
                                         className={`w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 border ${user.status === 'active'
-                                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/20'
-                                                : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/20'
+                                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/20'
+                                            : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/20'
                                             }`}
                                         onClick={() => toggleStatus(user.id)}
                                         title={user.status === 'active' ? 'Ban User' : 'Activate User'}
@@ -211,121 +211,123 @@ const ManageUsers: React.FC = () => {
             </div>
 
             {/* Create User Modal */}
-            {showModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] animate-fade-in" onClick={closeModal}>
-                    <div className="bg-[#1a1f2e] border border-white/10 rounded-xl w-[90%] max-w-[550px] max-h-[85vh] overflow-y-auto shadow-2xl animate-slide-up" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center py-6 px-7 border-b border-white/[0.08]">
-                            <h2 className="m-0 text-xl font-semibold text-white">Create New User</h2>
-                            <button className="bg-white/5 border-none text-white/60 cursor-pointer flex items-center justify-center w-8 h-8 rounded-md transition-all duration-200 hover:bg-white/10 hover:text-white" onClick={closeModal}>
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <div className="p-7">
-                            <div className="mb-6">
-                                <label className="block mb-2.5 text-white/85 text-sm font-semibold">Username *</label>
-                                <input
-                                    name="username"
-                                    value={formData.username}
-                                    onChange={handleChange}
-                                    placeholder="Enter username..."
-                                    required
-                                    className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
-                                />
+            {
+                showModal && (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] animate-fade-in" onClick={closeModal}>
+                        <div className="bg-[#1a1f2e] border border-white/10 rounded-xl w-[90%] max-w-[550px] max-h-[85vh] overflow-y-auto shadow-2xl animate-slide-up" onClick={e => e.stopPropagation()}>
+                            <div className="flex justify-between items-center py-6 px-7 border-b border-white/[0.08]">
+                                <h2 className="m-0 text-xl font-semibold text-white">Create New User</h2>
+                                <button className="bg-white/5 border-none text-white/60 cursor-pointer flex items-center justify-center w-8 h-8 rounded-md transition-all duration-200 hover:bg-white/10 hover:text-white" onClick={closeModal}>
+                                    <X size={20} />
+                                </button>
                             </div>
-
-                            <div className="grid grid-cols-2 gap-4 mb-6">
-                                <div>
-                                    <label className="block mb-2.5 text-white/85 text-sm font-semibold">First Name</label>
+                            <div className="p-7">
+                                <div className="mb-6">
+                                    <label className="block mb-2.5 text-white/85 text-sm font-semibold">Username *</label>
                                     <input
-                                        name="firstName"
-                                        value={formData.firstName}
+                                        name="username"
+                                        value={formData.username}
                                         onChange={handleChange}
-                                        placeholder="First name..."
+                                        placeholder="Enter username..."
+                                        required
                                         className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
                                     />
                                 </div>
-                                <div>
-                                    <label className="block mb-2.5 text-white/85 text-sm font-semibold">Last Name</label>
+
+                                <div className="grid grid-cols-2 gap-4 mb-6">
+                                    <div>
+                                        <label className="block mb-2.5 text-white/85 text-sm font-semibold">First Name</label>
+                                        <input
+                                            name="firstName"
+                                            value={formData.firstName}
+                                            onChange={handleChange}
+                                            placeholder="First name..."
+                                            className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block mb-2.5 text-white/85 text-sm font-semibold">Last Name</label>
+                                        <input
+                                            name="lastName"
+                                            value={formData.lastName}
+                                            onChange={handleChange}
+                                            placeholder="Last name..."
+                                            className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="mb-6">
+                                    <label className="block mb-2.5 text-white/85 text-sm font-semibold">Email *</label>
                                     <input
-                                        name="lastName"
-                                        value={formData.lastName}
+                                        name="email"
+                                        type="email"
+                                        value={formData.email}
                                         onChange={handleChange}
-                                        placeholder="Last name..."
+                                        placeholder="Enter email..."
+                                        required
                                         className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
                                     />
                                 </div>
-                            </div>
 
-                            <div className="mb-6">
-                                <label className="block mb-2.5 text-white/85 text-sm font-semibold">Email *</label>
-                                <input
-                                    name="email"
-                                    type="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    placeholder="Enter email..."
-                                    required
-                                    className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
-                                />
-                            </div>
+                                <div className="mb-6">
+                                    <label className="block mb-2.5 text-white/85 text-sm font-semibold">Password *</label>
+                                    <input
+                                        name="password"
+                                        type="password"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        placeholder="Enter password..."
+                                        required
+                                        className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
+                                    />
+                                </div>
 
-                            <div className="mb-6">
-                                <label className="block mb-2.5 text-white/85 text-sm font-semibold">Password *</label>
-                                <input
-                                    name="password"
-                                    type="password"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    placeholder="Enter password..."
-                                    required
-                                    className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
-                                />
-                            </div>
+                                <div className="mb-6">
+                                    <label className="block mb-2.5 text-white/85 text-sm font-semibold">Company / School Name</label>
+                                    <input
+                                        name="companySchool"
+                                        value={formData.companySchool}
+                                        onChange={handleChange}
+                                        placeholder="Company or school name..."
+                                        className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
+                                    />
+                                </div>
 
-                            <div className="mb-6">
-                                <label className="block mb-2.5 text-white/85 text-sm font-semibold">Company / School Name</label>
-                                <input
-                                    name="companySchool"
-                                    value={formData.companySchool}
-                                    onChange={handleChange}
-                                    placeholder="Company or school name..."
-                                    className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
-                                />
+                                <div className="mb-6">
+                                    <label className="block mb-2.5 text-white/85 text-sm font-semibold">Role</label>
+                                    <select
+                                        name="role"
+                                        value={formData.role}
+                                        onChange={handleChange}
+                                        className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)]"
+                                    >
+                                        <option value="player">Player</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="super_admin">Super Admin</option>
+                                    </select>
+                                </div>
                             </div>
-
-                            <div className="mb-6">
-                                <label className="block mb-2.5 text-white/85 text-sm font-semibold">Role</label>
-                                <select
-                                    name="role"
-                                    value={formData.role}
-                                    onChange={handleChange}
-                                    className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)]"
+                            <div className="flex justify-end gap-3.5 py-6 px-7 border-t border-white/[0.08] bg-white/[0.02]">
+                                <button
+                                    className="py-3 px-6 bg-transparent border-[1.5px] border-white/15 text-white/70 rounded-[10px] cursor-pointer font-medium text-[0.95rem] transition-all duration-200 hover:bg-white/5 hover:border-white/25 hover:text-white"
+                                    onClick={closeModal}
                                 >
-                                    <option value="player">Player</option>
-                                    <option value="admin">Admin</option>
-                                    <option value="super_admin">Super Admin</option>
-                                </select>
+                                    Cancel
+                                </button>
+                                <button
+                                    className="py-3 px-7 bg-gradient-to-br from-yellow-200/20 to-amber-400/15 border-[1.5px] border-yellow-200/50 text-yellow-200 rounded-[10px] cursor-pointer font-semibold text-[0.95rem] transition-all duration-200 hover:bg-gradient-to-br hover:from-yellow-200/25 hover:to-amber-400/20 hover:border-yellow-200/60 hover:shadow-[0_0_20px_rgba(253,230,138,0.15)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
+                                    onClick={handleCreateUser}
+                                    disabled={loading}
+                                >
+                                    {loading ? 'Creating...' : 'Create User'}
+                                </button>
                             </div>
-                        </div>
-                        <div className="flex justify-end gap-3.5 py-6 px-7 border-t border-white/[0.08] bg-white/[0.02]">
-                            <button
-                                className="py-3 px-6 bg-transparent border-[1.5px] border-white/15 text-white/70 rounded-[10px] cursor-pointer font-medium text-[0.95rem] transition-all duration-200 hover:bg-white/5 hover:border-white/25 hover:text-white"
-                                onClick={closeModal}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className="py-3 px-7 bg-gradient-to-br from-yellow-200/20 to-amber-400/15 border-[1.5px] border-yellow-200/50 text-yellow-200 rounded-[10px] cursor-pointer font-semibold text-[0.95rem] transition-all duration-200 hover:bg-gradient-to-br hover:from-yellow-200/25 hover:to-amber-400/20 hover:border-yellow-200/60 hover:shadow-[0_0_20px_rgba(253,230,138,0.15)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
-                                onClick={handleCreateUser}
-                                disabled={loading}
-                            >
-                                {loading ? 'Creating...' : 'Create User'}
-                            </button>
                         </div>
                     </div>
-                </div>
-            )}
-        </AdminLayout>
+                )
+            }
+        </div>
     );
 };
 
