@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, timestamp, pgEnum, text, integer, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, timestamp, pgEnum, text, integer, boolean, json } from 'drizzle-orm/pg-core';
 
 /**
  * User Role Enum
@@ -136,6 +136,9 @@ export const tasks = pgTable('tasks', {
 
   // Timestamp when task was last updated
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+
+  // Allowed languages (JSON array of strings)
+  allowedLanguages: json('allowed_languages').$type<string[]>().notNull().default([]),
 });
 
 /**

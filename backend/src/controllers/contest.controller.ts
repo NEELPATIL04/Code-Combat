@@ -46,15 +46,22 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
 
     // Create tasks if provided
     if (contestTasks && Array.isArray(contestTasks) && contestTasks.length > 0) {
-      const taskValues = contestTasks.map((task: any, index: number) => ({
-        contestId: contest.id,
-        title: task.title,
-        description: task.description,
-        difficulty: task.difficulty || difficulty || 'Medium',
-        maxPoints: task.maxPoints || 100,
-        orderIndex: index,
-      }));
+      const taskValues = contestTasks.map((task: any, index: number) => {
+        console.log(`Task ${index}: ${task.title} - Allowed Languages:`, task.allowedLanguages);
+        return {
+          contestId: contest.id,
+          title: task.title,
+          description: task.description,
+          difficulty: task.difficulty || difficulty || 'Medium',
+          maxPoints: task.maxPoints || 100,
+          allowedLanguages: task.allowedLanguages || [],
+          orderIndex: index,
+        };
+      });
       await db.insert(tasks).values(taskValues);
+      console.log('Tasks inserted successfully');
+    } else {
+      console.log('No tasks provided for creation');
     }
 
     // Add participants if provided
@@ -143,7 +150,10 @@ export const getContestById = async (req: Request, res: Response, next: NextFunc
     const contestTasks = await db
       .select()
       .from(tasks)
-      .where(eq(tasks.contestId, contestId));
+      .where(eq(tasks.contestId, contestId))
+      .orderBy(tasks.orderIndex);
+
+    console.log(`Fetched ${contestTasks.length} tasks for contest ${contestId}`);
 
     // Get participants with user details
     const participants = await db
@@ -212,20 +222,26 @@ export const updateContest = async (req: Request, res: Response, next: NextFunct
 
     // Update tasks if provided
     if (contestTasks && Array.isArray(contestTasks)) {
+      console.log('Updating tasks for contest:', contestId, 'Count:', contestTasks.length);
       // Delete existing tasks
       await db.delete(tasks).where(eq(tasks.contestId, contestId));
 
       // Insert new tasks
       if (contestTasks.length > 0) {
-        const taskValues = contestTasks.map((task: any, index: number) => ({
-          contestId: contestId,
-          title: task.title,
-          description: task.description,
-          difficulty: task.difficulty || difficulty || 'Medium',
-          maxPoints: task.maxPoints || 100,
-          orderIndex: index,
-        }));
+        const taskValues = contestTasks.map((task: any, index: number) => {
+          console.log(`Updating Task ${index}: ${task.title} - Allowed Languages:`, task.allowedLanguages);
+          return {
+            contestId: contestId,
+            title: task.title,
+            description: task.description,
+            difficulty: task.difficulty || difficulty || 'Medium',
+            maxPoints: task.maxPoints || 100,
+            allowedLanguages: task.allowedLanguages || [],
+            orderIndex: index,
+          };
+        });
         await db.insert(tasks).values(taskValues);
+        console.log('Tasks replaced successfully');
       }
     }
 
