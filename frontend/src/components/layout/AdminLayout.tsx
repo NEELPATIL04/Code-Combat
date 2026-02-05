@@ -9,16 +9,29 @@ interface MenuItem {
     path: string;
 }
 
+interface MenuSection {
+    title?: string;
+    items: MenuItem[];
+}
+
 interface AdminLayoutProps {
     children: ReactNode;
 }
 
-const menuItems: MenuItem[] = [
-    { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/admin' },
-    { icon: <Users size={20} />, label: 'Participants', path: '/admin/participants' },
-    { icon: <Trophy size={20} />, label: 'Contests', path: '/admin/contests' },
-    { icon: <UserCog size={20} />, label: 'Manage Users', path: '/admin/manage-users' },
-    { icon: <Settings size={20} />, label: 'Settings', path: '/admin/settings' },
+const menuSections: MenuSection[] = [
+    {
+        items: [
+            { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/admin' },
+        ]
+    },
+    {
+        items: [
+            { icon: <Users size={20} />, label: 'Participants', path: '/admin/participants' },
+            { icon: <Trophy size={20} />, label: 'Contests', path: '/admin/contests' },
+            { icon: <UserCog size={20} />, label: 'Manage Users', path: '/admin/manage-users' },
+            { icon: <Settings size={20} />, label: 'Settings', path: '/admin/settings' },
+        ]
+    }
 ];
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
@@ -32,11 +45,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     };
 
     const handleLogout = (): void => {
+        localStorage.clear();
         navigate('/login');
     };
 
     return (
-        <div className={`admin-layout ${collapsed ? 'collapsed' : ''}`}>
+        <div className={`admin-layout dark ${collapsed ? 'collapsed' : ''}`}>
             <aside className="admin-sidebar">
                 <div className="sidebar-header">
                     <div className="logo">
@@ -58,16 +72,23 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                 </div>
 
                 <nav className="sidebar-nav">
-                    {menuItems.map(item => (
-                        <button
-                            key={item.path}
-                            className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
-                            onClick={() => navigate(item.path)}
-                            title={collapsed ? item.label : undefined}
-                        >
-                            {item.icon}
-                            {!collapsed && <span>{item.label}</span>}
-                        </button>
+                    {menuSections.map((section, sectionIndex) => (
+                        <div key={sectionIndex} className="nav-section">
+                            {section.title && !collapsed && (
+                                <div className="section-title">{section.title}</div>
+                            )}
+                            {section.items.map(item => (
+                                <button
+                                    key={item.path}
+                                    className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
+                                    onClick={() => navigate(item.path)}
+                                    title={collapsed ? item.label : undefined}
+                                >
+                                    {item.icon}
+                                    {!collapsed && <span>{item.label}</span>}
+                                </button>
+                            ))}
+                        </div>
                     ))}
                 </nav>
 

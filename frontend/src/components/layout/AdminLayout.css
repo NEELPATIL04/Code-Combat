@@ -1,12 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
-
 /* ========== BASE LAYOUT ========== */
 .admin-layout {
     display: flex;
     min-height: 100vh;
-    background: #000000;
-    color: #ffffff;
-    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 /* ========== SIDEBAR ========== */
@@ -16,25 +14,32 @@
     top: 0;
     bottom: 0;
     width: 260px;
-    background: rgba(10, 10, 10, 0.95);
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--sidebar);
+    border-right: 1px solid var(--sidebar-border);
     display: flex;
     flex-direction: column;
-    z-index: 100;
-    transition: width 0.3s ease;
+    z-index: 1000;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     backdrop-filter: blur(20px);
 }
 
 .admin-layout.collapsed .admin-sidebar {
-    width: 72px;
+    width: 80px;
 }
 
 .sidebar-header {
-    padding: 24px 20px;
+    height: 70px;
+    padding: 0 20px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    position: relative;
+}
+
+.admin-layout.collapsed .sidebar-header {
+    justify-content: center;
+    padding: 0;
 }
 
 .logo {
@@ -43,6 +48,12 @@
     gap: 12px;
     text-decoration: none;
     color: #fff;
+    overflow: hidden;
+    transition: opacity 0.2s ease;
+}
+
+.admin-layout.collapsed .logo {
+    display: none;
 }
 
 .logo span {
@@ -53,10 +64,6 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
     white-space: nowrap;
-}
-
-.admin-layout.collapsed .logo span {
-    display: none;
 }
 
 .collapse-btn {
@@ -72,6 +79,15 @@
     justify-content: center;
     transition: all 0.2s ease;
     flex-shrink: 0;
+    position: relative;
+    z-index: 1001;
+}
+
+.admin-layout.collapsed .collapse-btn {
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: none;
 }
 
 .collapse-btn:hover {
@@ -82,24 +98,43 @@
 /* ========== NAVIGATION ========== */
 .sidebar-nav {
     flex: 1;
-    padding: 16px 12px;
+    padding: 20px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Navigation Sections */
+.nav-section {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    overflow-y: auto;
+}
+
+.section-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 0 16px 8px;
+    white-space: nowrap;
 }
 
 .nav-item {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 16px;
+    padding: 10px 16px;
     background: transparent;
-    border: none;
-    border-radius: 10px;
+    border: 1px solid transparent;
+    border-radius: 8px;
     color: rgba(255, 255, 255, 0.6);
     font-family: inherit;
     font-size: 0.95rem;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
     text-align: left;
@@ -114,12 +149,12 @@
 .nav-item.active {
     background: rgba(253, 230, 138, 0.1);
     color: #FDE68A;
-    border: 1px solid rgba(253, 230, 138, 0.2);
+    border-color: rgba(253, 230, 138, 0.2);
 }
 
 .admin-layout.collapsed .nav-item {
     justify-content: center;
-    padding: 14px;
+    padding: 12px;
 }
 
 .admin-layout.collapsed .nav-item span {
@@ -128,18 +163,19 @@
 
 /* ========== SIDEBAR FOOTER - LOGOUT AT BOTTOM ========== */
 .sidebar-footer {
-    padding: 16px 12px;
+    padding: 20px;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     margin-top: auto;
 }
 
 .nav-item.logout {
     color: #ef4444;
-    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.2);
 }
 
 .nav-item.logout:hover {
     background: rgba(239, 68, 68, 0.1);
+    color: #f87171;
 }
 
 /* ========== MAIN CONTENT - CENTERED ========== */
@@ -149,18 +185,15 @@
     padding: 40px 60px;
     position: relative;
     z-index: 1;
-    transition: margin-left 0.3s ease;
-    display: flex;
-    justify-content: center;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .admin-main>* {
     width: 100%;
-    max-width: 1200px;
 }
 
 .admin-layout.collapsed .admin-main {
-    margin-left: 72px;
+    margin-left: 80px;
 }
 
 /* ========== RESPONSIVE ========== */
@@ -172,21 +205,33 @@
 
 @media (max-width: 768px) {
     .admin-sidebar {
-        width: 72px;
+        width: 80px;
+        transform: translateX(-100%);
     }
 
-    .admin-sidebar .logo span,
+    .admin-sidebar.show {
+        transform: translateX(0);
+    }
+
+    .logo {
+        display: none;
+    }
+
     .admin-sidebar .nav-item span {
         display: none;
     }
 
     .admin-sidebar .nav-item {
         justify-content: center;
-        padding: 14px;
+        padding: 12px;
     }
 
     .admin-main {
-        margin-left: 72px;
+        margin-left: 0;
         padding: 24px;
+    }
+
+    .admin-layout.collapsed .admin-main {
+        margin-left: 0;
     }
 }

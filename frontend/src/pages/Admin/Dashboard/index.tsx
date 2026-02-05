@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Trophy, FileText, CheckCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../../components/layout/AdminLayout';
 import './Dashboard.css';
 
@@ -18,6 +19,7 @@ interface Stats {
 }
 
 const Dashboard: React.FC = () => {
+    const navigate = useNavigate();
     const [stats, setStats] = useState<Stats>({ activeUsers: 0, totalContests: 0, totalSubmissions: 0, successRate: 0 });
     const [recentContests, setRecentContests] = useState<Contest[]>([]);
 
@@ -72,7 +74,12 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 <div className="section">
-                    <div className="section-header"><h2>Recent Contests</h2></div>
+                    <div className="section-header">
+                        <h2>Recent Contests</h2>
+                        <button className="view-more-btn" onClick={() => navigate('/admin/contests')}>
+                            View More
+                        </button>
+                    </div>
                     <div className="contests-table">
                         <div className="table-header">
                             <span>Contest</span>

@@ -13,14 +13,15 @@ interface Participant {
     submissionsCount: number;
     joinedAt: string;
     successRate: number;
+    status: 'active' | 'inactive';
 }
 
 const mockParticipants: Participant[] = [
-    { id: 1, username: 'player1', email: 'player1@example.com', avatar: 'P', contestsCount: 12, submissionsCount: 45, joinedAt: '2024-01-15', successRate: 78 },
-    { id: 2, username: 'player2', email: 'player2@example.com', avatar: 'P', contestsCount: 8, submissionsCount: 32, joinedAt: '2024-02-20', successRate: 65 },
-    { id: 3, username: 'coder123', email: 'coder@example.com', avatar: 'C', contestsCount: 5, submissionsCount: 18, joinedAt: '2024-03-05', successRate: 82 },
-    { id: 4, username: 'devmaster', email: 'dev@example.com', avatar: 'D', contestsCount: 3, submissionsCount: 10, joinedAt: '2024-03-10', successRate: 90 },
-    { id: 5, username: 'algorithmguru', email: 'algo@example.com', avatar: 'A', contestsCount: 15, submissionsCount: 67, joinedAt: '2024-01-01', successRate: 88 },
+    { id: 1, username: 'player1', email: 'player1@example.com', avatar: 'P', contestsCount: 12, submissionsCount: 45, joinedAt: '2024-01-15', successRate: 78, status: 'active' },
+    { id: 2, username: 'player2', email: 'player2@example.com', avatar: 'P', contestsCount: 8, submissionsCount: 32, joinedAt: '2024-02-20', successRate: 65, status: 'active' },
+    { id: 3, username: 'coder123', email: 'coder@example.com', avatar: 'C', contestsCount: 5, submissionsCount: 18, joinedAt: '2024-03-05', successRate: 82, status: 'inactive' },
+    { id: 4, username: 'devmaster', email: 'dev@example.com', avatar: 'D', contestsCount: 3, submissionsCount: 10, joinedAt: '2024-03-10', successRate: 90, status: 'active' },
+    { id: 5, username: 'algorithmguru', email: 'algo@example.com', avatar: 'A', contestsCount: 15, submissionsCount: 67, joinedAt: '2024-01-01', successRate: 88, status: 'active' },
 ];
 
 const Participants: React.FC = () => {
@@ -54,6 +55,10 @@ const Participants: React.FC = () => {
                             <span className="mini-value">{participants.length}</span>
                             <span className="mini-label">Total</span>
                         </div>
+                        <div className="mini-stat">
+                            <span className="mini-value">{participants.filter(p => p.status === 'active').length}</span>
+                            <span className="mini-label">Active</span>
+                        </div>
                     </div>
                 </header>
 
@@ -70,6 +75,8 @@ const Participants: React.FC = () => {
                 <div className="participants-table">
                     <div className="table-header">
                         <span>Participant</span>
+                        <span>Email</span>
+                        <span>Status</span>
                         <span>Contests</span>
                         <span>Submissions</span>
                         <span>Success Rate</span>
@@ -82,13 +89,16 @@ const Participants: React.FC = () => {
                             className="table-row clickable"
                             onClick={() => handleRowClick(participant.id)}
                         >
-                            <div className="participant-info">
+                            <div className="participant-cell">
                                 <div className="avatar">{participant.username.charAt(0).toUpperCase()}</div>
-                                <div>
-                                    <span className="username">{participant.username}</span>
-                                    <span className="email">{participant.email}</span>
-                                </div>
+                                <span className="username">{participant.username}</span>
                             </div>
+                            <span className="email-cell">{participant.email}</span>
+                            <span className="status-cell">
+                                <span className={`status-badge ${participant.status}`}>
+                                    {participant.status === 'active' ? 'Active' : 'Inactive'}
+                                </span>
+                            </span>
                             <span className="stat-cell">{participant.contestsCount}</span>
                             <span className="stat-cell">{participant.submissionsCount}</span>
                             <span className="stat-cell success-rate">{participant.successRate}%</span>
