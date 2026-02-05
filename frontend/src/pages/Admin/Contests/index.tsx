@@ -1,6 +1,6 @@
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import { Plus, Edit2, Trash2, X, Play, Users } from 'lucide-react';
-import AdminLayout from '../../../components/layout/AdminLayout';
+
 import { contestAPI, userAPI } from '../../../utils/api';
 
 interface Contest {
@@ -354,128 +354,113 @@ const Contests: React.FC = () => {
         }
     };
 
-    return (
-        <AdminLayout>
-            <div className="max-w-[1000px]">
-                {/* Page Header */}
-                <header className="flex justify-between items-start mb-6">
-                    <div>
-                        <h1 className="text-3xl font-semibold m-0 mb-2 bg-gradient-to-r from-yellow-200 to-yellow-500 bg-clip-text text-transparent">
-                            My Contests
-                        </h1>
-                        <p className="text-white/50 m-0">Create and manage coding battles</p>
-                    </div>
+    return (<div>
+        <div className="max-w-[1000px]">
+            {/* Page Header */}
+            <header className="flex justify-between items-start mb-6">
+                <div>
+                    <h1 className="text-3xl font-semibold m-0 mb-2 bg-gradient-to-r from-yellow-200 to-yellow-500 bg-clip-text text-transparent">
+                        My Contests
+                    </h1>
+                    <p className="text-white/50 m-0">Create and manage coding battles</p>
+                </div>
+                <button
+                    className="flex items-center gap-2 py-3 px-6 bg-yellow-200/10 border border-yellow-200/30 text-yellow-200 rounded-full font-medium text-[0.9rem] cursor-pointer transition-all duration-200 hover:bg-yellow-200/20"
+                    onClick={() => openModal()}
+                >
+                    <Plus size={18} /> New Contest
+                </button>
+            </header>
+
+            {error && (
+                <div className="bg-red-500/10 border border-red-500 text-red-500 p-4 rounded-lg mb-6 flex justify-between items-center">
+                    {error}
+                    <button className="bg-transparent border-none text-red-500 cursor-pointer" onClick={() => setError('')}><X size={16} /></button>
+                </div>
+            )}
+
+            {/* Filter Bar */}
+            <div className="flex gap-2 mb-6">
+                {['all', 'upcoming', 'active', 'completed'].map(f => (
                     <button
-                        className="flex items-center gap-2 py-3 px-6 bg-yellow-200/10 border border-yellow-200/30 text-yellow-200 rounded-full font-medium text-[0.9rem] cursor-pointer transition-all duration-200 hover:bg-yellow-200/20"
-                        onClick={() => openModal()}
+                        key={f}
+                        className={`py-2 px-4.5 bg-transparent border border-white/10 rounded-full text-white/50 font-inherit text-[0.85rem] cursor-pointer transition-all duration-200 hover:border-white/20 hover:text-white ${filter === f ? 'bg-white/10 border-white/20 text-white' : ''
+                            }`}
+                        onClick={() => setFilter(f)}
                     >
-                        <Plus size={18} /> New Contest
+                        {f.charAt(0).toUpperCase() + f.slice(1)}
                     </button>
-                </header>
-
-                {error && (
-                    <div className="bg-red-500/10 border border-red-500 text-red-500 p-4 rounded-lg mb-6 flex justify-between items-center">
-                        {error}
-                        <button className="bg-transparent border-none text-red-500 cursor-pointer" onClick={() => setError('')}><X size={16} /></button>
-                    </div>
-                )}
-
-                {/* Filter Bar */}
-                <div className="flex gap-2 mb-6">
-                    {['all', 'upcoming', 'active', 'completed'].map(f => (
-                        <button
-                            key={f}
-                            className={`py-2 px-4.5 bg-transparent border border-white/10 rounded-full text-white/50 font-inherit text-[0.85rem] cursor-pointer transition-all duration-200 hover:border-white/20 hover:text-white ${filter === f ? 'bg-white/10 border-white/20 text-white' : ''
-                                }`}
-                            onClick={() => setFilter(f)}
-                        >
-                            {f.charAt(0).toUpperCase() + f.slice(1)}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Contests List */}
-                <div className="flex flex-col gap-3">
-                    {loading && contests.length === 0 ? (
-                        <div className="text-center py-15 text-white/40"><p>Loading contests...</p></div>
-                    ) : filteredContests.length === 0 ? (
-                        <div className="text-center py-15 text-white/40">
-                            <p>No contests found</p>
-                            <button
-                                className="mt-4 flex items-center gap-2 py-3 px-6 bg-yellow-200/10 border border-yellow-200/30 text-yellow-200 rounded-full font-medium text-[0.9rem] cursor-pointer mx-auto transition-all duration-200 hover:bg-yellow-200/20"
-                                onClick={() => openModal()}
-                            >
-                                <Plus size={18} /> Create your first contest
-                            </button>
-                        </div>
-                    ) : (
-                        filteredContests.map(contest => (
-                            <div key={contest.id} className="flex items-center justify-between py-5 px-6 bg-white/[0.02] border border-white/[0.08] rounded-xl transition-all duration-200 hover:border-white/15">
-                                <div className="flex items-center gap-4">
-                                    <span className={`w-2.5 h-2.5 rounded-full ${contest.status === 'active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
-                                        contest.status === 'upcoming' ? 'bg-amber-500' :
-                                            'bg-gray-500'
-                                        }`}></span>
-                                    <div>
-                                        <h3 className="text-[1rem] font-medium m-0 mb-1 text-white">{contest.title}</h3>
-                                        <span className="text-[0.75rem] text-white/40 py-0.5 px-2 bg-white/5 rounded-full mr-2">
-                                            {contest.difficulty}
-                                        </span>
-                                        {contest.isStarted && <span className="text-[0.7rem] py-0.5 px-2.5 bg-emerald-500/20 text-emerald-500 rounded-full font-semibold uppercase">Started</span>}
-                                    </div>
-                                </div>
-                                <div className="flex gap-8">
-                                    <div className="text-center">
-                                        <span className="block text-[1.25rem] font-semibold text-yellow-200">{contest.participantCount || 0}</span>
-                                        <span className="text-[0.7rem] text-white/40 uppercase">Players</span>
-                                    </div>
-                                    <div className="text-center">
-                                        <span className="block text-[1.25rem] font-semibold text-yellow-200">{contest.taskCount || 0}</span>
-                                        <span className="text-[0.7rem] text-white/40 uppercase">Tasks</span>
-                                    </div>
-                                    <div className="text-center">
-                                        <span className="block text-[1.25rem] font-semibold text-yellow-200">{contest.duration}m</span>
-                                        <span className="text-[0.7rem] text-white/40 uppercase">Duration</span>
-                                    </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    {!contest.isStarted && (
-                                        <button
-                                            className="w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/20"
-                                            onClick={() => startContest(contest.id)}
-                                            title="Start Contest"
-                                        >
-                                            <Play size={16} />
-                                        </button>
-                                    )}
-                                    <button
-                                        className="w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 bg-blue-500/10 border border-blue-500/30 text-blue-500 hover:bg-blue-500/20"
-                                        onClick={() => openParticipantModal(contest.id)}
-                                        title="Add Participants"
-                                    >
-                                        <Users size={16} />
-                                    </button>
-                                    <button
-                                        className="w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:text-white"
-                                        onClick={() => openModal(contest)}
-                                    >
-                                        <Edit2 size={16} />
-                                    </button>
-                                    <button
-                                        className="w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20"
-                                        onClick={() => deleteContest(contest.id)}
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                        ))
-                    )}
-                </div>
+                ))}
             </div>
 
-            {/* Contest Modal */}
-            {showModal && (
+            {/* Contests List */}
+            <div className="flex flex-col gap-3">
+                {loading && contests.length === 0 ? (
+                    <div className="text-center py-15 text-white/40"><p>Loading contests...</p></div>
+                ) : filteredContests.length === 0 ? (
+                    <div className="text-center py-15 text-white/40">
+                        <p>No contests found</p>
+                        <button
+                            className="mt-4 flex items-center gap-2 py-3 px-6 bg-yellow-200/10 border border-yellow-200/30 text-yellow-200 rounded-full font-medium text-[0.9rem] cursor-pointer mx-auto transition-all duration-200 hover:bg-yellow-200/20"
+                            onClick={() => openModal()}
+                        >
+                            <Plus size={18} /> Create your first contest
+                        </button>
+                                </div>
+                            </div>
+                            <div className="flex gap-8">
+                                <div className="text-center">
+                                    <span className="block text-[1.25rem] font-semibold text-yellow-200">{contest.participantCount || 0}</span>
+                                    <span className="text-[0.7rem] text-white/40 uppercase">Players</span>
+                                </div>
+                                <div className="text-center">
+                                    <span className="block text-[1.25rem] font-semibold text-yellow-200">{contest.taskCount || 0}</span>
+                                    <span className="text-[0.7rem] text-white/40 uppercase">Tasks</span>
+                                </div>
+                                <div className="text-center">
+                                    <span className="block text-[1.25rem] font-semibold text-yellow-200">{contest.duration}m</span>
+                                    <span className="text-[0.7rem] text-white/40 uppercase">Duration</span>
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                {!contest.isStarted && (
+                                    <button
+                                        className="w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/20"
+                                        onClick={() => startContest(contest.id)}
+                                        title="Start Contest"
+                                    >
+                                        <Play size={16} />
+                                    </button>
+                                )}
+                                <button
+                                    className="w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 bg-blue-500/10 border border-blue-500/30 text-blue-500 hover:bg-blue-500/20"
+                                    onClick={() => openParticipantModal(contest.id)}
+                                    title="Add Participants"
+                                >
+                                    <Users size={16} />
+                                </button>
+                                <button
+                                    className="w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:text-white"
+                                    onClick={() => openModal(contest)}
+                                >
+                                    <Edit2 size={16} />
+                                </button>
+                                <button
+                                    className="w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20"
+                                    onClick={() => deleteContest(contest.id)}
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+        </div>
+
+        {/* Contest Modal */}
+        {
+            showModal && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] animate-fade-in" onClick={closeModal}>
                     <div className="bg-[#1a1f2e] border border-white/10 rounded-xl w-[90%] max-w-[650px] max-h-[85vh] overflow-y-auto shadow-2xl animate-slide-up" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center py-6 px-7 border-b border-white/[0.08]">
@@ -707,10 +692,12 @@ const Contests: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            )}
+            )
+        }
 
-            {/* Add Participants Modal */}
-            {showParticipantModal && (
+        {/* Add Participants Modal */}
+        {
+            showParticipantModal && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] animate-fade-in" onClick={() => setShowParticipantModal(false)}>
                     <div className="bg-[#1a1f2e] border border-white/10 rounded-xl w-[90%] max-w-[550px] max-h-[85vh] overflow-y-auto shadow-2xl animate-slide-up" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center py-6 px-7 border-b border-white/[0.08]">
@@ -771,9 +758,10 @@ const Contests: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            )}
-        </AdminLayout>
-    );
+            )
+        }
+
+    </div>);
 };
 
 export default Contests;

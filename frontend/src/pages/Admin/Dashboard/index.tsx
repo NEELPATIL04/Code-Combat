@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Trophy, FileText, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import AdminLayout from '../../../components/layout/AdminLayout';
 
 interface Contest {
     id: number;
@@ -33,116 +32,183 @@ const Dashboard: React.FC = () => {
         }, 300);
     }, []);
 
+    const statCards = [
+        { icon: <Users size={24} />, value: stats.activeUsers.toLocaleString(), label: 'ACTIVE USERS' },
+        { icon: <Trophy size={24} />, value: stats.totalContests, label: 'TOTAL CONTESTS' },
+        { icon: <FileText size={24} />, value: stats.totalSubmissions.toLocaleString(), label: 'SUBMISSIONS' },
+        { icon: <CheckCircle size={24} />, value: `${stats.successRate}%`, label: 'SUCCESS RATE' },
+    ];
+
     return (
-        <AdminLayout>
-            <div className="max-w-[1400px] mx-auto">
-                {/* Page Header */}
-                <header className="mb-10">
-                    <h1 className="text-4xl font-bold m-0 mb-2 bg-gradient-to-r from-yellow-200 to-yellow-600 bg-clip-text text-transparent tracking-tight">
-                        Dashboard
-                    </h1>
-                    <p className="text-white/60 m-0 text-lg font-normal">Welcome back, Commander</p>
-                </header>
+        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+            {/* Page Header */}
+            <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <h1 style={{
+                    fontSize: '2.5rem',
+                    fontWeight: 600,
+                    margin: 0,
+                    color: '#ffffff'
+                }}>
+                    Dashboard
+                </h1>
+                <p style={{ margin: 0, fontSize: '1rem', color: 'rgba(255, 255, 255, 0.5)' }}>
+                    Welcome back, Commander
+                </p>
+            </header>
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-4 gap-6 mb-12 max-xl:grid-cols-2 max-sm:grid-cols-1">
-                    {/* Active Users */}
-                    <div className="bg-white/[0.03] border border-white/[0.08] rounded-[20px] p-6 flex flex-col items-start gap-4 transition-all duration-300 ease-in-out backdrop-blur-[10px] relative overflow-hidden hover:-translate-y-1 hover:border-yellow-200/20 hover:shadow-[0_12px_24px_-8px_rgba(0,0,0,0.3)] before:content-[''] before:absolute before:top-0 before:left-0 before:w-full before:h-full before:bg-gradient-to-br before:from-white/5 before:to-transparent before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100">
-                        <div className="w-12 h-12 flex items-center justify-center bg-yellow-200/10 rounded-xl text-yellow-200 mb-2 flex-shrink-0">
-                            <Users size={24} />
+            {/* Stats Grid */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: '24px',
+                marginBottom: '40px'
+            }}>
+                {statCards.map((card, index) => (
+                    <div
+                        key={index}
+                        style={{
+                            background: 'rgba(255, 255, 255, 0.02)',
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                            borderRadius: '16px',
+                            padding: '24px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'flex-start',
+                            gap: '16px'
+                        }}
+                    >
+                        <div style={{
+                            width: '48px',
+                            height: '48px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'rgba(253, 230, 138, 0.1)',
+                            borderRadius: '12px',
+                            color: '#FDE68A'
+                        }}>
+                            {card.icon}
                         </div>
-                        <div className="flex flex-col gap-2 w-full items-start justify-start">
-                            <div className="text-4xl font-semibold text-white leading-none tracking-tight">
-                                {stats.activeUsers.toLocaleString()}
+                        <div>
+                            <div style={{
+                                fontSize: '2rem',
+                                fontWeight: 600,
+                                color: '#ffffff',
+                                lineHeight: 1,
+                                marginBottom: '8px'
+                            }}>
+                                {card.value}
                             </div>
-                            <div className="text-base text-white/50 font-medium">Active Users</div>
-                        </div>
-                    </div>
-
-                    {/* Total Contests */}
-                    <div className="bg-white/[0.03] border border-white/[0.08] rounded-[20px] p-6 flex flex-col items-start gap-4 transition-all duration-300 ease-in-out backdrop-blur-[10px] relative overflow-hidden hover:-translate-y-1 hover:border-yellow-200/20 hover:shadow-[0_12px_24px_-8px_rgba(0,0,0,0.3)] before:content-[''] before:absolute before:top-0 before:left-0 before:w-full before:h-full before:bg-gradient-to-br before:from-white/5 before:to-transparent before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100">
-                        <div className="w-12 h-12 flex items-center justify-center bg-yellow-200/10 rounded-xl text-yellow-200 mb-2 flex-shrink-0">
-                            <Trophy size={24} />
-                        </div>
-                        <div className="flex flex-col gap-2 w-full items-start justify-start">
-                            <div className="text-4xl font-semibold text-white leading-none tracking-tight">
-                                {stats.totalContests}
+                            <div style={{
+                                fontSize: '0.75rem',
+                                color: 'rgba(255, 255, 255, 0.4)',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em'
+                            }}>
+                                {card.label}
                             </div>
-                            <div className="text-base text-white/50 font-medium">Total Contests</div>
                         </div>
                     </div>
-
-                    {/* Submissions */}
-                    <div className="bg-white/[0.03] border border-white/[0.08] rounded-[20px] p-6 flex flex-col items-start gap-4 transition-all duration-300 ease-in-out backdrop-blur-[10px] relative overflow-hidden hover:-translate-y-1 hover:border-yellow-200/20 hover:shadow-[0_12px_24px_-8px_rgba(0,0,0,0.3)] before:content-[''] before:absolute before:top-0 before:left-0 before:w-full before:h-full before:bg-gradient-to-br before:from-white/5 before:to-transparent before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100">
-                        <div className="w-12 h-12 flex items-center justify-center bg-yellow-200/10 rounded-xl text-yellow-200 mb-2 flex-shrink-0">
-                            <FileText size={24} />
-                        </div>
-                        <div className="flex flex-col gap-2 w-full items-start justify-start">
-                            <div className="text-4xl font-semibold text-white leading-none tracking-tight">
-                                {stats.totalSubmissions.toLocaleString()}
-                            </div>
-                            <div className="text-base text-white/50 font-medium">Submissions</div>
-                        </div>
-                    </div>
-
-                    {/* Success Rate */}
-                    <div className="bg-white/[0.03] border border-white/[0.08] rounded-[20px] p-6 flex flex-col items-start gap-4 transition-all duration-300 ease-in-out backdrop-blur-[10px] relative overflow-hidden hover:-translate-y-1 hover:border-yellow-200/20 hover:shadow-[0_12px_24px_-8px_rgba(0,0,0,0.3)] before:content-[''] before:absolute before:top-0 before:left-0 before:w-full before:h-full before:bg-gradient-to-br before:from-white/5 before:to-transparent before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100">
-                        <div className="w-12 h-12 flex items-center justify-center bg-yellow-200/10 rounded-xl text-yellow-200 mb-2 flex-shrink-0">
-                            <CheckCircle size={24} />
-                        </div>
-                        <div className="flex flex-col gap-2 w-full items-start justify-start">
-                            <div className="text-4xl font-semibold text-white leading-none tracking-tight">
-                                {stats.successRate}%
-                            </div>
-                            <div className="text-base text-white/50 font-medium">Success Rate</div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Recent Contests Section */}
-                <div className="bg-[rgba(20,20,22,0.6)] border border-white/[0.08] rounded-3xl overflow-hidden backdrop-blur-xl">
-                    {/* Section Header */}
-                    <div className="py-6 px-8 border-b border-white/[0.08] flex justify-between items-center">
-                        <h2 className="m-0 text-xl font-semibold text-white">Recent Contests</h2>
-                        <button
-                            onClick={() => navigate('/admin/contests')}
-                            className="bg-transparent border border-white/10 text-white/70 py-2 px-4 rounded-lg text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-white/5 hover:text-white hover:border-white/20"
-                        >
-                            View More
-                        </button>
-                    </div>
-
-                    {/* Contests Table */}
-                    <div className="p-0">
-                        {/* Table Header */}
-                        <div className="grid grid-cols-[2fr_1fr_1fr] gap-6 py-5 px-8 bg-white/[0.02] text-[0.85rem] font-semibold text-white/50 uppercase tracking-wider">
-                            <span>Contest</span>
-                            <span>Status</span>
-                            <span>Participants</span>
-                        </div>
-
-                        {/* Table Rows */}
-                        {recentContests.map(contest => (
-                            <div
-                                key={contest.id}
-                                className="grid grid-cols-[2fr_1fr_1fr] gap-6 py-5 px-8 border-t border-white/5 items-center transition-colors duration-200 hover:bg-white/[0.03]"
-                            >
-                                <span className="font-medium text-base text-white/90">{contest.title}</span>
-                                <span className={`text-xs py-1.5 px-4 rounded-full capitalize w-fit font-medium ${contest.status === 'active'
-                                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                        : contest.status === 'upcoming'
-                                            ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-                                            : 'bg-gray-500/10 text-gray-400 border border-gray-500/20'
-                                    }`}>
-                                    {contest.status}
-                                </span>
-                                <span className="text-white/90">{contest.participants}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                ))}
             </div>
-        </AdminLayout>
+
+            {/* Recent Contests Section */}
+            <div style={{
+                background: 'rgba(20, 20, 22, 0.6)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '20px',
+                overflow: 'hidden'
+            }}>
+                {/* Section Header */}
+                <div style={{
+                    padding: '24px 32px',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }}>
+                    <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#ffffff' }}>
+                        Recent Contests
+                    </h2>
+                    <button
+                        onClick={() => navigate('/admin/contests')}
+                        style={{
+                            background: 'transparent',
+                            border: '1px solid rgba(255, 255, 255, 0.15)',
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            fontSize: '0.875rem',
+                            fontWeight: 500,
+                            cursor: 'pointer'
+                        }}
+                    >
+                        View More
+                    </button>
+                </div>
+
+                {/* Table Header */}
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '2fr 1fr 1fr',
+                    gap: '24px',
+                    padding: '20px 32px',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: 'rgba(255, 255, 255, 0.4)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em'
+                }}>
+                    <span>Contest</span>
+                    <span>Status</span>
+                    <span>Participants</span>
+                </div>
+
+                {/* Table Rows */}
+                {recentContests.map(contest => (
+                    <div
+                        key={contest.id}
+                        style={{
+                            display: 'grid',
+                            gridTemplateColumns: '2fr 1fr 1fr',
+                            gap: '24px',
+                            padding: '20px 32px',
+                            borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                            alignItems: 'center'
+                        }}
+                    >
+                        <span style={{ fontWeight: 500, fontSize: '1rem', color: 'rgba(255, 255, 255, 0.9)' }}>
+                            {contest.title}
+                        </span>
+                        <span>
+                            <span style={{
+                                display: 'inline-block',
+                                fontSize: '0.75rem',
+                                padding: '6px 16px',
+                                borderRadius: '100px',
+                                textTransform: 'capitalize',
+                                fontWeight: 500,
+                                background: contest.status === 'active'
+                                    ? 'rgba(16, 185, 129, 0.15)'
+                                    : 'rgba(251, 191, 36, 0.15)',
+                                color: contest.status === 'active'
+                                    ? '#10b981'
+                                    : '#fbbf24',
+                                border: contest.status === 'active'
+                                    ? '1px solid rgba(16, 185, 129, 0.3)'
+                                    : '1px solid rgba(251, 191, 36, 0.3)'
+                            }}>
+                                {contest.status === 'active' ? 'Active' : 'Upcoming'}
+                            </span>
+                        </span>
+                        <span style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+                            {contest.participants}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        </div>
     );
 };
 

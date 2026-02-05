@@ -24,13 +24,21 @@ const Hero: React.FC = () => {
     }));
 
     return (
-        <div className="min-h-screen bg-black text-white relative overflow-hidden" style={{ fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif" }}>
-            {/* Stars */}
-            <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-0">
+        <div
+            className="min-h-screen bg-black text-white relative"
+            style={{
+                fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif",
+                overflowX: 'hidden',
+                width: '100%',
+                maxWidth: '100vw'
+            }}
+        >
+            {/* Stars Container */}
+            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
                 {stars.map(star => (
                     <div
                         key={star.id}
-                        className="absolute bg-white rounded-full animate-twinkle opacity-0"
+                        className="absolute bg-white rounded-full opacity-0 animate-twinkle"
                         style={{
                             left: star.left,
                             top: star.top,
@@ -44,11 +52,14 @@ const Hero: React.FC = () => {
             </div>
 
             {/* Gradient Overlay */}
-            <div className="fixed top-0 left-0 right-0 bottom-0 pointer-events-none z-0" style={{ background: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(120, 119, 198, 0.12), transparent)' }}></div>
+            <div
+                className="fixed inset-0 pointer-events-none z-0"
+                style={{ background: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(120, 119, 198, 0.12), transparent)' }}
+            />
 
             {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-[100] py-5 px-10">
-                <div className="max-w-[1200px] mx-auto flex justify-between items-center">
+            <nav className="fixed top-0 left-0 right-0 z-[100]" style={{ padding: '20px 40px' }}>
+                <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <a href="/" className="flex items-center gap-2.5 no-underline text-white font-semibold">
                         <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
                             <circle cx="12" cy="12" r="10" stroke="url(#logoGrad)" strokeWidth="1.5" />
@@ -60,11 +71,12 @@ const Hero: React.FC = () => {
                                 </linearGradient>
                             </defs>
                         </svg>
-                        <span className="bg-gradient-to-r from-yellow-200 to-yellow-400 bg-clip-text text-transparent [-webkit-background-clip:text] [-webkit-text-fill-color:transparent]">Code Combat</span>
+                        <span className="bg-gradient-to-r from-yellow-200 to-yellow-400 bg-clip-text text-transparent">Code Combat</span>
                     </a>
 
                     <button
-                        className="flex items-center gap-2 py-2.5 px-5 bg-transparent border border-white/20 text-white font-inherit text-[0.9rem] rounded-[100px] cursor-pointer transition-all duration-200 ease-in-out hover:bg-white/10 hover:border-white/30"
+                        className="flex items-center gap-2 bg-transparent text-white cursor-pointer transition-all duration-200 ease-in-out hover:bg-white/10 hover:border-white/30"
+                        style={{ padding: '10px 20px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '100px', fontSize: '0.9rem' }}
                         onClick={() => navigate('/login')}
                     >
                         Login <ArrowRight size={16} />
@@ -73,19 +85,29 @@ const Hero: React.FC = () => {
             </nav>
 
             {/* Hero Section */}
-            <section className="relative z-[1] min-h-[60vh] flex flex-col justify-center items-center pt-40 px-10 pb-[60px] text-center">
-                <h1 className="text-[4rem] font-medium leading-[1.1] m-0 mb-6 text-white/90">
+            <section
+                className="relative z-[1] flex flex-col justify-center items-center text-center"
+                style={{ minHeight: '60vh', padding: '160px 40px 60px' }}
+            >
+                <h1
+                    className="text-white/90"
+                    style={{ fontSize: '4rem', fontWeight: 500, lineHeight: 1.1, margin: '0 0 24px' }}
+                >
                     Battles that spark with
                     <br />
                     <span className="bg-gradient-to-r from-yellow-200 to-yellow-400 bg-clip-text text-transparent">competitive intelligence.</span>
                 </h1>
 
-                <p className="text-[1.2rem] text-white/50 m-0 mb-10 max-w-[500px]">
+                <p
+                    className="text-white/50"
+                    style={{ fontSize: '1.2rem', margin: '0 0 40px', maxWidth: '500px' }}
+                >
                     The coding features you need to transport your skills from the little leagues to the big time.
                 </p>
 
                 <button
-                    className="flex items-center gap-2.5 py-3.5 px-8 bg-yellow-200/10 border border-yellow-200/30 text-yellow-200 font-inherit text-[1rem] font-medium rounded-full cursor-pointer transition-all duration-200 ease-in-out hover:bg-yellow-200/20"
+                    className="flex items-center gap-2.5 bg-yellow-200/10 text-yellow-200 cursor-pointer transition-all duration-200 ease-in-out hover:bg-yellow-200/20"
+                    style={{ padding: '14px 32px', border: '1px solid rgba(253, 230, 138, 0.3)', borderRadius: '100px', fontSize: '1rem', fontWeight: 500 }}
                     onClick={() => navigate('/login')}
                 >
                     Get Started <ArrowRight size={18} />
@@ -93,18 +115,35 @@ const Hero: React.FC = () => {
             </section>
 
             {/* Preview Section */}
-            <div className="relative z-[1] px-10 pb-20">
-                <div className="max-w-[900px] mx-auto">
-                    <div className="bg-[rgba(20,20,20,0.8)] border border-white/10 rounded-2xl overflow-hidden">
-                        <div className="py-3 px-4 border-b border-white/10">
+            <div className="relative z-[1]" style={{ padding: '0 40px 80px' }}>
+                <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                    <div
+                        style={{
+                            background: 'rgba(20, 20, 20, 0.8)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '16px',
+                            overflow: 'hidden'
+                        }}
+                    >
+                        {/* Preview Header */}
+                        <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
                             <div className="flex gap-2">
-                                <span className="w-3 h-3 rounded-full bg-[#ff5f57]"></span>
-                                <span className="w-3 h-3 rounded-full bg-[#ffbd2e]"></span>
-                                <span className="w-3 h-3 rounded-full bg-[#28c840]"></span>
+                                <span className="w-3 h-3 rounded-full" style={{ background: '#ff5f57' }}></span>
+                                <span className="w-3 h-3 rounded-full" style={{ background: '#ffbd2e' }}></span>
+                                <span className="w-3 h-3 rounded-full" style={{ background: '#28c840' }}></span>
                             </div>
                         </div>
-                        <div className="p-[60px]">
-                            <div className="h-[300px] bg-white/[0.02] border-2 border-dashed border-white/10 rounded-lg flex items-center justify-center">
+                        {/* Preview Content */}
+                        <div style={{ padding: '60px' }}>
+                            <div
+                                className="flex items-center justify-center"
+                                style={{
+                                    height: '300px',
+                                    background: 'rgba(255, 255, 255, 0.02)',
+                                    border: '2px dashed rgba(255, 255, 255, 0.1)',
+                                    borderRadius: '8px'
+                                }}
+                            >
                                 <span className="text-white/30">Your Product Screenshot</span>
                             </div>
                         </div>
