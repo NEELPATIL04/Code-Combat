@@ -1,10 +1,102 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Play, Send, XCircle, Clock } from 'lucide-react';
+import Editor from '@monaco-editor/react';
+
+interface Task {
+    id: number;
+    contestId: number;
+    title: string;
+    description: string;
+    difficulty: 'Easy' | 'Medium' | 'Hard';
+    maxPoints: number;
+    orderIndex: number;
+}
+
+interface Contest {
+    id: number;
+    title: string;
+    duration: number;
+    status: string;
+}
 
 const TaskPage: React.FC = () => {
     const navigate = useNavigate();
+    const { id: contestId } = useParams<{ id: string }>();
+    const [task, setTask] = useState<Task | null>(null);
+    const [contest, setContest] = useState<Contest | null>(null);
     const [time, setTime] = useState<number>(45 * 60 + 22);
+    const [code, setCode] = useState<string>('// Write your solution here\nfunction solve() {\n    \n}\n');
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string>('');
+
+    useEffect(() => {
+        const fetchTaskData = async () => {
+            try {
+                console.log('Contest ID from URL:', contestId);
+                const token = sessionStorage.getItem('token');
+                console.log('Token exists:', !!token);
+
+                if (!token) {
+                    console.log('No token found, redirecting to login');
+                    navigate('/login');
+                    return;
+                }
+
+                const apiUrl = `/api/contests/${contestId}/tasks`;
+                console.log('Fetching from:', apiUrl);
+
+                // Fetch tasks for the contest
+                const response = await fetch(apiUrl, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                console.log('Response status:', response.status);
+                console.log('Response OK:', response.ok);
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+                    console.error('API Error:', errorData);
+                    throw new Error(errorData.message || 'Failed to fetch tasks');
+                }
+
+                const data = await response.json();
+                console.log('Received data:', data);
+
+                if (data.tasks && data.tasks.length > 0) {
+                    console.log('Setting task:', data.tasks[0]);
+                    setTask(data.tasks[0]); // Get the first task
+                    setContest(data.contest);
+
+                    // Set timer based on contest duration
+                    if (data.contest?.duration) {
+                        setTime(data.contest.duration * 60);
+                    }
+                } else {
+                    console.log('No tasks found in response');
+                    setError('No tasks found for this contest');
+                }
+
+                setLoading(false);
+            } catch (err) {
+                console.error('Error fetching task:', err);
+                setError(err instanceof Error ? err.message : 'Failed to load task');
+                setLoading(false);
+            }
+        };
+
+        if (contestId) {
+            console.log('Starting fetch with contest ID:', contestId);
+            fetchTaskData();
+        } else {
+            console.log('No contest ID provided');
+            setError('No contest ID provided');
+            setLoading(false);
+        }
+    }, [contestId, navigate]);
 
     useEffect(() => {
         const interval = setInterval(() => setTime(prev => prev > 0 ? prev - 1 : 0), 1000);
@@ -17,26 +109,86 @@ const TaskPage: React.FC = () => {
         return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
 
+    const handleEditorChange = (value: string | undefined) => {
+        if (value !== undefined) {
+            setCode(value);
+        }
+    };
+
+    const handleRunTests = () => {
+        console.log('Running tests with code:', code);
+        // TODO: Implement test runner
+    };
+
+    const handleSubmit = () => {
+        console.log('Submitting code:', code);
+        // TODO: Implement submission
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-black text-white flex items-center justify-center">
+                <div className="text-xl">Loading task...</div>
+            </div>
+        );
+    }
+
+    if (error || !task) {
+        return (
+            <div className="min-h-screen bg-black text-white flex items-center justify-center">
+                <div className="text-xl text-red-500">{error || 'Task not found'}</div>
+            </div>
+        );
+    }
+
+    const getDifficultyColor = (difficulty: string) => {
+        switch (difficulty) {
+            case 'Easy':
+                return 'bg-emerald-500/15 text-emerald-500';
+            case 'Medium':
+                return 'bg-amber-500/15 text-amber-500';
+            case 'Hard':
+                return 'bg-red-500/15 text-red-500';
+            default:
+                return 'bg-amber-500/15 text-amber-500';
+        }
+    };
+
     return (
-        <div className="min-h-screen bg-black text-white font-sans">
-            <nav className="fixed top-0 left-0 right-0 z-[100] py-4 px-8 bg-black/80 backdrop-blur-[20px] border-b border-white/[0.08]">
-                <div className="flex justify-between items-center text-white font-sans">
+        <div className="min-h-screen bg-black text-white" style={{ fontFamily: "'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+            {/* Navigation */}
+            <nav className="fixed top-0 left-0 right-0 z-[100] py-4 px-8 border-b" style={{
+                background: 'rgba(0, 0, 0, 0.8)',
+                backdropFilter: 'blur(20px)',
+                borderColor: 'rgba(255, 255, 255, 0.08)'
+            }}>
+                <div className="flex justify-between items-center">
                     <a href="/" className="flex items-center gap-2.5 no-underline text-white font-semibold">
                         <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
                             <circle cx="14" cy="14" r="12" stroke="url(#logoGrad3)" strokeWidth="1.5" />
                             <circle cx="14" cy="14" r="5" fill="url(#logoGrad3)" />
-                            <defs><linearGradient id="logoGrad3" x1="0" y1="0" x2="28" y2="28"><stop offset="0%" stopColor="#FDE68A" /><stop offset="100%" stopColor="#F59E0B" /></linearGradient></defs>
+                            <defs>
+                                <linearGradient id="logoGrad3" x1="0" y1="0" x2="28" y2="28">
+                                    <stop offset="0%" stopColor="#FDE68A" />
+                                    <stop offset="100%" stopColor="#FBBF24" />
+                                </linearGradient>
+                            </defs>
                         </svg>
-                        <span className="bg-gradient-to-r from-yellow-200 to-amber-500 bg-clip-text text-transparent">Code Combat</span>
+                        <span style={{
+                            background: 'linear-gradient(90deg, #FDE68A 0%, #FBBF24 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text'
+                        }}>Code Combat</span>
                     </a>
-                    <div className="flex items-center gap-5 text-white font-sans">
-                        <span className="text-white/70 text-[0.95rem]">Binary Search Challenge</span>
+                    <div className="flex items-center gap-5">
+                        <span className="text-white/70 text-[0.95rem]">{contest?.title || 'Contest'}</span>
                         <div className="flex items-center gap-2 text-[1.1rem] font-semibold text-yellow-200 font-mono">
                             <Clock size={16} />{formatTime(time)}
                         </div>
                         <button
                             className="flex items-center gap-1.5 py-2 px-4 bg-red-500/10 border border-red-500/30 text-red-500 rounded-full font-inherit text-[0.9rem] cursor-pointer transition-all duration-200 hover:bg-red-500/20"
-                            onClick={() => navigate('/')}
+                            onClick={() => navigate('/player')}
                         >
                             <XCircle size={16} /> Abort
                         </button>
@@ -44,56 +196,59 @@ const TaskPage: React.FC = () => {
                 </div>
             </nav>
 
+            {/* Main Content */}
             <div className="relative z-[1] grid grid-cols-2 gap-6 pt-[88px] px-8 pb-8 h-screen box-border">
-                <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl overflow-hidden flex flex-col text-white font-sans">
+                {/* Left Side - Task Description */}
+                <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl overflow-hidden flex flex-col">
                     <div className="py-5 px-6 border-b border-white/[0.08] flex items-center gap-4">
-                        <span className="py-1 px-3 bg-amber-500/15 text-amber-500 rounded-full text-xs font-medium">Medium</span>
-                        <h1 className="m-0 text-[1.3rem] font-medium text-white">Binary Search</h1>
+                        <span className={`py-1 px-3 rounded-full text-xs font-medium ${getDifficultyColor(task.difficulty)}`}>
+                            {task.difficulty}
+                        </span>
+                        <h1 className="m-0 text-[1.3rem] font-medium text-white">{task.title}</h1>
                     </div>
                     <div className="p-6 overflow-y-auto flex-1">
-                        <p className="text-white/70 leading-[1.7] mb-6">Implement a function that performs a binary search on a sorted array of integers.</p>
-                        <div className="mb-5 text-white font-sans">
-                            <h3 className="text-xs text-white/50 uppercase tracking-wider mb-2 font-sans font-normal">Input</h3>
-                            <code className="block py-3 px-4 bg-white/[0.03] border border-white/[0.06] rounded-lg font-mono text-[0.9rem] text-white">nums = [-1, 0, 3, 5, 9, 12], target = 9</code>
-                        </div>
-                        <div className="mb-5 text-white font-sans">
-                            <h3 className="text-xs text-white/50 uppercase tracking-wider mb-2 font-sans font-normal">Output</h3>
-                            <code className="block py-3 px-4 bg-white/[0.03] border border-white/[0.06] rounded-lg font-mono text-[0.9rem] text-white">4</code>
-                        </div>
-                        <div className="mb-5 text-white font-sans">
-                            <h3 className="text-xs text-white/50 uppercase tracking-wider mb-2 font-sans font-normal">Constraints</h3>
-                            <code className="block py-3 px-4 bg-white/[0.03] border border-white/[0.06] rounded-lg font-mono text-[0.9rem] text-white">1 ≤ nums.length ≤ 10⁴</code>
+                        <div className="text-white/70 leading-[1.7] whitespace-pre-wrap">
+                            {task.description}
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl overflow-hidden flex flex-col text-white font-sans">
+                {/* Right Side - Monaco Editor */}
+                <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl overflow-hidden flex flex-col">
                     <div className="py-3 px-4 border-b border-white/[0.08] flex items-center">
                         <span className="py-2 px-4 bg-yellow-200/10 text-yellow-200 rounded-lg text-[0.85rem]">solution.ts</span>
                     </div>
-                    <div className="flex-1 flex overflow-auto p-4 text-white font-sans">
-                        <div className="w-10 text-right pr-4 border-r border-white/[0.06] mr-4 text-white/30 font-mono text-[0.9rem] leading-[1.6]">
-                            {Array.from({ length: 12 }, (_, i) => <div key={i}>{i + 1}</div>)}
-                        </div>
-                        <div className="flex-1 font-mono text-[0.9rem] leading-[1.6] text-white/80">
-                            <span className="text-[#c792ea]">function</span> <span className="text-[#82aaff]">search</span>(nums: <span className="text-[#c792ea]">number</span>[], target: <span className="text-[#c792ea]">number</span>): <span className="text-[#c792ea]">number</span> {'{'}<br />
-                            &nbsp;&nbsp;<span className="text-[#546e7a]">// Write your code here</span><br />
-                            &nbsp;&nbsp;<span className="text-[#c792ea]">let</span> left = <span className="text-[#f78c6c]">0</span>;<br />
-                            &nbsp;&nbsp;<span className="text-[#c792ea]">let</span> right = nums.length - <span className="text-[#f78c6c]">1</span>;<br />
-                            &nbsp;&nbsp;<br />
-                            &nbsp;&nbsp;<span className="text-[#c792ea]">while</span> (left {'<='} right) {'{'}<br />
-                            &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-[#546e7a]">// Your logic</span><br />
-                            &nbsp;&nbsp;{'}'}<br />
-                            &nbsp;&nbsp;<br />
-                            &nbsp;&nbsp;<span className="text-[#c792ea]">return</span> -<span className="text-[#f78c6c]">1</span>;<br />
-                            {'}'}
-                        </div>
+                    <div className="flex-1 overflow-hidden">
+                        <Editor
+                            height="100%"
+                            defaultLanguage="typescript"
+                            value={code}
+                            onChange={handleEditorChange}
+                            theme="vs-dark"
+                            options={{
+                                minimap: { enabled: false },
+                                fontSize: 14,
+                                lineNumbers: 'on',
+                                scrollBeyondLastLine: false,
+                                automaticLayout: true,
+                                tabSize: 2,
+                                wordWrap: 'on',
+                                padding: { top: 16, bottom: 16 },
+                                fontFamily: "'JetBrains Mono', 'Consolas', 'Courier New', monospace",
+                            }}
+                        />
                     </div>
-                    <div className="p-4 border-t border-white/[0.08] flex justify-end gap-3 text-white font-sans">
-                        <button className="flex items-center gap-2 py-2.5 px-5 rounded-full font-inherit text-[0.9rem] cursor-pointer bg-white/5 border border-white/15 text-white transition-all duration-200 hover:bg-white/10">
+                    <div className="p-4 border-t border-white/[0.08] flex justify-end gap-3">
+                        <button
+                            className="flex items-center gap-2 py-2.5 px-5 rounded-full font-inherit text-[0.9rem] cursor-pointer bg-white/5 border border-white/15 text-white transition-all duration-200 hover:bg-white/10"
+                            onClick={handleRunTests}
+                        >
                             <Play size={16} /> Run Tests
                         </button>
-                        <button className="flex items-center gap-2 py-2.5 px-5 rounded-full font-inherit text-[0.9rem] cursor-pointer bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 transition-all duration-200 hover:bg-emerald-500/25">
+                        <button
+                            className="flex items-center gap-2 py-2.5 px-5 rounded-full font-inherit text-[0.9rem] cursor-pointer bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 transition-all duration-200 hover:bg-emerald-500/25"
+                            onClick={handleSubmit}
+                        >
                             <Send size={16} /> Submit
                         </button>
                     </div>

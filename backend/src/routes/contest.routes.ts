@@ -9,6 +9,8 @@ import {
   removeParticipant,
   startContest,
   getMyContests,
+  getContestTasks,
+  getTaskById,
 } from '../controllers/contest.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/roleCheck.middleware';
@@ -41,25 +43,12 @@ router.post('/', authenticate, requireRole(['admin', 'super_admin']), createCont
 router.get('/', authenticate, requireRole(['admin', 'super_admin']), getAllContests);
 
 /**
- * GET /api/contests/:id
- * Get single contest by ID
+ * GET /api/contests/:id/tasks
+ * Get all tasks for a contest
  * Requires: Authentication
+ * IMPORTANT: This must come BEFORE /:id to avoid route conflicts
  */
-router.get('/:id', authenticate, getContestById);
-
-/**
- * PUT /api/contests/:id
- * Update contest
- * Requires: Authentication + Admin role
- */
-router.put('/:id', authenticate, requireRole(['admin', 'super_admin']), updateContest);
-
-/**
- * DELETE /api/contests/:id
- * Delete contest
- * Requires: Authentication + Admin role
- */
-router.delete('/:id', authenticate, requireRole(['admin', 'super_admin']), deleteContest);
+router.get('/:id/tasks', authenticate, getContestTasks);
 
 /**
  * POST /api/contests/:id/participants
@@ -81,5 +70,27 @@ router.delete('/:id/participants/:userId', authenticate, requireRole(['admin', '
  * Requires: Authentication + Admin role
  */
 router.post('/:id/start', authenticate, requireRole(['admin', 'super_admin']), startContest);
+
+/**
+ * GET /api/contests/:id
+ * Get single contest by ID
+ * Requires: Authentication
+ * IMPORTANT: This must come AFTER specific routes like /:id/tasks
+ */
+router.get('/:id', authenticate, getContestById);
+
+/**
+ * PUT /api/contests/:id
+ * Update contest
+ * Requires: Authentication + Admin role
+ */
+router.put('/:id', authenticate, requireRole(['admin', 'super_admin']), updateContest);
+
+/**
+ * DELETE /api/contests/:id
+ * Delete contest
+ * Requires: Authentication + Admin role
+ */
+router.delete('/:id', authenticate, requireRole(['admin', 'super_admin']), deleteContest);
 
 export default router;

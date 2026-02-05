@@ -181,7 +181,7 @@ export const getContestById = async (req: Request, res: Response, next: NextFunc
 export const updateContest = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const contestId = parseInt(req.params.id);
-    const { title, description, difficulty, duration, status, startPassword } = req.body;
+    const { title, description, difficulty, duration, status, startPassword, contestTasks } = req.body;
 
     const [existingContest] = await db
       .select()
@@ -209,6 +209,25 @@ export const updateContest = async (req: Request, res: Response, next: NextFunct
       .set(updateData)
       .where(eq(contests.id, contestId))
       .returning();
+
+    // Update tasks if provided
+    if (contestTasks && Array.isArray(contestTasks)) {
+      // Delete existing tasks
+      await db.delete(tasks).where(eq(tasks.contestId, contestId));
+
+      // Insert new tasks
+      if (contestTasks.length > 0) {
+        const taskValues = contestTasks.map((task: any, index: number) => ({
+          contestId: contestId,
+          title: task.title,
+          description: task.description,
+          difficulty: task.difficulty || difficulty || 'Medium',
+          maxPoints: task.maxPoints || 100,
+          orderIndex: index,
+        }));
+        await db.insert(tasks).values(taskValues);
+      }
+    }
 
     res.status(200).json({
       message: 'Contest updated successfully',
@@ -414,6 +433,84 @@ export const getMyContests = async (req: Request, res: Response, next: NextFunct
     });
 
     res.status(200).json({ contests: myContests });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get tasks for a specific contest
+ * GET /api/contests/:id/tasks
+ */
+export const getContestTasks = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const contestId = parseInt(req.params.id as string);
+
+    const [contest] = await db
+      .select()
+      .from(contests)
+      .where(eq(contests.id, contestId));
+
+    if (!contest) {
+      res.status(404).json({ message: 'Contest not found' });
+      return;
+    }
+
+    // Get all tasks for this contest
+    const contestTasks = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.contestId, contestId))
+      .orderBy(tasks.orderIndex);
+
+    res.status(200).json({
+      contest: {
+        id: contest.id,
+        title: contest.title,
+        difficulty: contest.difficulty,
+        duration: contest.duration,
+        status: contest.status,
+      },
+      tasks: contestTasks,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get single task by ID
+ * GET /api/tasks/:id
+ */
+export const getTaskById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const taskId = parseInt(req.params.id as string);
+
+    const [task] = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.id, taskId));
+
+    if (!task) {
+      res.status(404).json({ message: 'Task not found' });
+      return;
+    }
+
+    // Get contest info
+    const [contest] = await db
+      .select()
+      .from(contests)
+      .where(eq(contests.id, task.contestId));
+
+    res.status(200).json({
+      task,
+      contest: contest ? {
+        id: contest.id,
+        title: contest.title,
+        duration: contest.duration,
+        status: contest.status,
+      } : null,
+    });
   } catch (error) {
     next(error);
   }

@@ -101,17 +101,33 @@ const Contests: React.FC = () => {
 
     const filteredContests = filter === 'all' ? contests : contests.filter(c => c.status === filter);
 
-    const openModal = (contest: Contest | null = null) => {
+    const openModal = async (contest: Contest | null = null) => {
         if (contest) {
+            console.log('Opening modal for contest:', contest);
             setEditingContest(contest);
-            setFormData({
+
+            // Fetch tasks for this contest
+            let contestTasks: Task[] = [];
+            try {
+                console.log('Fetching tasks for contest ID:', contest.id);
+                const data = await contestAPI.getById(contest.id);
+                console.log('Received contest data:', data);
+                contestTasks = data.contest.tasks || [];
+                console.log('Contest tasks:', contestTasks);
+            } catch (err) {
+                console.error('Failed to load contest tasks:', err);
+            }
+
+            const formDataToSet = {
                 title: contest.title,
                 description: contest.description || '',
                 difficulty: contest.difficulty,
                 duration: contest.duration,
                 startPassword: '',
-                tasks: [],
-            });
+                tasks: contestTasks,
+            };
+            console.log('Setting form data:', formDataToSet);
+            setFormData(formDataToSet);
         } else {
             setEditingContest(null);
             setFormData({
@@ -205,15 +221,23 @@ const Contests: React.FC = () => {
                 participantIds: [],
             };
 
+            console.log('Saving contest data:', contestData);
+            console.log('Is editing?', !!editingContest);
+
             if (editingContest) {
-                await contestAPI.update(editingContest.id, contestData);
+                const response = await contestAPI.update(editingContest.id, contestData);
+                console.log('Update response:', response);
+                alert('Contest updated successfully!');
             } else {
-                await contestAPI.create(contestData);
+                const response = await contestAPI.create(contestData);
+                console.log('Create response:', response);
+                alert('Contest created successfully!');
             }
 
             await loadContests();
             closeModal();
         } catch (err) {
+            console.error('Save error:', err);
             setError(err instanceof Error ? err.message : 'Failed to save contest');
         } finally {
             setLoading(false);
