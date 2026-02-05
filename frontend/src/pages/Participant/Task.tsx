@@ -11,6 +11,7 @@ interface Task {
     difficulty: 'Easy' | 'Medium' | 'Hard';
     maxPoints: number;
     orderIndex: number;
+    allowedLanguages: string[];
 }
 
 interface Contest {
@@ -20,13 +21,39 @@ interface Contest {
     status: string;
 }
 
+const LANGUAGE_BOILERPLATES: Record<string, string> = {
+    javascript: '// Write your JavaScript solution here\nfunction solve() {\n    \n}\n',
+    typescript: '// Write your TypeScript solution here\nfunction solve() {\n    \n}\n',
+    python: '# Write your Python solution here\ndef solve():\n    pass\n',
+    java: '// Write your Java solution here\nclass Solution {\n    public static void main(String[] args) {\n        \n    }\n}\n',
+    cpp: '// Write your C++ solution here\n#include <iostream>\nusing namespace std;\n\nint main() {\n    return 0;\n}\n',
+    csharp: '// Write your C# solution here\nusing System;\n\nclass Solution {\n    static void Main() {\n        \n    }\n}\n',
+    go: '// Write your Go solution here\npackage main\n\nimport "fmt"\n\nfunc main() {\n    \n}\n',
+    rust: '// Write your Rust solution here\nfn main() {\n    \n}\n',
+};
+
+const getFileExtension = (lang: string): string => {
+    switch (lang) {
+        case 'javascript': return 'js';
+        case 'typescript': return 'ts';
+        case 'python': return 'py';
+        case 'java': return 'java';
+        case 'cpp': return 'cpp';
+        case 'csharp': return 'cs';
+        case 'go': return 'go';
+        case 'rust': return 'rs';
+        default: return 'txt';
+    }
+};
+
 const TaskPage: React.FC = () => {
     const navigate = useNavigate();
     const { id: contestId } = useParams<{ id: string }>();
     const [task, setTask] = useState<Task | null>(null);
     const [contest, setContest] = useState<Contest | null>(null);
     const [time, setTime] = useState<number>(45 * 60 + 22);
-    const [code, setCode] = useState<string>('// Write your solution here\nfunction solve() {\n    \n}\n');
+    const [language, setLanguage] = useState<string>('typescript');
+    const [code, setCode] = useState<string>(LANGUAGE_BOILERPLATES['typescript']);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
 
@@ -71,6 +98,13 @@ const TaskPage: React.FC = () => {
                     setTask(data.tasks[0]); // Get the first task
                     setContest(data.contest);
 
+                    // Set initial language if available
+                    if (data.tasks[0].allowedLanguages && data.tasks[0].allowedLanguages.length > 0) {
+                        const initialLang = data.tasks[0].allowedLanguages[0];
+                        setLanguage(initialLang);
+                        setCode(LANGUAGE_BOILERPLATES[initialLang] || LANGUAGE_BOILERPLATES['typescript']);
+                    }
+
                     // Set timer based on contest duration
                     if (data.contest?.duration) {
                         setTime(data.contest.duration * 60);
@@ -107,6 +141,20 @@ const TaskPage: React.FC = () => {
         const m = Math.floor(seconds / 60);
         const s = seconds % 60;
         return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
+    const handleLanguageChange = (newLang: string) => {
+        // Only reset code if it's currently a boilerplate or empty
+        const currentBoilerplate = LANGUAGE_BOILERPLATES[language];
+        const isDefaultCode = !code.trim() || code === currentBoilerplate;
+
+        if (!isDefaultCode) {
+            const confirmReset = window.confirm('Switching languages will reset your current code. Do you want to proceed?');
+            if (!confirmReset) return;
+        }
+
+        setCode(LANGUAGE_BOILERPLATES[newLang] || LANGUAGE_BOILERPLATES['typescript']);
+        setLanguage(newLang);
     };
 
     const handleEditorChange = (value: string | undefined) => {
@@ -197,14 +245,22 @@ const TaskPage: React.FC = () => {
             </nav>
 
             {/* Main Content */}
-            <div className="relative z-[1] grid grid-cols-2 gap-6 pt-[88px] px-8 pb-8 h-screen box-border">
+            <div
+                className="relative z-[1] grid grid-cols-2 gap-6 px-8 pb-8 box-border overflow-hidden"
+                style={{ paddingTop: '120px', height: '100vh' }}
+            >
                 {/* Left Side - Task Description */}
                 <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl overflow-hidden flex flex-col">
-                    <div className="py-5 px-6 border-b border-white/[0.08] flex items-center gap-4">
-                        <span className={`py-1 px-3 rounded-full text-xs font-medium ${getDifficultyColor(task.difficulty)}`}>
-                            {task.difficulty}
-                        </span>
-                        <h1 className="m-0 text-[1.3rem] font-medium text-white">{task.title}</h1>
+                    <div className="py-4 px-6 border-b border-white/[0.08] flex items-center justify-between bg-white/[0.02]">
+                        <div className="flex items-center gap-3">
+                            <span className={`py-1 px-3 rounded-full text-[0.7rem] font-semibold uppercase tracking-wider ${getDifficultyColor(task.difficulty)}`}>
+                                {task.difficulty}
+                            </span>
+                            <h1 className="m-0 text-[1.1rem] font-semibold text-white">{task.title}</h1>
+                        </div>
+                        <div className="text-white/40 text-[0.8rem] font-medium">
+                            Max Points: {task.maxPoints}
+                        </div>
                     </div>
                     <div className="p-6 overflow-y-auto flex-1">
                         <div className="text-white/70 leading-[1.7] whitespace-pre-wrap">
@@ -215,13 +271,40 @@ const TaskPage: React.FC = () => {
 
                 {/* Right Side - Monaco Editor */}
                 <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl overflow-hidden flex flex-col">
-                    <div className="py-3 px-4 border-b border-white/[0.08] flex items-center">
-                        <span className="py-2 px-4 bg-yellow-200/10 text-yellow-200 rounded-lg text-[0.85rem]">solution.ts</span>
+                    <div className="py-3 px-4 border-b border-white/[0.08] flex items-center justify-between bg-white/[0.02]">
+                        <div className="flex items-center gap-3">
+                            <span className="text-yellow-200/80 font-semibold text-[0.8rem] uppercase tracking-wider">Select Language:</span>
+                            <select
+                                value={language}
+                                onChange={(e) => handleLanguageChange(e.target.value)}
+                                className="bg-yellow-200/10 border border-yellow-200/30 rounded-lg py-1.5 px-3 text-yellow-200 text-[0.85rem] font-medium focus:outline-none focus:border-yellow-200/60 focus:ring-1 focus:ring-yellow-200/20 transition-all cursor-pointer"
+                            >
+                                {task?.allowedLanguages && task.allowedLanguages.length > 0 ? (
+                                    task.allowedLanguages.map(lang => (
+                                        <option key={lang} value={lang} className="bg-[#1e1e1e] text-white">
+                                            {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                                        </option>
+                                    ))
+                                ) : (
+                                    <>
+                                        <option value="typescript" className="bg-[#1e1e1e] text-white">TypeScript</option>
+                                        <option value="javascript" className="bg-[#1e1e1e] text-white">JavaScript</option>
+                                    </>
+                                )}
+                            </select>
+                        </div>
+                        <div className="flex items-center">
+                            <span className="py-1 px-3 bg-yellow-200/10 text-yellow-200 rounded-lg text-[0.8rem] font-medium font-mono">
+                                solution.{getFileExtension(language)}
+                            </span>
+                        </div>
                     </div>
-                    <div className="flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-hidden text-left tracking-normal" style={{ letterSpacing: 'normal' }}>
                         <Editor
+                            key={`${task.id}-${language}`}
                             height="100%"
-                            defaultLanguage="typescript"
+                            defaultLanguage={language}
+                            language={language}
                             value={code}
                             onChange={handleEditorChange}
                             theme="vs-dark"
@@ -234,7 +317,10 @@ const TaskPage: React.FC = () => {
                                 tabSize: 2,
                                 wordWrap: 'on',
                                 padding: { top: 16, bottom: 16 },
-                                fontFamily: "'JetBrains Mono', 'Consolas', 'Courier New', monospace",
+                                fontFamily: "'Consolas', 'Monaco', 'Courier New', monospace",
+                                fontLigatures: false,
+                                renderWhitespace: 'selection',
+                                fixedOverflowWidgets: true,
                             }}
                         />
                     </div>

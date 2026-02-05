@@ -21,7 +21,19 @@ interface Task {
     description: string;
     difficulty: string;
     maxPoints: number;
+    allowedLanguages: string[];
 }
+
+const SUPPORTED_LANGUAGES = [
+    { id: 'javascript', name: 'JavaScript' },
+    { id: 'typescript', name: 'TypeScript' },
+    { id: 'python', name: 'Python' },
+    { id: 'java', name: 'Java' },
+    { id: 'cpp', name: 'C++' },
+    { id: 'csharp', name: 'C#' },
+    { id: 'go', name: 'Go' },
+    { id: 'rust', name: 'Rust' },
+];
 
 interface User {
     id: number;
@@ -48,8 +60,10 @@ const Contests: React.FC = () => {
     const [showModal, setShowModal] = useState<boolean>(false);
     const [showParticipantModal, setShowParticipantModal] = useState<boolean>(false);
     const [editingContest, setEditingContest] = useState<Contest | null>(null);
+    const [editingTaskIndex, setEditingTaskIndex] = useState<number | null>(null);
     const [selectedContestId, setSelectedContestId] = useState<number | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
+    const [fetchingDetails, setFetchingDetails] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
 
     const [formData, setFormData] = useState<FormData>({
@@ -66,6 +80,7 @@ const Contests: React.FC = () => {
         description: '',
         difficulty: 'Medium',
         maxPoints: 100,
+        allowedLanguages: ['javascript', 'typescript', 'python', 'java', 'cpp'],
     });
 
     const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
@@ -105,31 +120,39 @@ const Contests: React.FC = () => {
         if (contest) {
             console.log('Opening modal for contest:', contest);
             setEditingContest(contest);
+            setFetchingDetails(true);
+            setShowModal(true); // Show modal immediately with loading state
 
-            // Fetch tasks for this contest
-            let contestTasks: Task[] = [];
-            try {
-                console.log('Fetching tasks for contest ID:', contest.id);
-                const data = await contestAPI.getById(contest.id);
-                console.log('Received contest data:', data);
-                contestTasks = data.contest.tasks || [];
-                console.log('Contest tasks:', contestTasks);
-            } catch (err) {
-                console.error('Failed to load contest tasks:', err);
-            }
-
-            const formDataToSet = {
+            // Initialize form with basic info first
+            setFormData({
                 title: contest.title,
                 description: contest.description || '',
                 difficulty: contest.difficulty,
                 duration: contest.duration,
                 startPassword: '',
-                tasks: contestTasks,
-            };
-            console.log('Setting form data:', formDataToSet);
-            setFormData(formDataToSet);
+                tasks: [], // Empty initially while fetching
+            });
+
+            // Fetch tasks for this contest
+            try {
+                console.log('Fetching tasks for contest ID:', contest.id);
+                const data = await contestAPI.getById(contest.id);
+                console.log('Received contest data:', data);
+
+                // Update form with fetched tasks
+                setFormData(prev => ({
+                    ...prev,
+                    tasks: data.contest.tasks || []
+                }));
+            } catch (err) {
+                console.error('Failed to load contest tasks:', err);
+                setError('Failed to load contest tasks. Please try again.');
+            } finally {
+                setFetchingDetails(false);
+            }
         } else {
             setEditingContest(null);
+            setFetchingDetails(false);
             setFormData({
                 title: '',
                 description: '',
@@ -138,14 +161,15 @@ const Contests: React.FC = () => {
                 startPassword: '',
                 tasks: [],
             });
+            setShowModal(true);
+            setError('');
         }
-        setShowModal(true);
-        setError('');
     };
 
     const closeModal = () => {
         setShowModal(false);
         setEditingContest(null);
+        setEditingTaskIndex(null);
         setFormData({
             title: '',
             description: '',
@@ -159,6 +183,7 @@ const Contests: React.FC = () => {
             description: '',
             difficulty: 'Medium',
             maxPoints: 100,
+            allowedLanguages: ['javascript', 'typescript', 'python', 'java', 'cpp'],
         });
         setError('');
     };
@@ -179,19 +204,42 @@ const Contests: React.FC = () => {
         }));
     };
 
+    const toggleLanguage = (langId: string) => {
+        setTaskInput(prev => ({
+            ...prev,
+            allowedLanguages: prev.allowedLanguages.includes(langId)
+                ? prev.allowedLanguages.filter(l => l !== langId)
+                : [...prev.allowedLanguages, langId]
+        }));
+    };
+
     const addTask = () => {
         if (taskInput.title.trim() && taskInput.description.trim()) {
-            setFormData(prev => ({
-                ...prev,
-                tasks: [...prev.tasks, { ...taskInput }]
-            }));
+            setFormData(prev => {
+                const newTasks = [...prev.tasks];
+                if (editingTaskIndex !== null) {
+                    newTasks[editingTaskIndex] = { ...taskInput };
+                } else {
+                    newTasks.push({ ...taskInput });
+                }
+                return { ...prev, tasks: newTasks };
+            });
+
             setTaskInput({
                 title: '',
                 description: '',
                 difficulty: 'Medium',
                 maxPoints: 100,
+                allowedLanguages: ['javascript', 'typescript', 'python', 'java', 'cpp'],
             });
+            setEditingTaskIndex(null);
         }
+    };
+
+    const editTask = (index: number) => {
+        const taskToEdit = formData.tasks[index];
+        setTaskInput({ ...taskToEdit });
+        setEditingTaskIndex(index);
     };
 
     const removeTask = (index: number) => {
@@ -202,6 +250,12 @@ const Contests: React.FC = () => {
     };
 
     const handleSave = async () => {
+        // Check for unsaved task input
+        if (taskInput.title.trim() || taskInput.description.trim()) {
+            setError('You have entered task details but not added the task. Please click "Add Task" first to include it.');
+            return;
+        }
+
         try {
             if (!formData.title.trim()) {
                 setError('Contest title is required');
@@ -352,21 +406,6 @@ const Contests: React.FC = () => {
                         >
                             <Plus size={18} /> Create your first contest
                         </button>
-                    </div>
-                ) : (
-                    filteredContests.map(contest => (
-                        <div key={contest.id} className="flex items-center justify-between py-5 px-6 bg-white/[0.02] border border-white/[0.08] rounded-xl transition-all duration-200 hover:border-white/15">
-                            <div className="flex items-center gap-4">
-                                <span className={`w-2.5 h-2.5 rounded-full ${contest.status === 'active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
-                                    contest.status === 'upcoming' ? 'bg-amber-500' :
-                                        'bg-gray-500'
-                                    }`}></span>
-                                <div>
-                                    <h3 className="text-[1rem] font-medium m-0 mb-1 text-white">{contest.title}</h3>
-                                    <span className="text-[0.75rem] text-white/40 py-0.5 px-2 bg-white/5 rounded-full mr-2">
-                                        {contest.difficulty}
-                                    </span>
-                                    {contest.isStarted && <span className="text-[0.7rem] py-0.5 px-2.5 bg-emerald-500/20 text-emerald-500 rounded-full font-semibold uppercase">Started</span>}
                                 </div>
                             </div>
                             <div className="flex gap-8">
@@ -430,159 +469,212 @@ const Contests: React.FC = () => {
                                 <X size={20} />
                             </button>
                         </div>
-                        <div className="p-7">
-                            {error && (
-                                <div className="bg-red-500/10 border border-red-500/40 text-red-400 p-3.5 rounded-[10px] mb-6 text-[0.9rem] flex items-center gap-2.5">
-                                    {error}
-                                </div>
-                            )}
 
-                            <div className="mb-6">
-                                <label className="block mb-2.5 text-white/85 text-[0.9rem] font-semibold">Title *</label>
-                                <input
-                                    name="title"
-                                    value={formData.title}
-                                    onChange={handleChange}
-                                    placeholder="Contest title..."
-                                    required
-                                    className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
-                                />
+                        {fetchingDetails ? (
+                            <div className="p-12 text-center">
+                                <div className="inline-block w-8 h-8 border-2 border-yellow-200/20 border-t-yellow-200 rounded-full animate-spin mb-4"></div>
+                                <p className="text-white/60">Loading contest details...</p>
                             </div>
-
-                            <div className="mb-6">
-                                <label className="block mb-2.5 text-white/85 text-[0.9rem] font-semibold">Description</label>
-                                <textarea
-                                    name="description"
-                                    value={formData.description}
-                                    onChange={handleChange}
-                                    placeholder="Contest description..."
-                                    rows={3}
-                                    className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35 resize-y min-h-[90px] leading-relaxed"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4.5 mb-6">
-                                <div>
-                                    <label className="block mb-2.5 text-white/85 text-[0.9rem] font-semibold">Difficulty</label>
-                                    <select
-                                        name="difficulty"
-                                        value={formData.difficulty}
-                                        onChange={handleChange}
-                                        className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)]"
-                                    >
-                                        <option value="Easy">Easy</option>
-                                        <option value="Medium">Medium</option>
-                                        <option value="Hard">Hard</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block mb-2.5 text-white/85 text-[0.9rem] font-semibold">Duration (min) *</label>
-                                    <input
-                                        type="number"
-                                        name="duration"
-                                        value={formData.duration}
-                                        onChange={handleChange}
-                                        min="1"
-                                        required
-                                        className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)]"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="mb-6">
-                                <label className="block mb-2.5 text-white/85 text-[0.9rem] font-semibold">Start Password (optional)</label>
-                                <input
-                                    type="password"
-                                    name="startPassword"
-                                    value={formData.startPassword}
-                                    onChange={handleChange}
-                                    placeholder="Password to start contest..."
-                                    className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
-                                />
-                            </div>
-
-                            <div className="mt-8 pt-7 border-t border-white/10">
-                                <div className="flex justify-between items-center mb-4.5">
-                                    <h3 className="m-0 text-[1.05rem] font-semibold text-white">Tasks</h3>
-                                    {formData.tasks.length > 0 && (
-                                        <span className="text-[0.85rem] text-white/50">{formData.tasks.length} task{formData.tasks.length !== 1 ? 's' : ''}</span>
-                                    )}
-                                </div>
-                                <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-5 mb-4.5">
-                                    <div className="mb-4">
-                                        <input
-                                            name="title"
-                                            value={taskInput.title}
-                                            onChange={handleTaskInputChange}
-                                            placeholder="Task title..."
-                                            className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
-                                        />
-                                    </div>
-                                    <div className="mb-4">
-                                        <textarea
-                                            name="description"
-                                            value={taskInput.description}
-                                            onChange={handleTaskInputChange}
-                                            placeholder="Task description..."
-                                            rows={2}
-                                            className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35 resize-y min-h-[90px] leading-relaxed"
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-[1.2fr_120px] gap-3.5 items-end mb-4">
-                                        <div>
-                                            <select
-                                                name="difficulty"
-                                                value={taskInput.difficulty}
-                                                onChange={handleTaskInputChange}
-                                                className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)]"
-                                            >
-                                                <option value="Easy">Easy</option>
-                                                <option value="Medium">Medium</option>
-                                                <option value="Hard">Hard</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <input
-                                                type="number"
-                                                name="maxPoints"
-                                                value={taskInput.maxPoints}
-                                                onChange={handleTaskInputChange}
-                                                placeholder="Points"
-                                                min="1"
-                                                className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)]"
-                                            />
-                                        </div>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={addTask}
-                                        className="py-2.5 px-4.5 bg-yellow-200/10 border-[1.5px] border-yellow-200/35 text-yellow-200 rounded-[10px] cursor-pointer flex items-center gap-2 font-inherit text-[0.88rem] font-semibold w-full justify-center transition-all duration-200 hover:bg-yellow-200/20 hover:border-yellow-200/45"
-                                    >
-                                        <Plus size={16} /> Add Task
-                                    </button>
-                                </div>
-
-                                {formData.tasks.length > 0 && (
-                                    <div className="flex flex-col gap-3 mt-4.5">
-                                        {formData.tasks.map((task, index) => (
-                                            <div key={index} className="flex justify-between items-start gap-3.5 p-4 bg-white/[0.04] border border-white/10 rounded-[10px] transition-all duration-200 hover:border-white/20 hover:bg-white/5">
-                                                <div className="flex-1">
-                                                    <strong className="text-yellow-200 text-[0.98rem] block mb-1">{task.title}</strong>
-                                                    <span className="text-white/55 text-[0.82rem] font-normal"> - {task.difficulty} • {task.maxPoints} points</span>
-                                                    <p className="mt-2 mb-0 text-white/65 text-[0.88rem] leading-relaxed">{task.description}</p>
-                                                </div>
-                                                <button
-                                                    onClick={() => removeTask(index)}
-                                                    className="bg-red-500/10 border border-red-500/25 text-red-400 rounded-lg p-2 cursor-pointer flex transition-all duration-200 flex-shrink-0 hover:bg-red-500/20 hover:border-red-500/35"
-                                                >
-                                                    <X size={14} />
-                                                </button>
-                                            </div>
-                                        ))}
+                        ) : (
+                            <div className="p-7">
+                                {error && (
+                                    <div className="bg-red-500/10 border border-red-500/40 text-red-400 p-3.5 rounded-[10px] mb-6 text-[0.9rem] flex items-center gap-2.5">
+                                        {error}
                                     </div>
                                 )}
+
+                                <div className="mb-6">
+                                    <label className="block mb-2.5 text-white/85 text-[0.9rem] font-semibold">Title *</label>
+                                    <input
+                                        name="title"
+                                        value={formData.title}
+                                        onChange={handleChange}
+                                        placeholder="Contest title..."
+                                        required
+                                        className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
+                                    />
+                                </div>
+
+                                <div className="mb-6">
+                                    <label className="block mb-2.5 text-white/85 text-[0.9rem] font-semibold">Description</label>
+                                    <textarea
+                                        name="description"
+                                        value={formData.description}
+                                        onChange={handleChange}
+                                        placeholder="Contest description..."
+                                        rows={3}
+                                        className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35 resize-y min-h-[90px] leading-relaxed"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4.5 mb-6">
+                                    <div>
+                                        <label className="block mb-2.5 text-white/85 text-[0.9rem] font-semibold">Difficulty</label>
+                                        <select
+                                            name="difficulty"
+                                            value={formData.difficulty}
+                                            onChange={handleChange}
+                                            className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)]"
+                                        >
+                                            <option value="Easy">Easy</option>
+                                            <option value="Medium">Medium</option>
+                                            <option value="Hard">Hard</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block mb-2.5 text-white/85 text-[0.9rem] font-semibold">Duration (min) *</label>
+                                        <input
+                                            type="number"
+                                            name="duration"
+                                            value={formData.duration}
+                                            onChange={handleChange}
+                                            min="1"
+                                            required
+                                            className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)]"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="mb-6">
+                                    <label className="block mb-2.5 text-white/85 text-[0.9rem] font-semibold">Start Password (optional)</label>
+                                    <input
+                                        type="password"
+                                        name="startPassword"
+                                        value={formData.startPassword}
+                                        onChange={handleChange}
+                                        placeholder="Password to start contest..."
+                                        className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
+                                    />
+                                </div>
+
+                                <div className="mt-8 pt-7 border-t border-white/10">
+                                    <div className="flex justify-between items-center mb-4.5">
+                                        <h3 className="m-0 text-[1.05rem] font-semibold text-white">Tasks</h3>
+                                        {formData.tasks.length > 0 && (
+                                            <span className="text-[0.85rem] text-white/50">{formData.tasks.length} task{formData.tasks.length !== 1 ? 's' : ''}</span>
+                                        )}
+                                    </div>
+                                    <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-5 mb-4.5">
+                                        <div className="mb-4">
+                                            <input
+                                                name="title"
+                                                value={taskInput.title}
+                                                onChange={handleTaskInputChange}
+                                                placeholder="Task title..."
+                                                className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
+                                            />
+                                        </div>
+                                        <div className="mb-4">
+                                            <textarea
+                                                name="description"
+                                                value={taskInput.description}
+                                                onChange={handleTaskInputChange}
+                                                placeholder="Task description..."
+                                                rows={2}
+                                                className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35 resize-y min-h-[90px] leading-relaxed"
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-[1.2fr_120px] gap-3.5 items-end mb-4">
+                                            <div>
+                                                <select
+                                                    name="difficulty"
+                                                    value={taskInput.difficulty}
+                                                    onChange={handleTaskInputChange}
+                                                    className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)]"
+                                                >
+                                                    <option value="Easy">Easy</option>
+                                                    <option value="Medium">Medium</option>
+                                                    <option value="Hard">Hard</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <input
+                                                    type="number"
+                                                    name="maxPoints"
+                                                    value={taskInput.maxPoints}
+                                                    onChange={handleTaskInputChange}
+                                                    placeholder="Points"
+                                                    min="1"
+                                                    className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)]"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="mb-4.5">
+                                            <label className="block mb-2 text-white/70 text-[0.85rem] font-medium">Allowed Languages</label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {SUPPORTED_LANGUAGES.map(lang => (
+                                                    <button
+                                                        key={lang.id}
+                                                        type="button"
+                                                        onClick={() => toggleLanguage(lang.id)}
+                                                        className={`py-1.5 px-3 rounded-full text-[0.8rem] font-medium border transition-all duration-200 cursor-pointer ${taskInput.allowedLanguages.includes(lang.id)
+                                                            ? 'bg-yellow-200/20 border-yellow-200/50 text-yellow-200'
+                                                            : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white/70'
+                                                            }`}
+                                                    >
+                                                        {lang.name}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={addTask}
+                                            className="py-2.5 px-4.5 bg-yellow-200/10 border-[1.5px] border-yellow-200/35 text-yellow-200 rounded-[10px] cursor-pointer flex items-center gap-2 font-inherit text-[0.88rem] font-semibold w-full justify-center transition-all duration-200 hover:bg-yellow-200/20 hover:border-yellow-200/45"
+                                        >
+                                            {editingTaskIndex !== null ? <><Edit2 size={16} /> Update Task</> : <><Plus size={16} /> Add Task</>}
+                                        </button>
+                                    </div>
+
+                                    {formData.tasks.length > 0 && (
+                                        <div className="flex flex-col gap-3 mt-4.5">
+                                            {formData.tasks.map((task, index) => (
+                                                <div key={index} className="flex justify-between items-start gap-3.5 p-4 bg-white/[0.04] border border-white/10 rounded-[10px] transition-all duration-200 hover:border-white/20 hover:bg-white/5">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <strong className="text-yellow-200 text-[0.98rem] block">{task.title}</strong>
+                                                            <span className={`text-[0.7rem] px-2 py-0.5 rounded-full font-medium ${task.difficulty === 'Easy' ? 'bg-emerald-500/20 text-emerald-400' : task.difficulty === 'Medium' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}`}>
+                                                                {task.difficulty}
+                                                            </span>
+                                                        </div>
+                                                        <span className="text-white/40 text-[0.75rem] font-medium block mb-2">{task.maxPoints} points</span>
+                                                        <p className="mb-3 text-white/55 text-[0.85rem] leading-relaxed line-clamp-2">{task.description}</p>
+
+                                                        {task.allowedLanguages && task.allowedLanguages.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1.5 mt-2">
+                                                                {task.allowedLanguages.map(langId => (
+                                                                    <span key={langId} className="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[0.65rem] text-white/60">
+                                                                        {SUPPORTED_LANGUAGES.find(l => l.id === langId)?.name || langId}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => editTask(index)}
+                                                            className="bg-yellow-200/10 border border-yellow-200/25 text-yellow-200 rounded-lg p-2 cursor-pointer flex transition-all duration-200 flex-shrink-0 hover:bg-yellow-200/20 hover:border-yellow-200/35"
+                                                            title="Edit Task"
+                                                        >
+                                                            <Edit2 size={14} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => removeTask(index)}
+                                                            className="bg-red-500/10 border border-red-500/25 text-red-400 rounded-lg p-2 cursor-pointer flex transition-all duration-200 flex-shrink-0 hover:bg-red-500/20 hover:border-red-500/35"
+                                                            title="Remove Task"
+                                                        >
+                                                            <X size={14} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
+                        )}
                         <div className="flex justify-end gap-3.5 py-6 px-7 border-t border-white/[0.08] bg-white/[0.02]">
                             <button
                                 className="py-3 px-6 bg-transparent border-[1.5px] border-white/15 text-white/70 rounded-[10px] cursor-pointer font-medium text-[0.95rem] transition-all duration-200 hover:bg-white/5 hover:border-white/25 hover:text-white"
@@ -593,7 +685,7 @@ const Contests: React.FC = () => {
                             <button
                                 className="py-3 px-7 bg-gradient-to-br from-yellow-200/20 to-amber-400/15 border-[1.5px] border-yellow-200/50 text-yellow-200 rounded-[10px] cursor-pointer font-semibold text-[0.95rem] transition-all duration-200 hover:bg-gradient-to-br hover:from-yellow-200/25 hover:to-amber-400/20 hover:border-yellow-200/60 hover:shadow-[0_0_20px_rgba(253,230,138,0.15)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
                                 onClick={handleSave}
-                                disabled={loading}
+                                disabled={loading || fetchingDetails}
                             >
                                 {loading ? 'Saving...' : editingContest ? 'Update Contest' : 'Create Contest'}
                             </button>
