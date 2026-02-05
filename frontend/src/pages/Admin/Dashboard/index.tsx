@@ -35,7 +35,7 @@ const Dashboard: React.FC = () => {
 
     return (
         <AdminLayout>
-            <div className="max-w-[1400px] mx-auto">
+            <div className="w-full">
                 {/* Page Header */}
                 <header className="mb-10">
                     <h1 className="text-4xl font-bold m-0 mb-2 bg-gradient-to-r from-yellow-200 to-yellow-600 bg-clip-text text-transparent tracking-tight">
@@ -45,7 +45,7 @@ const Dashboard: React.FC = () => {
                 </header>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-4 gap-6 mb-12 max-xl:grid-cols-2 max-sm:grid-cols-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-12">
                     {/* Active Users */}
                     <div className="bg-white/[0.03] border border-white/[0.08] rounded-[20px] p-6 flex flex-col items-start gap-4 transition-all duration-300 ease-in-out backdrop-blur-[10px] relative overflow-hidden hover:-translate-y-1 hover:border-yellow-200/20 hover:shadow-[0_12px_24px_-8px_rgba(0,0,0,0.3)] before:content-[''] before:absolute before:top-0 before:left-0 before:w-full before:h-full before:bg-gradient-to-br before:from-white/5 before:to-transparent before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100">
                         <div className="w-12 h-12 flex items-center justify-center bg-yellow-200/10 rounded-xl text-yellow-200 mb-2 flex-shrink-0">
