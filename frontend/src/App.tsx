@@ -1,5 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
+// Route Guards
+import { ProtectedRoute } from './components/routes/ProtectedRoute';
+import { PrivateRoute } from './components/routes/PrivateRoute';
+
 // Public pages
 import Hero from './pages/public/Hero';
 import Login from './pages/public/Login';
@@ -22,24 +26,87 @@ const App: React.FC = () => {
             <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<Hero />} />
-                <Route path="/login" element={<Login />} />
+                <Route
+                    path="/login"
+                    element={
+                        <ProtectedRoute>
+                            <Login />
+                        </ProtectedRoute>
+                    }
+                />
 
-                {/* Admin Routes */}
-                <Route path="/admin" element={<Dashboard />} />
-                <Route path="/admin/participants" element={<Participants />} />
-                <Route path="/admin/participants/:id" element={<ParticipantProfile />} />
-                <Route path="/admin/participants/:id/contest/:contestId" element={<Submissions />} />
-                <Route path="/admin/contests" element={<Contests />} />
-                <Route path="/admin/manage-users" element={<ManageUsers />} />
-                <Route path="/admin/settings" element={<Settings />} />
+                {/* Admin Routes - Protected for admin and super_admin only */}
+                <Route
+                    path="/admin"
+                    element={
+                        <PrivateRoute allowedRoles={['admin', 'super_admin']}>
+                            <Dashboard />
+                        </PrivateRoute>
+                    }
+                />
+                <Route
+                    path="/admin/participants"
+                    element={
+                        <PrivateRoute allowedRoles={['admin', 'super_admin']}>
+                            <Participants />
+                        </PrivateRoute>
+                    }
+                />
+                <Route
+                    path="/admin/participants/:id"
+                    element={
+                        <PrivateRoute allowedRoles={['admin', 'super_admin']}>
+                            <ParticipantProfile />
+                        </PrivateRoute>
+                    }
+                />
+                <Route
+                    path="/admin/participants/:id/contest/:contestId"
+                    element={
+                        <PrivateRoute allowedRoles={['admin', 'super_admin']}>
+                            <Submissions />
+                        </PrivateRoute>
+                    }
+                />
+                <Route
+                    path="/admin/contests"
+                    element={
+                        <PrivateRoute allowedRoles={['admin', 'super_admin']}>
+                            <Contests />
+                        </PrivateRoute>
+                    }
+                />
+                <Route
+                    path="/admin/manage-users"
+                    element={
+                        <PrivateRoute allowedRoles={['admin', 'super_admin']}>
+                            <ManageUsers />
+                        </PrivateRoute>
+                    }
+                />
+                <Route
+                    path="/admin/settings"
+                    element={
+                        <PrivateRoute allowedRoles={['admin', 'super_admin']}>
+                            <Settings />
+                        </PrivateRoute>
+                    }
+                />
 
                 {/* Legacy route redirects */}
                 <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
                 <Route path="/admin/users" element={<Navigate to="/admin/participants" replace />} />
 
-                {/* Participant Routes */}
-                <Route path="/task" element={<TaskPage />} />
+                {/* Participant Routes - Protected for player role only */}
+                <Route
+                    path="/task"
+                    element={
+                        <PrivateRoute allowedRoles={['player']}>
+                            <TaskPage />
+                        </PrivateRoute>
+                    }
+                />
 
                 {/* Catch all */}
                 <Route path="*" element={<Navigate to="/" replace />} />

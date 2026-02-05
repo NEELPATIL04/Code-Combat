@@ -1,6 +1,7 @@
 import React, { useState, ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, Trophy, UserCog, Settings, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
 import './AdminLayout.css';
 
 interface MenuItem {
@@ -37,6 +38,7 @@ const menuSections: MenuSection[] = [
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { logout } = useAuth();
     const [collapsed, setCollapsed] = useState<boolean>(false);
 
     const isActive = (path: string): boolean => {
@@ -45,7 +47,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     };
 
     const handleLogout = (): void => {
-        localStorage.clear();
+        logout();
         navigate('/login');
     };
 
