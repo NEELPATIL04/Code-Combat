@@ -19,6 +19,7 @@ import Settings from './pages/Admin/Settings';
 
 // Participant pages
 import TaskPage from './pages/Participant/Task';
+import ParticipantDashboard from './pages/Participant/Dashboard';
 
 const App: React.FC = () => {
     return (
@@ -99,6 +100,22 @@ const App: React.FC = () => {
                 <Route path="/admin/users" element={<Navigate to="/admin/participants" replace />} />
 
                 {/* Participant Routes - Protected for player role only */}
+                <Route
+                    path="/player"
+                    element={
+                        <PrivateRoute allowedRoles={['player']}>
+                            <ParticipantDashboard />
+                        </PrivateRoute>
+                    }
+                />
+                <Route
+                    path="/contest/:id"
+                    element={
+                        <PrivateRoute allowedRoles={['player']}>
+                            <TaskPage />
+                        </PrivateRoute>
+                    }
+                />
                 <Route
                     path="/task"
                     element={
