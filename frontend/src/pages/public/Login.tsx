@@ -89,10 +89,10 @@ const Login: React.FC = () => {
                 throw new Error(data.message || 'Authentication Failed');
             }
 
-            // Store authentication data in localStorage
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('username', data.username);
-            localStorage.setItem('role', data.role);
+            // Store authentication data in sessionStorage (allows multiple sessions per PC)
+            sessionStorage.setItem('token', data.token);
+            sessionStorage.setItem('username', data.username);
+            sessionStorage.setItem('role', data.role);
 
             console.log('✅ Login successful:', {
                 username: data.username,
