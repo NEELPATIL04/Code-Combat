@@ -50,76 +50,166 @@ const Submissions: React.FC = () => {
 
     const getStatusIcon = (status: string) => {
         switch (status) {
-            case 'passed': return <CheckCircle size={16} className="text-emerald-500" />;
-            case 'failed': return <XCircle size={16} className="text-red-500" />;
-            default: return <Clock size={16} className="text-amber-500" />;
+            case 'passed': return <CheckCircle size={16} style={{ color: '#10b981' }} />;
+            case 'failed': return <XCircle size={16} style={{ color: '#ef4444' }} />;
+            default: return <Clock size={16} style={{ color: '#f59e0b' }} />;
+        }
+    };
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'passed': return '#10b981';
+            case 'failed': return '#ef4444';
+            default: return '#f59e0b';
         }
     };
 
     if (!contestInfo) return (
-        <div className="p-12 text-center text-white/50">Loading...</div>
+        <div style={{ padding: '48px', textAlign: 'center', color: 'rgba(255, 255, 255, 0.5)' }}>
+            <div style={{
+                width: '32px',
+                height: '32px',
+                border: '2px solid rgba(253, 230, 138, 0.2)',
+                borderTopColor: '#FDE68A',
+                borderRadius: '50%',
+                margin: '0 auto 16px',
+                animation: 'spin 1s linear infinite'
+            }}></div>
+            Loading...
+        </div>
     );
 
     return (
-        <div className="max-w-[1200px]">
+        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
             {/* Back Button */}
             <button
-                className="flex items-center gap-2 py-2.5 px-4.5 bg-transparent border border-white/10 text-white/70 rounded-full font-inherit text-[0.9rem] cursor-pointer mb-6 transition-all duration-200 hover:border-white/20 hover:text-white"
                 onClick={() => navigate(`/admin/participants/${id}`)}
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 18px',
+                    background: 'transparent',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '100px',
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    marginBottom: '24px'
+                }}
             >
                 <ArrowLeft size={18} /> Back to Profile
             </button>
 
             {/* Submissions Header */}
-            <div className="flex justify-between items-start mb-6">
+            <header style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                marginBottom: '24px'
+            }}>
                 <div>
-                    <h1 className="text-[1.75rem] font-semibold m-0 mb-2 bg-gradient-to-r from-yellow-200 to-yellow-500 bg-clip-text text-transparent">
+                    <h1 style={{
+                        fontSize: '1.75rem',
+                        fontWeight: 600,
+                        margin: 0,
+                        marginBottom: '8px',
+                        color: '#ffffff'
+                    }}>
                         {contestInfo.title}
                     </h1>
-                    <p className="text-white/50 m-0">Submissions by {contestInfo.participantName}</p>
+                    <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.5)' }}>
+                        Submissions by {contestInfo.participantName}
+                    </p>
                 </div>
-                <div className="flex gap-4">
-                    <div className="text-center py-3 px-5 bg-white/[0.03] border border-white/[0.08] rounded-xl">
-                        <span className="block text-xl font-semibold text-yellow-200">{contestInfo.totalSubmissions}</span>
-                        <span className="text-[0.7rem] text-white/50 uppercase">Submissions</span>
+                <div style={{ display: 'flex', gap: '16px' }}>
+                    <div style={{
+                        textAlign: 'center',
+                        padding: '12px 20px',
+                        background: 'rgba(20, 20, 22, 0.6)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        borderRadius: '12px'
+                    }}>
+                        <span style={{ display: 'block', fontSize: '1.25rem', fontWeight: 600, color: '#FBBF24' }}>
+                            {contestInfo.totalSubmissions}
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase' }}>
+                            Submissions
+                        </span>
                     </div>
-                    <div className="text-center py-3 px-5 bg-white/[0.03] border border-white/[0.08] rounded-xl">
-                        <span className="block text-xl font-semibold text-yellow-200">{contestInfo.bestScore}</span>
-                        <span className="text-[0.7rem] text-white/50 uppercase">Best Score</span>
+                    <div style={{
+                        textAlign: 'center',
+                        padding: '12px 20px',
+                        background: 'rgba(20, 20, 22, 0.6)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        borderRadius: '12px'
+                    }}>
+                        <span style={{ display: 'block', fontSize: '1.25rem', fontWeight: 600, color: '#FBBF24' }}>
+                            {contestInfo.bestScore}
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase' }}>
+                            Best Score
+                        </span>
                     </div>
                 </div>
-            </div>
+            </header>
 
             {/* Submissions Layout */}
-            <div className="grid grid-cols-[320px_1fr] gap-5 h-[calc(100vh-280px)] max-md:grid-cols-1 max-md:h-auto">
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: '320px 1fr',
+                gap: '20px',
+                height: 'calc(100vh - 280px)'
+            }}>
                 {/* Submissions List */}
-                <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl overflow-hidden flex flex-col">
-                    <div className="py-4 px-5 text-[0.8rem] text-white/50 uppercase tracking-wider border-b border-white/[0.08]">
+                <div style={{
+                    background: 'rgba(20, 20, 22, 0.6)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column'
+                }}>
+                    <div style={{
+                        padding: '16px 20px',
+                        fontSize: '0.8rem',
+                        color: 'rgba(255, 255, 255, 0.5)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.1em',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+                    }}>
                         All Submissions
                     </div>
-                    <div className="flex flex-col overflow-y-auto">
+                    <div style={{ flex: 1, overflowY: 'auto' }}>
                         {submissions.map(sub => (
                             <div
                                 key={sub.id}
-                                className={`py-4 px-5 border-b border-white/5 cursor-pointer transition-all duration-200 hover:bg-white/[0.02] ${selectedSubmission?.id === sub.id
-                                    ? 'bg-yellow-200/5 border-l-[3px] border-l-yellow-200'
-                                    : ''
-                                    }`}
                                 onClick={() => setSelectedSubmission(sub)}
+                                style={{
+                                    padding: '16px 20px',
+                                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                                    cursor: 'pointer',
+                                    background: selectedSubmission?.id === sub.id ? 'rgba(253, 230, 138, 0.05)' : 'transparent',
+                                    borderLeft: selectedSubmission?.id === sub.id ? '3px solid #FDE68A' : '3px solid transparent',
+                                    transition: 'all 0.2s ease'
+                                }}
                             >
-                                <div className="flex items-center gap-3 mb-2">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                                     {getStatusIcon(sub.status)}
                                     <div>
-                                        <span className="block text-[0.9rem] font-medium text-white">{sub.timestamp}</span>
-                                        <span className={`text-[0.75rem] capitalize ${sub.status === 'passed' ? 'text-emerald-500' :
-                                            sub.status === 'failed' ? 'text-red-500' :
-                                                'text-amber-500'
-                                            }`}>
+                                        <span style={{ display: 'block', fontSize: '0.9rem', fontWeight: 500, color: '#ffffff' }}>
+                                            {sub.timestamp}
+                                        </span>
+                                        <span style={{
+                                            fontSize: '0.75rem',
+                                            textTransform: 'capitalize',
+                                            color: getStatusColor(sub.status)
+                                        }}>
                                             {sub.status}
                                         </span>
                                     </div>
                                 </div>
-                                <div className="flex gap-4 text-[0.8rem] text-white/40 pl-7">
+                                <div style={{ display: 'flex', gap: '16px', fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.4)', paddingLeft: '28px' }}>
                                     <span>{sub.runtime}</span>
                                     <span>{sub.memory}</span>
                                 </div>
@@ -129,21 +219,52 @@ const Submissions: React.FC = () => {
                 </div>
 
                 {/* Code Viewer */}
-                <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl overflow-hidden flex flex-col h-full max-md:min-h-[400px]">
+                <div style={{
+                    background: 'rgba(20, 20, 22, 0.6)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%'
+                }}>
                     {selectedSubmission && (
                         <>
-                            <div className="flex justify-between items-center py-3.5 px-5 border-b border-white/[0.08]">
-                                <div className="flex items-center gap-2 text-white/70 text-[0.9rem]">
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                padding: '14px 20px',
+                                borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem' }}>
                                     <Code size={16} />
                                     <span>solution.ts</span>
                                 </div>
-                                <span className="text-[0.8rem] text-yellow-200 py-1 px-2.5 bg-yellow-200/10 rounded-full">
+                                <span style={{
+                                    padding: '4px 10px',
+                                    background: 'rgba(253, 230, 138, 0.1)',
+                                    borderRadius: '100px',
+                                    fontSize: '0.8rem',
+                                    color: '#FDE68A'
+                                }}>
                                     {selectedSubmission.language}
                                 </span>
                             </div>
-                            <div className="flex-1 p-5 overflow-auto bg-black/30">
-                                <pre className="m-0">
-                                    <code className="font-mono text-[0.9rem] leading-relaxed text-white/85 whitespace-pre">
+                            <div style={{
+                                flex: 1,
+                                padding: '20px',
+                                overflow: 'auto',
+                                background: 'rgba(0, 0, 0, 0.3)'
+                            }}>
+                                <pre style={{ margin: 0 }}>
+                                    <code style={{
+                                        fontFamily: 'monospace',
+                                        fontSize: '0.9rem',
+                                        lineHeight: 1.6,
+                                        color: 'rgba(255, 255, 255, 0.85)',
+                                        whiteSpace: 'pre'
+                                    }}>
                                         {selectedSubmission.code}
                                     </code>
                                 </pre>
@@ -152,8 +273,13 @@ const Submissions: React.FC = () => {
                     )}
                 </div>
             </div>
-        </div>
 
+            <style>{`
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+            `}</style>
+        </div>
     );
 };
 

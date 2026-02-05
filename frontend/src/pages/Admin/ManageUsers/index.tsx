@@ -129,77 +129,256 @@ const ManageUsers: React.FC = () => {
         }
     };
 
+    // Get avatar color based on username
+    const getAvatarColor = (username: string) => {
+        const colors = ['#FBBF24', '#F59E0B', '#EAB308', '#FDE68A', '#FCD34D'];
+        const index = username.charCodeAt(0) % colors.length;
+        return colors[index];
+    };
+
+    const inputStyle: React.CSSProperties = {
+        width: '100%',
+        padding: '14px 16px',
+        background: 'rgba(255, 255, 255, 0.04)',
+        border: '1.5px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: '10px',
+        color: '#ffffff',
+        fontSize: '0.95rem',
+        outline: 'none'
+    };
+
+    const labelStyle: React.CSSProperties = {
+        display: 'block',
+        marginBottom: '10px',
+        color: 'rgba(255, 255, 255, 0.85)',
+        fontSize: '0.875rem',
+        fontWeight: 600
+    };
+
     return (
         <div>
-            <div className="max-w-[1000px]">
-                <header className="mb-8 flex justify-between items-end">
+            <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+                {/* Header */}
+                <header style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    marginBottom: '32px'
+                }}>
                     <div>
-                        <h1 className="text-3xl font-semibold m-0 mb-2 bg-gradient-to-r from-yellow-200 to-yellow-500 bg-clip-text text-transparent">
+                        <h1 style={{
+                            fontSize: '2rem',
+                            fontWeight: 600,
+                            margin: 0,
+                            marginBottom: '8px',
+                            color: '#ffffff'
+                        }}>
                             Manage Users
                         </h1>
-                        <p className="text-white/50 m-0">Add, edit, or remove users</p>
+                        <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.5)' }}>
+                            Add, edit, or remove users
+                        </p>
                     </div>
                     <button
-                        className="flex items-center gap-2 py-3 px-5 bg-yellow-200/10 border border-yellow-200/30 text-yellow-200 rounded-full font-medium text-sm cursor-pointer transition-all duration-200 hover:bg-yellow-200/20"
                         onClick={openModal}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '12px 24px',
+                            background: 'rgba(253, 230, 138, 0.15)',
+                            border: '1px solid rgba(253, 230, 138, 0.4)',
+                            borderRadius: '100px',
+                            color: '#FDE68A',
+                            fontSize: '0.9rem',
+                            fontWeight: 500,
+                            cursor: 'pointer'
+                        }}
                     >
                         <Plus size={18} /> Create User
                     </button>
                 </header>
 
+                {/* Error Banner */}
                 {error && (
-                    <div className="bg-red-500/10 border border-red-500 text-red-500 p-4 rounded-lg mb-6 flex justify-between items-center">
+                    <div style={{
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        color: '#ef4444',
+                        padding: '16px',
+                        borderRadius: '12px',
+                        marginBottom: '24px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                    }}>
                         {error}
-                        <button onClick={() => setError('')} className="bg-transparent border-none text-red-500 cursor-pointer"><X size={16} /></button>
+                        <button
+                            onClick={() => setError('')}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#ef4444',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <X size={16} />
+                        </button>
                     </div>
                 )}
 
+                {/* Loading State */}
                 {loading && users.length === 0 ? (
-                    <div className="text-center py-10 text-white/50"><p>Loading users...</p></div>
+                    <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255, 255, 255, 0.5)' }}>
+                        <div style={{
+                            width: '32px',
+                            height: '32px',
+                            border: '2px solid rgba(253, 230, 138, 0.2)',
+                            borderTopColor: '#FDE68A',
+                            borderRadius: '50%',
+                            margin: '0 auto 16px',
+                            animation: 'spin 1s linear infinite'
+                        }}></div>
+                        <p>Loading users...</p>
+                    </div>
                 ) : (
-                    <div className="flex flex-col gap-3">
+                    /* Users List */
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {users.map(user => (
-                            <div key={user.id} className={`flex items-center gap-5 p-5 bg-white/[0.02] border border-white/[0.08] rounded-xl transition-all duration-200 hover:border-white/15 ${user.status === 'banned' ? 'opacity-60' : ''}`}>
-                                <div className="w-12 h-12 bg-yellow-200/15 text-yellow-200 rounded-full flex items-center justify-center font-semibold text-xl flex-shrink-0">
+                            <div
+                                key={user.id}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '20px',
+                                    padding: '20px 24px',
+                                    background: 'rgba(20, 20, 22, 0.6)',
+                                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                                    borderRadius: '16px',
+                                    opacity: user.status === 'banned' ? 0.6 : 1
+                                }}
+                            >
+                                {/* Avatar */}
+                                <div style={{
+                                    width: '48px',
+                                    height: '48px',
+                                    borderRadius: '50%',
+                                    background: getAvatarColor(user.username),
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontWeight: 600,
+                                    fontSize: '1.25rem',
+                                    color: '#000000',
+                                    flexShrink: 0
+                                }}>
                                     {user.firstName
                                         ? user.firstName.charAt(0).toUpperCase()
                                         : user.username.charAt(0).toUpperCase()
                                     }
                                 </div>
-                                <div className="flex-1">
-                                    <h3 className="m-0 text-base font-medium text-white">{user.username}</h3>
+
+                                {/* User Info */}
+                                <div style={{ flex: 1 }}>
+                                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 500, color: '#ffffff' }}>
+                                        {user.username}
+                                    </h3>
                                     {user.firstName && user.lastName && (
-                                        <p className="mt-1 text-[0.85rem] text-white/50">{user.firstName} {user.lastName}</p>
+                                        <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.5)' }}>
+                                            {user.firstName} {user.lastName}
+                                        </p>
                                     )}
-                                    <p className="mt-1 text-[0.85rem] text-white/50">{user.email}</p>
-                                    {user.companySchool && (
-                                        <p className="mt-1 text-[0.85rem] text-white/50">{user.companySchool}</p>
-                                    )}
+                                    <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.5)' }}>
+                                        {user.email}
+                                    </p>
                                 </div>
-                                <div className="flex gap-3 items-center">
+
+                                {/* Role Badge */}
+                                <span style={{
+                                    padding: '6px 14px',
+                                    borderRadius: '100px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 500,
+                                    textTransform: 'capitalize',
+                                    background: user.role === 'admin' ? 'rgba(139, 92, 246, 0.15)'
+                                        : user.role === 'super_admin' ? 'rgba(239, 68, 68, 0.15)'
+                                            : 'rgba(16, 185, 129, 0.15)',
+                                    color: user.role === 'admin' ? '#8b5cf6'
+                                        : user.role === 'super_admin' ? '#ef4444'
+                                            : '#10b981',
+                                    border: user.role === 'admin' ? '1px solid rgba(139, 92, 246, 0.3)'
+                                        : user.role === 'super_admin' ? '1px solid rgba(239, 68, 68, 0.3)'
+                                            : '1px solid rgba(16, 185, 129, 0.3)'
+                                }}>
+                                    {user.role === 'super_admin' ? 'Super Admin' : user.role}
+                                </span>
+
+                                {/* Status Badge */}
+                                <span style={{
+                                    padding: '6px 14px',
+                                    borderRadius: '100px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 500,
+                                    background: user.status === 'active' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                    color: user.status === 'active' ? '#10b981' : '#ef4444',
+                                    border: user.status === 'active' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)'
+                                }}>
+                                    {user.status === 'active' ? 'Active' : 'Banned'}
+                                </span>
+
+                                {/* Actions */}
+                                <div style={{ display: 'flex', gap: '8px' }}>
                                     <select
                                         value={user.role}
                                         onChange={(e: ChangeEvent<HTMLSelectElement>) => changeRole(user.id, e.target.value)}
-                                        className="py-2 px-3 bg-white/5 border border-white/10 rounded-lg text-white font-inherit focus:outline-none focus:border-yellow-200/30"
+                                        style={{
+                                            padding: '8px 12px',
+                                            background: 'rgba(255, 255, 255, 0.05)',
+                                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                                            borderRadius: '8px',
+                                            color: '#ffffff',
+                                            fontSize: '0.85rem',
+                                            outline: 'none',
+                                            cursor: 'pointer'
+                                        }}
                                     >
                                         <option value="player">Player</option>
                                         <option value="admin">Admin</option>
                                         <option value="super_admin">Super Admin</option>
                                     </select>
                                     <button
-                                        className={`w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 border ${user.status === 'active'
-                                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/20'
-                                            : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/20'
-                                            }`}
                                         onClick={() => toggleStatus(user.id)}
                                         title={user.status === 'active' ? 'Ban User' : 'Activate User'}
+                                        style={{
+                                            width: '40px',
+                                            height: '40px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            background: user.status === 'active' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(251, 191, 36, 0.1)',
+                                            border: user.status === 'active' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(251, 191, 36, 0.3)',
+                                            borderRadius: '10px',
+                                            color: user.status === 'active' ? '#10b981' : '#FBBF24',
+                                            cursor: 'pointer'
+                                        }}
                                     >
                                         {user.status === 'active' ? <Ban size={16} /> : <Shield size={16} />}
                                     </button>
                                     <button
-                                        className="w-9 h-9 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-red-500/20"
                                         onClick={() => deleteUser(user.id)}
                                         title="Delete User"
+                                        style={{
+                                            width: '40px',
+                                            height: '40px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            background: 'rgba(239, 68, 68, 0.15)',
+                                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                                            borderRadius: '10px',
+                                            color: '#ef4444',
+                                            cursor: 'pointer'
+                                        }}
                                     >
                                         <Trash2 size={16} />
                                     </button>
@@ -211,122 +390,208 @@ const ManageUsers: React.FC = () => {
             </div>
 
             {/* Create User Modal */}
-            {
-                showModal && (
-                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] animate-fade-in" onClick={closeModal}>
-                        <div className="bg-[#1a1f2e] border border-white/10 rounded-xl w-[90%] max-w-[550px] max-h-[85vh] overflow-y-auto shadow-2xl animate-slide-up" onClick={e => e.stopPropagation()}>
-                            <div className="flex justify-between items-center py-6 px-7 border-b border-white/[0.08]">
-                                <h2 className="m-0 text-xl font-semibold text-white">Create New User</h2>
-                                <button className="bg-white/5 border-none text-white/60 cursor-pointer flex items-center justify-center w-8 h-8 rounded-md transition-all duration-200 hover:bg-white/10 hover:text-white" onClick={closeModal}>
-                                    <X size={20} />
-                                </button>
+            {showModal && (
+                <div
+                    onClick={closeModal}
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(0, 0, 0, 0.8)',
+                        backdropFilter: 'blur(4px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 1000
+                    }}
+                >
+                    <div
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                            background: '#1a1f2e',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '16px',
+                            width: '90%',
+                            maxWidth: '550px',
+                            maxHeight: '85vh',
+                            overflowY: 'auto'
+                        }}
+                    >
+                        {/* Modal Header */}
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '24px 28px',
+                            borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+                        }}>
+                            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#ffffff' }}>
+                                Create New User
+                            </h2>
+                            <button
+                                onClick={closeModal}
+                                style={{
+                                    width: '32px',
+                                    height: '32px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    background: 'rgba(255, 255, 255, 0.05)',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    color: 'rgba(255, 255, 255, 0.6)',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div style={{ padding: '28px' }}>
+                            {/* Username */}
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={labelStyle}>Username *</label>
+                                <input
+                                    name="username"
+                                    value={formData.username}
+                                    onChange={handleChange}
+                                    placeholder="Enter username..."
+                                    required
+                                    style={inputStyle}
+                                />
                             </div>
-                            <div className="p-7">
-                                <div className="mb-6">
-                                    <label className="block mb-2.5 text-white/85 text-sm font-semibold">Username *</label>
+
+                            {/* First & Last Name */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                                <div>
+                                    <label style={labelStyle}>First Name</label>
                                     <input
-                                        name="username"
-                                        value={formData.username}
+                                        name="firstName"
+                                        value={formData.firstName}
                                         onChange={handleChange}
-                                        placeholder="Enter username..."
-                                        required
-                                        className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
+                                        placeholder="First name..."
+                                        style={inputStyle}
                                     />
                                 </div>
-
-                                <div className="grid grid-cols-2 gap-4 mb-6">
-                                    <div>
-                                        <label className="block mb-2.5 text-white/85 text-sm font-semibold">First Name</label>
-                                        <input
-                                            name="firstName"
-                                            value={formData.firstName}
-                                            onChange={handleChange}
-                                            placeholder="First name..."
-                                            className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block mb-2.5 text-white/85 text-sm font-semibold">Last Name</label>
-                                        <input
-                                            name="lastName"
-                                            value={formData.lastName}
-                                            onChange={handleChange}
-                                            placeholder="Last name..."
-                                            className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="mb-6">
-                                    <label className="block mb-2.5 text-white/85 text-sm font-semibold">Email *</label>
+                                <div>
+                                    <label style={labelStyle}>Last Name</label>
                                     <input
-                                        name="email"
-                                        type="email"
-                                        value={formData.email}
+                                        name="lastName"
+                                        value={formData.lastName}
                                         onChange={handleChange}
-                                        placeholder="Enter email..."
-                                        required
-                                        className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
+                                        placeholder="Last name..."
+                                        style={inputStyle}
                                     />
-                                </div>
-
-                                <div className="mb-6">
-                                    <label className="block mb-2.5 text-white/85 text-sm font-semibold">Password *</label>
-                                    <input
-                                        name="password"
-                                        type="password"
-                                        value={formData.password}
-                                        onChange={handleChange}
-                                        placeholder="Enter password..."
-                                        required
-                                        className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
-                                    />
-                                </div>
-
-                                <div className="mb-6">
-                                    <label className="block mb-2.5 text-white/85 text-sm font-semibold">Company / School Name</label>
-                                    <input
-                                        name="companySchool"
-                                        value={formData.companySchool}
-                                        onChange={handleChange}
-                                        placeholder="Company or school name..."
-                                        className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
-                                    />
-                                </div>
-
-                                <div className="mb-6">
-                                    <label className="block mb-2.5 text-white/85 text-sm font-semibold">Role</label>
-                                    <select
-                                        name="role"
-                                        value={formData.role}
-                                        onChange={handleChange}
-                                        className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)]"
-                                    >
-                                        <option value="player">Player</option>
-                                        <option value="admin">Admin</option>
-                                        <option value="super_admin">Super Admin</option>
-                                    </select>
                                 </div>
                             </div>
-                            <div className="flex justify-end gap-3.5 py-6 px-7 border-t border-white/[0.08] bg-white/[0.02]">
-                                <button
-                                    className="py-3 px-6 bg-transparent border-[1.5px] border-white/15 text-white/70 rounded-[10px] cursor-pointer font-medium text-[0.95rem] transition-all duration-200 hover:bg-white/5 hover:border-white/25 hover:text-white"
-                                    onClick={closeModal}
+
+                            {/* Email */}
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={labelStyle}>Email *</label>
+                                <input
+                                    name="email"
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                    placeholder="Enter email..."
+                                    required
+                                    style={inputStyle}
+                                />
+                            </div>
+
+                            {/* Password */}
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={labelStyle}>Password *</label>
+                                <input
+                                    name="password"
+                                    type="password"
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                    placeholder="Enter password..."
+                                    required
+                                    style={inputStyle}
+                                />
+                            </div>
+
+                            {/* Company/School */}
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={labelStyle}>Company / School Name</label>
+                                <input
+                                    name="companySchool"
+                                    value={formData.companySchool}
+                                    onChange={handleChange}
+                                    placeholder="Company or school name..."
+                                    style={inputStyle}
+                                />
+                            </div>
+
+                            {/* Role */}
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={labelStyle}>Role</label>
+                                <select
+                                    name="role"
+                                    value={formData.role}
+                                    onChange={handleChange}
+                                    style={inputStyle}
                                 >
-                                    Cancel
-                                </button>
-                                <button
-                                    className="py-3 px-7 bg-gradient-to-br from-yellow-200/20 to-amber-400/15 border-[1.5px] border-yellow-200/50 text-yellow-200 rounded-[10px] cursor-pointer font-semibold text-[0.95rem] transition-all duration-200 hover:bg-gradient-to-br hover:from-yellow-200/25 hover:to-amber-400/20 hover:border-yellow-200/60 hover:shadow-[0_0_20px_rgba(253,230,138,0.15)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
-                                    onClick={handleCreateUser}
-                                    disabled={loading}
-                                >
-                                    {loading ? 'Creating...' : 'Create User'}
-                                </button>
+                                    <option value="player">Player</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="super_admin">Super Admin</option>
+                                </select>
                             </div>
                         </div>
+
+                        {/* Modal Footer */}
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                            gap: '14px',
+                            padding: '24px 28px',
+                            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                            background: 'rgba(255, 255, 255, 0.02)'
+                        }}>
+                            <button
+                                onClick={closeModal}
+                                style={{
+                                    padding: '12px 24px',
+                                    background: 'transparent',
+                                    border: '1.5px solid rgba(255, 255, 255, 0.15)',
+                                    borderRadius: '10px',
+                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    fontSize: '0.95rem',
+                                    fontWeight: 500,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleCreateUser}
+                                disabled={loading}
+                                style={{
+                                    padding: '12px 28px',
+                                    background: 'rgba(253, 230, 138, 0.15)',
+                                    border: '1.5px solid rgba(253, 230, 138, 0.5)',
+                                    borderRadius: '10px',
+                                    color: '#FDE68A',
+                                    fontSize: '0.95rem',
+                                    fontWeight: 600,
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    opacity: loading ? 0.5 : 1
+                                }}
+                            >
+                                {loading ? 'Creating...' : 'Create User'}
+                            </button>
+                        </div>
                     </div>
-                )
-            }
+                </div>
+            )}
+
+            <style>{`
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+            `}</style>
         </div>
     );
 };

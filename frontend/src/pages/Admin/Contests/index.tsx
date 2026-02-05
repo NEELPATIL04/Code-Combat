@@ -355,38 +355,92 @@ const Contests: React.FC = () => {
     };
 
     return (<div>
-        <div className="max-w-[1000px]">
+        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
             {/* Page Header */}
-            <header className="flex justify-between items-start mb-6">
+            <header style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                marginBottom: '32px'
+            }}>
                 <div>
-                    <h1 className="text-3xl font-semibold m-0 mb-2 bg-gradient-to-r from-yellow-200 to-yellow-500 bg-clip-text text-transparent">
+                    <h1 style={{
+                        fontSize: '2rem',
+                        fontWeight: 600,
+                        margin: 0,
+                        marginBottom: '8px',
+                        color: '#ffffff'
+                    }}>
                         My Contests
                     </h1>
-                    <p className="text-white/50 m-0">Create and manage coding battles</p>
+                    <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.5)' }}>
+                        Create and manage coding battles
+                    </p>
                 </div>
                 <button
-                    className="flex items-center gap-2 py-3 px-6 bg-yellow-200/10 border border-yellow-200/30 text-yellow-200 rounded-full font-medium text-[0.9rem] cursor-pointer transition-all duration-200 hover:bg-yellow-200/20"
                     onClick={() => openModal()}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '12px 24px',
+                        background: 'rgba(253, 230, 138, 0.15)',
+                        border: '1px solid rgba(253, 230, 138, 0.4)',
+                        borderRadius: '100px',
+                        color: '#FDE68A',
+                        fontSize: '0.9rem',
+                        fontWeight: 500,
+                        cursor: 'pointer'
+                    }}
                 >
                     <Plus size={18} /> New Contest
                 </button>
             </header>
 
             {error && (
-                <div className="bg-red-500/10 border border-red-500 text-red-500 p-4 rounded-lg mb-6 flex justify-between items-center">
+                <div style={{
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    color: '#ef4444',
+                    padding: '16px',
+                    borderRadius: '12px',
+                    marginBottom: '24px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }}>
                     {error}
-                    <button className="bg-transparent border-none text-red-500 cursor-pointer" onClick={() => setError('')}><X size={16} /></button>
+                    <button
+                        onClick={() => setError('')}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#ef4444',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        <X size={16} />
+                    </button>
                 </div>
             )}
 
             {/* Filter Bar */}
-            <div className="flex gap-2 mb-6">
-                {['all', 'upcoming', 'active', 'completed'].map(f => (
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+                {['all', 'active', 'upcoming', 'completed'].map(f => (
                     <button
                         key={f}
-                        className={`py-2 px-4.5 bg-transparent border border-white/10 rounded-full text-white/50 font-inherit text-[0.85rem] cursor-pointer transition-all duration-200 hover:border-white/20 hover:text-white ${filter === f ? 'bg-white/10 border-white/20 text-white' : ''
-                            }`}
                         onClick={() => setFilter(f)}
+                        style={{
+                            padding: '8px 20px',
+                            background: filter === f ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                            border: filter === f ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '100px',
+                            color: filter === f ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
+                            fontSize: '0.85rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                        }}
                     >
                         {f.charAt(0).toUpperCase() + f.slice(1)}
                     </button>
@@ -394,75 +448,229 @@ const Contests: React.FC = () => {
             </div>
 
             {/* Contests List */}
-            <div className="flex flex-col gap-3">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {loading && contests.length === 0 ? (
-                    <div className="text-center py-15 text-white/40"><p>Loading contests...</p></div>
+                    <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255, 255, 255, 0.4)' }}>
+                        <div style={{
+                            width: '32px',
+                            height: '32px',
+                            border: '2px solid rgba(253, 230, 138, 0.2)',
+                            borderTopColor: '#FDE68A',
+                            borderRadius: '50%',
+                            margin: '0 auto 16px',
+                            animation: 'spin 1s linear infinite'
+                        }}></div>
+                        <p>Loading contests...</p>
+                    </div>
                 ) : filteredContests.length === 0 ? (
-                    <div className="text-center py-15 text-white/40">
+                    <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255, 255, 255, 0.4)' }}>
                         <p>No contests found</p>
                         <button
-                            className="mt-4 flex items-center gap-2 py-3 px-6 bg-yellow-200/10 border border-yellow-200/30 text-yellow-200 rounded-full font-medium text-[0.9rem] cursor-pointer mx-auto transition-all duration-200 hover:bg-yellow-200/20"
                             onClick={() => openModal()}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                marginTop: '16px',
+                                padding: '12px 24px',
+                                background: 'rgba(253, 230, 138, 0.15)',
+                                border: '1px solid rgba(253, 230, 138, 0.4)',
+                                borderRadius: '100px',
+                                color: '#FDE68A',
+                                fontSize: '0.9rem',
+                                fontWeight: 500,
+                                cursor: 'pointer'
+                            }}
                         >
                             <Plus size={18} /> Create your first contest
                         </button>
                     </div>
                 ) : (
                     filteredContests.map(contest => (
-                        <div key={contest.id} className="flex items-center justify-between py-5 px-6 bg-white/[0.02] border border-white/[0.08] rounded-xl transition-all duration-200 hover:border-white/15">
-                            <div className="flex items-center gap-4">
-                                <span className={`w-2.5 h-2.5 rounded-full ${contest.status === 'active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
-                                    contest.status === 'upcoming' ? 'bg-amber-500' :
-                                        'bg-gray-500'
-                                    }`}></span>
+                        <div
+                            key={contest.id}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '20px 24px',
+                                background: 'rgba(20, 20, 22, 0.6)',
+                                border: '1px solid rgba(255, 255, 255, 0.08)',
+                                borderRadius: '16px',
+                                transition: 'border-color 0.2s ease'
+                            }}
+                        >
+                            {/* Left: Status dot + Title + Difficulty */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: '300px' }}>
+                                <span style={{
+                                    width: '10px',
+                                    height: '10px',
+                                    borderRadius: '50%',
+                                    flexShrink: 0,
+                                    background: contest.status === 'active' ? '#10b981'
+                                        : contest.status === 'upcoming' ? '#FBBF24'
+                                            : '#6b7280',
+                                    boxShadow: contest.status === 'active' ? '0 0 8px rgba(16, 185, 129, 0.5)' : 'none'
+                                }}></span>
                                 <div>
-                                    <h3 className="text-[1rem] font-medium m-0 mb-1 text-white">{contest.title}</h3>
-                                    <span className="text-[0.75rem] text-white/40 py-0.5 px-2 bg-white/5 rounded-full mr-2">
+                                    <h3 style={{
+                                        margin: 0,
+                                        marginBottom: '6px',
+                                        fontSize: '1rem',
+                                        fontWeight: 500,
+                                        color: '#ffffff'
+                                    }}>
+                                        {contest.title}
+                                    </h3>
+                                    <span style={{
+                                        display: 'inline-block',
+                                        padding: '4px 12px',
+                                        background: contest.difficulty === 'Easy' ? 'rgba(16, 185, 129, 0.15)'
+                                            : contest.difficulty === 'Medium' ? 'rgba(16, 185, 129, 0.15)'
+                                                : 'rgba(239, 68, 68, 0.15)',
+                                        border: contest.difficulty === 'Easy' ? '1px solid rgba(16, 185, 129, 0.3)'
+                                            : contest.difficulty === 'Medium' ? '1px solid rgba(16, 185, 129, 0.3)'
+                                                : '1px solid rgba(239, 68, 68, 0.3)',
+                                        borderRadius: '100px',
+                                        fontSize: '0.7rem',
+                                        fontWeight: 500,
+                                        color: contest.difficulty === 'Easy' ? '#10b981'
+                                            : contest.difficulty === 'Medium' ? '#10b981'
+                                                : '#ef4444'
+                                    }}>
                                         {contest.difficulty}
                                     </span>
-                                    {contest.isStarted && <span className="text-[0.7rem] py-0.5 px-2.5 bg-emerald-500/20 text-emerald-500 rounded-full font-semibold uppercase">Started</span>}
+                                    {contest.isStarted && (
+                                        <span style={{
+                                            marginLeft: '8px',
+                                            display: 'inline-block',
+                                            padding: '4px 12px',
+                                            background: 'rgba(16, 185, 129, 0.2)',
+                                            borderRadius: '100px',
+                                            fontSize: '0.65rem',
+                                            fontWeight: 600,
+                                            color: '#10b981',
+                                            textTransform: 'uppercase'
+                                        }}>
+                                            Started
+                                        </span>
+                                    )}
                                 </div>
                             </div>
-                            <div className="flex gap-8">
-                                <div className="text-center">
-                                    <span className="block text-[1.25rem] font-semibold text-yellow-200">{contest.participantCount || 0}</span>
-                                    <span className="text-[0.7rem] text-white/40 uppercase">Players</span>
+
+                            {/* Middle: Stats */}
+                            <div style={{ display: 'flex', gap: '40px', alignItems: 'center' }}>
+                                <div style={{ textAlign: 'left' }}>
+                                    <span style={{
+                                        fontSize: '1.25rem',
+                                        fontWeight: 600,
+                                        color: '#ffffff'
+                                    }}>
+                                        {contest.participantCount || 0}
+                                    </span>
+                                    <span style={{
+                                        marginLeft: '4px',
+                                        fontSize: '0.7rem',
+                                        color: 'rgba(255, 255, 255, 0.4)',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em'
+                                    }}>
+                                        Players
+                                    </span>
                                 </div>
-                                <div className="text-center">
-                                    <span className="block text-[1.25rem] font-semibold text-yellow-200">{contest.taskCount || 0}</span>
-                                    <span className="text-[0.7rem] text-white/40 uppercase">Tasks</span>
-                                </div>
-                                <div className="text-center">
-                                    <span className="block text-[1.25rem] font-semibold text-yellow-200">{contest.duration}m</span>
-                                    <span className="text-[0.7rem] text-white/40 uppercase">Duration</span>
+                                <div style={{ textAlign: 'left' }}>
+                                    <span style={{
+                                        fontSize: '1.25rem',
+                                        fontWeight: 600,
+                                        color: '#FBBF24'
+                                    }}>
+                                        {contest.duration}m
+                                    </span>
+                                    <span style={{
+                                        marginLeft: '4px',
+                                        fontSize: '0.7rem',
+                                        color: 'rgba(255, 255, 255, 0.4)',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em'
+                                    }}>
+                                        Duration
+                                    </span>
                                 </div>
                             </div>
-                            <div className="flex gap-2">
+
+                            {/* Right: Action Buttons */}
+                            <div style={{ display: 'flex', gap: '8px' }}>
                                 {!contest.isStarted && (
                                     <button
-                                        className="w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/20"
                                         onClick={() => startContest(contest.id)}
                                         title="Start Contest"
+                                        style={{
+                                            width: '40px',
+                                            height: '40px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            background: 'rgba(16, 185, 129, 0.1)',
+                                            border: '1px solid rgba(16, 185, 129, 0.3)',
+                                            borderRadius: '10px',
+                                            color: '#10b981',
+                                            cursor: 'pointer'
+                                        }}
                                     >
                                         <Play size={16} />
                                     </button>
                                 )}
                                 <button
-                                    className="w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 bg-blue-500/10 border border-blue-500/30 text-blue-500 hover:bg-blue-500/20"
                                     onClick={() => openParticipantModal(contest.id)}
                                     title="Add Participants"
+                                    style={{
+                                        width: '40px',
+                                        height: '40px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        background: 'rgba(59, 130, 246, 0.1)',
+                                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                                        borderRadius: '10px',
+                                        color: '#3b82f6',
+                                        cursor: 'pointer'
+                                    }}
                                 >
                                     <Users size={16} />
                                 </button>
                                 <button
-                                    className="w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:text-white"
                                     onClick={() => openModal(contest)}
+                                    title="Edit Contest"
+                                    style={{
+                                        width: '40px',
+                                        height: '40px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        background: 'rgba(255, 255, 255, 0.05)',
+                                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                                        borderRadius: '10px',
+                                        color: 'rgba(255, 255, 255, 0.7)',
+                                        cursor: 'pointer'
+                                    }}
                                 >
                                     <Edit2 size={16} />
                                 </button>
                                 <button
-                                    className="w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20"
                                     onClick={() => deleteContest(contest.id)}
+                                    title="Delete Contest"
+                                    style={{
+                                        width: '40px',
+                                        height: '40px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        background: 'rgba(239, 68, 68, 0.15)',
+                                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                                        borderRadius: '10px',
+                                        color: '#ef4444',
+                                        cursor: 'pointer'
+                                    }}
                                 >
                                     <Trash2 size={16} />
                                 </button>
@@ -473,308 +681,693 @@ const Contests: React.FC = () => {
             </div>
         </div>
 
+
         {/* Contest Modal */}
-        {
-            showModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] animate-fade-in" onClick={closeModal}>
-                    <div className="bg-[#1a1f2e] border border-white/10 rounded-xl w-[90%] max-w-[650px] max-h-[85vh] overflow-y-auto shadow-2xl animate-slide-up" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center py-6 px-7 border-b border-white/[0.08]">
-                            <h2 className="m-0 text-[1.4rem] font-semibold text-white">{editingContest ? 'Edit Contest' : 'Create New Contest'}</h2>
-                            <button className="bg-white/5 border-none text-white/60 cursor-pointer flex items-center justify-center w-8 h-8 rounded-md transition-all duration-200 hover:bg-white/10 hover:text-white" onClick={closeModal}>
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        {fetchingDetails ? (
-                            <div className="p-12 text-center">
-                                <div className="inline-block w-8 h-8 border-2 border-yellow-200/20 border-t-yellow-200 rounded-full animate-spin mb-4"></div>
-                                <p className="text-white/60">Loading contest details...</p>
-                            </div>
-                        ) : (
-                            <div className="p-7">
-                                {error && (
-                                    <div className="bg-red-500/10 border border-red-500/40 text-red-400 p-3.5 rounded-[10px] mb-6 text-[0.9rem] flex items-center gap-2.5">
-                                        {error}
-                                    </div>
-                                )}
-
-                                <div className="mb-6">
-                                    <label className="block mb-2.5 text-white/85 text-[0.9rem] font-semibold">Title *</label>
-                                    <input
-                                        name="title"
-                                        value={formData.title}
-                                        onChange={handleChange}
-                                        placeholder="Contest title..."
-                                        required
-                                        className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
-                                    />
-                                </div>
-
-                                <div className="mb-6">
-                                    <label className="block mb-2.5 text-white/85 text-[0.9rem] font-semibold">Description</label>
-                                    <textarea
-                                        name="description"
-                                        value={formData.description}
-                                        onChange={handleChange}
-                                        placeholder="Contest description..."
-                                        rows={3}
-                                        className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35 resize-y min-h-[90px] leading-relaxed"
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4.5 mb-6">
-                                    <div>
-                                        <label className="block mb-2.5 text-white/85 text-[0.9rem] font-semibold">Difficulty</label>
-                                        <select
-                                            name="difficulty"
-                                            value={formData.difficulty}
-                                            onChange={handleChange}
-                                            className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)]"
-                                        >
-                                            <option value="Easy">Easy</option>
-                                            <option value="Medium">Medium</option>
-                                            <option value="Hard">Hard</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block mb-2.5 text-white/85 text-[0.9rem] font-semibold">Duration (min) *</label>
-                                        <input
-                                            type="number"
-                                            name="duration"
-                                            value={formData.duration}
-                                            onChange={handleChange}
-                                            min="1"
-                                            required
-                                            className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)]"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="mb-6">
-                                    <label className="block mb-2.5 text-white/85 text-[0.9rem] font-semibold">Start Password (optional)</label>
-                                    <input
-                                        type="password"
-                                        name="startPassword"
-                                        value={formData.startPassword}
-                                        onChange={handleChange}
-                                        placeholder="Password to start contest..."
-                                        className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
-                                    />
-                                </div>
-
-                                <div className="mt-8 pt-7 border-t border-white/10">
-                                    <div className="flex justify-between items-center mb-4.5">
-                                        <h3 className="m-0 text-[1.05rem] font-semibold text-white">Tasks</h3>
-                                        {formData.tasks.length > 0 && (
-                                            <span className="text-[0.85rem] text-white/50">{formData.tasks.length} task{formData.tasks.length !== 1 ? 's' : ''}</span>
-                                        )}
-                                    </div>
-                                    <div className="bg-white/[0.02] border border-white/[0.08] rounded-xl p-5 mb-4.5">
-                                        <div className="mb-4">
-                                            <input
-                                                name="title"
-                                                value={taskInput.title}
-                                                onChange={handleTaskInputChange}
-                                                placeholder="Task title..."
-                                                className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35"
-                                            />
-                                        </div>
-                                        <div className="mb-4">
-                                            <textarea
-                                                name="description"
-                                                value={taskInput.description}
-                                                onChange={handleTaskInputChange}
-                                                placeholder="Task description..."
-                                                rows={2}
-                                                className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)] placeholder:text-white/35 resize-y min-h-[90px] leading-relaxed"
-                                            />
-                                        </div>
-                                        <div className="grid grid-cols-[1.2fr_120px] gap-3.5 items-end mb-4">
-                                            <div>
-                                                <select
-                                                    name="difficulty"
-                                                    value={taskInput.difficulty}
-                                                    onChange={handleTaskInputChange}
-                                                    className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)]"
-                                                >
-                                                    <option value="Easy">Easy</option>
-                                                    <option value="Medium">Medium</option>
-                                                    <option value="Hard">Hard</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <input
-                                                    type="number"
-                                                    name="maxPoints"
-                                                    value={taskInput.maxPoints}
-                                                    onChange={handleTaskInputChange}
-                                                    placeholder="Points"
-                                                    min="1"
-                                                    className="w-full py-3.5 px-4 bg-white/[0.04] border-[1.5px] border-white/10 rounded-[10px] text-white font-inherit text-[0.95rem] transition-all duration-200 focus:outline-none focus:border-yellow-200/60 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(253,230,138,0.1)]"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="mb-4.5">
-                                            <label className="block mb-2 text-white/70 text-[0.85rem] font-medium">Allowed Languages</label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {SUPPORTED_LANGUAGES.map(lang => (
-                                                    <button
-                                                        key={lang.id}
-                                                        type="button"
-                                                        onClick={() => toggleLanguage(lang.id)}
-                                                        className={`py-1.5 px-3 rounded-full text-[0.8rem] font-medium border transition-all duration-200 cursor-pointer ${taskInput.allowedLanguages.includes(lang.id)
-                                                            ? 'bg-yellow-200/20 border-yellow-200/50 text-yellow-200'
-                                                            : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white/70'
-                                                            }`}
-                                                    >
-                                                        {lang.name}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            onClick={addTask}
-                                            className="py-2.5 px-4.5 bg-yellow-200/10 border-[1.5px] border-yellow-200/35 text-yellow-200 rounded-[10px] cursor-pointer flex items-center gap-2 font-inherit text-[0.88rem] font-semibold w-full justify-center transition-all duration-200 hover:bg-yellow-200/20 hover:border-yellow-200/45"
-                                        >
-                                            {editingTaskIndex !== null ? <><Edit2 size={16} /> Update Task</> : <><Plus size={16} /> Add Task</>}
-                                        </button>
-                                    </div>
-
-                                    {formData.tasks.length > 0 && (
-                                        <div className="flex flex-col gap-3 mt-4.5">
-                                            {formData.tasks.map((task, index) => (
-                                                <div key={index} className="flex justify-between items-start gap-3.5 p-4 bg-white/[0.04] border border-white/10 rounded-[10px] transition-all duration-200 hover:border-white/20 hover:bg-white/5">
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <strong className="text-yellow-200 text-[0.98rem] block">{task.title}</strong>
-                                                            <span className={`text-[0.7rem] px-2 py-0.5 rounded-full font-medium ${task.difficulty === 'Easy' ? 'bg-emerald-500/20 text-emerald-400' : task.difficulty === 'Medium' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}`}>
-                                                                {task.difficulty}
-                                                            </span>
-                                                        </div>
-                                                        <span className="text-white/40 text-[0.75rem] font-medium block mb-2">{task.maxPoints} points</span>
-                                                        <p className="mb-3 text-white/55 text-[0.85rem] leading-relaxed line-clamp-2">{task.description}</p>
-
-                                                        {task.allowedLanguages && task.allowedLanguages.length > 0 && (
-                                                            <div className="flex flex-wrap gap-1.5 mt-2">
-                                                                {task.allowedLanguages.map(langId => (
-                                                                    <span key={langId} className="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[0.65rem] text-white/60">
-                                                                        {SUPPORTED_LANGUAGES.find(l => l.id === langId)?.name || langId}
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => editTask(index)}
-                                                            className="bg-yellow-200/10 border border-yellow-200/25 text-yellow-200 rounded-lg p-2 cursor-pointer flex transition-all duration-200 flex-shrink-0 hover:bg-yellow-200/20 hover:border-yellow-200/35"
-                                                            title="Edit Task"
-                                                        >
-                                                            <Edit2 size={14} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => removeTask(index)}
-                                                            className="bg-red-500/10 border border-red-500/25 text-red-400 rounded-lg p-2 cursor-pointer flex transition-all duration-200 flex-shrink-0 hover:bg-red-500/20 hover:border-red-500/35"
-                                                            title="Remove Task"
-                                                        >
-                                                            <X size={14} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                        <div className="flex justify-end gap-3.5 py-6 px-7 border-t border-white/[0.08] bg-white/[0.02]">
-                            <button
-                                className="py-3 px-6 bg-transparent border-[1.5px] border-white/15 text-white/70 rounded-[10px] cursor-pointer font-medium text-[0.95rem] transition-all duration-200 hover:bg-white/5 hover:border-white/25 hover:text-white"
-                                onClick={closeModal}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className="py-3 px-7 bg-gradient-to-br from-yellow-200/20 to-amber-400/15 border-[1.5px] border-yellow-200/50 text-yellow-200 rounded-[10px] cursor-pointer font-semibold text-[0.95rem] transition-all duration-200 hover:bg-gradient-to-br hover:from-yellow-200/25 hover:to-amber-400/20 hover:border-yellow-200/60 hover:shadow-[0_0_20px_rgba(253,230,138,0.15)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
-                                onClick={handleSave}
-                                disabled={loading || fetchingDetails}
-                            >
-                                {loading ? 'Saving...' : editingContest ? 'Update Contest' : 'Create Contest'}
-                            </button>
-                        </div>
+        {showModal && (
+            <div
+                onClick={closeModal}
+                style={{
+                    position: 'fixed',
+                    inset: 0,
+                    background: 'rgba(0, 0, 0, 0.8)',
+                    backdropFilter: 'blur(4px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000
+                }}
+            >
+                <div
+                    onClick={e => e.stopPropagation()}
+                    style={{
+                        background: 'rgba(15, 19, 24, 0.98)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        borderRadius: '16px',
+                        width: '90%',
+                        maxWidth: '650px',
+                        maxHeight: '85vh',
+                        overflowY: 'auto',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)'
+                    }}
+                >
+                    {/* Modal Header */}
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '24px 28px',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+                    }}>
+                        <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 600, color: '#ffffff' }}>
+                            {editingContest ? 'Edit Contest' : 'Create New Contest'}
+                        </h2>
+                        <button
+                            onClick={closeModal}
+                            style={{
+                                width: '32px',
+                                height: '32px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                border: 'none',
+                                borderRadius: '8px',
+                                color: 'rgba(255, 255, 255, 0.6)',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <X size={20} />
+                        </button>
                     </div>
-                </div>
-            )
-        }
 
-        {/* Add Participants Modal */}
-        {
-            showParticipantModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] animate-fade-in" onClick={() => setShowParticipantModal(false)}>
-                    <div className="bg-[#1a1f2e] border border-white/10 rounded-xl w-[90%] max-w-[550px] max-h-[85vh] overflow-y-auto shadow-2xl animate-slide-up" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center py-6 px-7 border-b border-white/[0.08]">
-                            <h2 className="m-0 text-[1.4rem] font-semibold text-white">Add Participants</h2>
-                            <button className="bg-white/5 border-none text-white/60 cursor-pointer flex items-center justify-center w-8 h-8 rounded-md transition-all duration-200 hover:bg-white/10 hover:text-white" onClick={() => setShowParticipantModal(false)}>
-                                <X size={20} />
-                            </button>
+                    {fetchingDetails ? (
+                        <div style={{ padding: '48px', textAlign: 'center' }}>
+                            <div style={{
+                                width: '32px',
+                                height: '32px',
+                                border: '2px solid rgba(253, 230, 138, 0.2)',
+                                borderTopColor: '#FDE68A',
+                                borderRadius: '50%',
+                                margin: '0 auto 16px',
+                                animation: 'spin 1s linear infinite'
+                            }}></div>
+                            <p style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Loading contest details...</p>
                         </div>
-                        <div className="p-7">
+                    ) : (
+                        <div style={{ padding: '28px' }}>
                             {error && (
-                                <div className="bg-red-500/10 border border-red-500/40 text-red-400 p-3.5 rounded-[10px] mb-6 text-[0.9rem] flex items-center gap-2.5">
+                                <div style={{
+                                    background: 'rgba(239, 68, 68, 0.1)',
+                                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                                    color: '#f87171',
+                                    padding: '14px',
+                                    borderRadius: '10px',
+                                    marginBottom: '24px',
+                                    fontSize: '0.9rem'
+                                }}>
                                     {error}
                                 </div>
                             )}
 
-                            {allUsers.length === 0 ? (
-                                <div className="text-center py-12 px-6 text-white/50">
-                                    <p className="m-0 leading-relaxed">No players available. Create players in the Manage Users page first.</p>
+                            {/* Title */}
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={{ display: 'block', marginBottom: '10px', color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.9rem', fontWeight: 600 }}>
+                                    Title *
+                                </label>
+                                <input
+                                    name="title"
+                                    value={formData.title}
+                                    onChange={handleChange}
+                                    placeholder="Contest title..."
+                                    required
+                                    style={{
+                                        width: '100%',
+                                        padding: '14px 16px',
+                                        background: 'rgba(255, 255, 255, 0.04)',
+                                        border: '1.5px solid rgba(255, 255, 255, 0.1)',
+                                        borderRadius: '10px',
+                                        color: '#ffffff',
+                                        fontSize: '0.95rem',
+                                        outline: 'none'
+                                    }}
+                                />
+                            </div>
+
+                            {/* Description */}
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={{ display: 'block', marginBottom: '10px', color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.9rem', fontWeight: 600 }}>
+                                    Description
+                                </label>
+                                <textarea
+                                    name="description"
+                                    value={formData.description}
+                                    onChange={handleChange}
+                                    placeholder="Contest description..."
+                                    rows={3}
+                                    style={{
+                                        width: '100%',
+                                        padding: '14px 16px',
+                                        background: 'rgba(255, 255, 255, 0.04)',
+                                        border: '1.5px solid rgba(255, 255, 255, 0.1)',
+                                        borderRadius: '10px',
+                                        color: '#ffffff',
+                                        fontSize: '0.95rem',
+                                        outline: 'none',
+                                        resize: 'vertical',
+                                        minHeight: '90px'
+                                    }}
+                                />
+                            </div>
+
+                            {/* Difficulty & Duration */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', marginBottom: '24px' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '10px', color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.9rem', fontWeight: 600 }}>
+                                        Difficulty
+                                    </label>
+                                    <select
+                                        name="difficulty"
+                                        value={formData.difficulty}
+                                        onChange={handleChange}
+                                        style={{
+                                            width: '100%',
+                                            padding: '14px 16px',
+                                            background: '#1e2433',
+                                            border: '1.5px solid rgba(255, 255, 255, 0.1)',
+                                            borderRadius: '10px',
+                                            color: '#ffffff',
+                                            fontSize: '0.95rem',
+                                            outline: 'none',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        <option value="Easy" style={{ background: '#1e2433', color: '#ffffff' }}>Easy</option>
+                                        <option value="Medium" style={{ background: '#1e2433', color: '#ffffff' }}>Medium</option>
+                                        <option value="Hard" style={{ background: '#1e2433', color: '#ffffff' }}>Hard</option>
+                                    </select>
                                 </div>
-                            ) : (
-                                <div className="max-h-[420px] overflow-y-auto -m-2 p-2">
-                                    {allUsers.map(user => (
-                                        <label key={user.id} className="flex items-center gap-3.5 py-3.5 px-4 border-b border-white/5 cursor-pointer transition-all duration-200 rounded-lg hover:bg-white/[0.04] last:border-b-0">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedUserIds.includes(user.id)}
-                                                onChange={() => toggleUserSelection(user.id)}
-                                                className="w-5 h-5 m-0 cursor-pointer accent-yellow-200"
-                                            />
-                                            <div className="flex-1 flex flex-col gap-1.5">
-                                                <span className="text-white font-medium text-[0.95rem]">
-                                                    {user.firstName && user.lastName
-                                                        ? `${user.firstName} ${user.lastName}`
-                                                        : user.username
-                                                    }
-                                                </span>
-                                                <span className="text-white/50 text-[0.85rem]">{user.email}</span>
-                                            </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '10px', color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.9rem', fontWeight: 600 }}>
+                                        Duration (min) *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        name="duration"
+                                        value={formData.duration}
+                                        onChange={handleChange}
+                                        min="1"
+                                        required
+                                        style={{
+                                            width: '100%',
+                                            padding: '14px 16px',
+                                            background: 'rgba(255, 255, 255, 0.04)',
+                                            border: '1.5px solid rgba(255, 255, 255, 0.1)',
+                                            borderRadius: '10px',
+                                            color: '#ffffff',
+                                            fontSize: '0.95rem',
+                                            outline: 'none'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Start Password */}
+                            <div style={{ marginBottom: '24px' }}>
+                                <label style={{ display: 'block', marginBottom: '10px', color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.9rem', fontWeight: 600 }}>
+                                    Start Password (optional)
+                                </label>
+                                <input
+                                    type="password"
+                                    name="startPassword"
+                                    value={formData.startPassword}
+                                    onChange={handleChange}
+                                    placeholder="Password to start contest..."
+                                    style={{
+                                        width: '100%',
+                                        padding: '14px 16px',
+                                        background: 'rgba(255, 255, 255, 0.04)',
+                                        border: '1.5px solid rgba(255, 255, 255, 0.1)',
+                                        borderRadius: '10px',
+                                        color: '#ffffff',
+                                        fontSize: '0.95rem',
+                                        outline: 'none'
+                                    }}
+                                />
+                            </div>
+
+                            {/* Tasks Section */}
+                            <div style={{ marginTop: '32px', paddingTop: '28px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+                                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600, color: '#ffffff' }}>Tasks</h3>
+                                    {formData.tasks.length > 0 && (
+                                        <span style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.5)' }}>
+                                            {formData.tasks.length} task{formData.tasks.length !== 1 ? 's' : ''}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Task Input Form */}
+                                <div style={{
+                                    background: 'rgba(255, 255, 255, 0.02)',
+                                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                                    borderRadius: '12px',
+                                    padding: '20px',
+                                    marginBottom: '18px'
+                                }}>
+                                    <div style={{ marginBottom: '16px' }}>
+                                        <input
+                                            name="title"
+                                            value={taskInput.title}
+                                            onChange={handleTaskInputChange}
+                                            placeholder="Task title..."
+                                            style={{
+                                                width: '100%',
+                                                padding: '14px 16px',
+                                                background: 'rgba(255, 255, 255, 0.04)',
+                                                border: '1.5px solid rgba(255, 255, 255, 0.1)',
+                                                borderRadius: '10px',
+                                                color: '#ffffff',
+                                                fontSize: '0.95rem',
+                                                outline: 'none'
+                                            }}
+                                        />
+                                    </div>
+                                    <div style={{ marginBottom: '16px' }}>
+                                        <textarea
+                                            name="description"
+                                            value={taskInput.description}
+                                            onChange={handleTaskInputChange}
+                                            placeholder="Task description..."
+                                            rows={2}
+                                            style={{
+                                                width: '100%',
+                                                padding: '14px 16px',
+                                                background: 'rgba(255, 255, 255, 0.04)',
+                                                border: '1.5px solid rgba(255, 255, 255, 0.1)',
+                                                borderRadius: '10px',
+                                                color: '#ffffff',
+                                                fontSize: '0.95rem',
+                                                outline: 'none',
+                                                resize: 'vertical',
+                                                minHeight: '70px'
+                                            }}
+                                        />
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: '14px', marginBottom: '16px' }}>
+                                        <select
+                                            name="difficulty"
+                                            value={taskInput.difficulty}
+                                            onChange={handleTaskInputChange}
+                                            style={{
+                                                width: '100%',
+                                                padding: '14px 16px',
+                                                background: '#1e2433',
+                                                border: '1.5px solid rgba(255, 255, 255, 0.1)',
+                                                borderRadius: '10px',
+                                                color: '#ffffff',
+                                                fontSize: '0.95rem',
+                                                outline: 'none',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            <option value="Easy" style={{ background: '#1e2433', color: '#ffffff' }}>Easy</option>
+                                            <option value="Medium" style={{ background: '#1e2433', color: '#ffffff' }}>Medium</option>
+                                            <option value="Hard" style={{ background: '#1e2433', color: '#ffffff' }}>Hard</option>
+                                        </select>
+                                        <input
+                                            type="number"
+                                            name="maxPoints"
+                                            value={taskInput.maxPoints}
+                                            onChange={handleTaskInputChange}
+                                            placeholder="Points"
+                                            min="1"
+                                            style={{
+                                                width: '100%',
+                                                padding: '14px 16px',
+                                                background: 'rgba(255, 255, 255, 0.04)',
+                                                border: '1.5px solid rgba(255, 255, 255, 0.1)',
+                                                borderRadius: '10px',
+                                                color: '#ffffff',
+                                                fontSize: '0.95rem',
+                                                outline: 'none'
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* Allowed Languages */}
+                                    <div style={{ marginBottom: '18px' }}>
+                                        <label style={{ display: 'block', marginBottom: '8px', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.85rem', fontWeight: 500 }}>
+                                            Allowed Languages
                                         </label>
-                                    ))}
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                            {SUPPORTED_LANGUAGES.map(lang => (
+                                                <button
+                                                    key={lang.id}
+                                                    type="button"
+                                                    onClick={() => toggleLanguage(lang.id)}
+                                                    style={{
+                                                        padding: '6px 12px',
+                                                        borderRadius: '100px',
+                                                        fontSize: '0.8rem',
+                                                        fontWeight: 500,
+                                                        cursor: 'pointer',
+                                                        border: taskInput.allowedLanguages.includes(lang.id)
+                                                            ? '1px solid rgba(253, 230, 138, 0.5)'
+                                                            : '1px solid rgba(255, 255, 255, 0.1)',
+                                                        background: taskInput.allowedLanguages.includes(lang.id)
+                                                            ? 'rgba(253, 230, 138, 0.2)'
+                                                            : 'rgba(255, 255, 255, 0.05)',
+                                                        color: taskInput.allowedLanguages.includes(lang.id)
+                                                            ? '#FDE68A'
+                                                            : 'rgba(255, 255, 255, 0.5)'
+                                                    }}
+                                                >
+                                                    {lang.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={addTask}
+                                        style={{
+                                            width: '100%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px',
+                                            padding: '10px 18px',
+                                            background: 'rgba(253, 230, 138, 0.1)',
+                                            border: '1.5px solid rgba(253, 230, 138, 0.35)',
+                                            borderRadius: '10px',
+                                            color: '#FDE68A',
+                                            fontSize: '0.88rem',
+                                            fontWeight: 600,
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        {editingTaskIndex !== null ? <><Edit2 size={16} /> Update Task</> : <><Plus size={16} /> Add Task</>}
+                                    </button>
                                 </div>
-                            )}
+
+                                {/* Task List */}
+                                {formData.tasks.length > 0 && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '18px' }}>
+                                        {formData.tasks.map((task, index) => (
+                                            <div
+                                                key={index}
+                                                style={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'flex-start',
+                                                    gap: '14px',
+                                                    padding: '16px',
+                                                    background: 'rgba(255, 255, 255, 0.04)',
+                                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                                    borderRadius: '10px'
+                                                }}
+                                            >
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                        <strong style={{ color: '#FDE68A', fontSize: '0.98rem' }}>{task.title}</strong>
+                                                        <span style={{
+                                                            fontSize: '0.7rem',
+                                                            padding: '2px 8px',
+                                                            borderRadius: '100px',
+                                                            fontWeight: 500,
+                                                            background: task.difficulty === 'Easy' ? 'rgba(16, 185, 129, 0.2)'
+                                                                : task.difficulty === 'Medium' ? 'rgba(245, 158, 11, 0.2)'
+                                                                    : 'rgba(239, 68, 68, 0.2)',
+                                                            color: task.difficulty === 'Easy' ? '#34d399'
+                                                                : task.difficulty === 'Medium' ? '#fbbf24'
+                                                                    : '#f87171'
+                                                        }}>
+                                                            {task.difficulty}
+                                                        </span>
+                                                    </div>
+                                                    <span style={{ display: 'block', fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.4)', fontWeight: 500, marginBottom: '8px' }}>
+                                                        {task.maxPoints} points
+                                                    </span>
+                                                    <p style={{ margin: '0 0 12px', color: 'rgba(255, 255, 255, 0.55)', fontSize: '0.85rem', lineHeight: 1.5 }}>
+                                                        {task.description}
+                                                    </p>
+
+                                                    {task.allowedLanguages && task.allowedLanguages.length > 0 && (
+                                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                                                            {task.allowedLanguages.map(langId => (
+                                                                <span
+                                                                    key={langId}
+                                                                    style={{
+                                                                        padding: '2px 8px',
+                                                                        background: 'rgba(255, 255, 255, 0.05)',
+                                                                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '0.65rem',
+                                                                        color: 'rgba(255, 255, 255, 0.6)'
+                                                                    }}
+                                                                >
+                                                                    {SUPPORTED_LANGUAGES.find(l => l.id === langId)?.name || langId}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button
+                                                        onClick={() => editTask(index)}
+                                                        title="Edit Task"
+                                                        style={{
+                                                            padding: '8px',
+                                                            background: 'rgba(253, 230, 138, 0.1)',
+                                                            border: '1px solid rgba(253, 230, 138, 0.25)',
+                                                            borderRadius: '8px',
+                                                            color: '#FDE68A',
+                                                            cursor: 'pointer',
+                                                            display: 'flex'
+                                                        }}
+                                                    >
+                                                        <Edit2 size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => removeTask(index)}
+                                                        title="Remove Task"
+                                                        style={{
+                                                            padding: '8px',
+                                                            background: 'rgba(239, 68, 68, 0.1)',
+                                                            border: '1px solid rgba(239, 68, 68, 0.25)',
+                                                            borderRadius: '8px',
+                                                            color: '#f87171',
+                                                            cursor: 'pointer',
+                                                            display: 'flex'
+                                                        }}
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        <div className="flex justify-end gap-3.5 py-6 px-7 border-t border-white/[0.08] bg-white/[0.02]">
-                            <button
-                                className="py-3 px-6 bg-transparent border-[1.5px] border-white/15 text-white/70 rounded-[10px] cursor-pointer font-medium text-[0.95rem] transition-all duration-200 hover:bg-white/5 hover:border-white/25 hover:text-white"
-                                onClick={() => setShowParticipantModal(false)}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className="py-3 px-7 bg-gradient-to-br from-yellow-200/20 to-amber-400/15 border-[1.5px] border-yellow-200/50 text-yellow-200 rounded-[10px] cursor-pointer font-semibold text-[0.95rem] transition-all duration-200 hover:bg-gradient-to-br hover:from-yellow-200/25 hover:to-amber-400/20 hover:border-yellow-200/60 hover:shadow-[0_0_20px_rgba(253,230,138,0.15)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
-                                onClick={addParticipants}
-                                disabled={selectedUserIds.length === 0 || loading}
-                            >
-                                {loading ? 'Adding...' : `Add ${selectedUserIds.length} Participant${selectedUserIds.length !== 1 ? 's' : ''}`}
-                            </button>
-                        </div>
+                    )}
+
+                    {/* Modal Footer */}
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        gap: '14px',
+                        padding: '24px 28px',
+                        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                        background: 'rgba(255, 255, 255, 0.02)'
+                    }}>
+                        <button
+                            onClick={closeModal}
+                            style={{
+                                padding: '12px 24px',
+                                background: 'transparent',
+                                border: '1.5px solid rgba(255, 255, 255, 0.15)',
+                                borderRadius: '10px',
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                fontSize: '0.95rem',
+                                fontWeight: 500,
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            disabled={loading || fetchingDetails}
+                            style={{
+                                padding: '12px 28px',
+                                background: 'rgba(253, 230, 138, 0.15)',
+                                border: '1.5px solid rgba(253, 230, 138, 0.5)',
+                                borderRadius: '10px',
+                                color: '#FDE68A',
+                                fontSize: '0.95rem',
+                                fontWeight: 600,
+                                cursor: loading || fetchingDetails ? 'not-allowed' : 'pointer',
+                                opacity: loading || fetchingDetails ? 0.5 : 1
+                            }}
+                        >
+                            {loading ? 'Saving...' : editingContest ? 'Update Contest' : 'Create Contest'}
+                        </button>
                     </div>
                 </div>
-            )
-        }
+            </div>
+        )}
+
+        {/* Add Participants Modal */}
+        {showParticipantModal && (
+            <div
+                onClick={() => setShowParticipantModal(false)}
+                style={{
+                    position: 'fixed',
+                    inset: 0,
+                    background: 'rgba(0, 0, 0, 0.8)',
+                    backdropFilter: 'blur(4px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000
+                }}
+            >
+                <div
+                    onClick={e => e.stopPropagation()}
+                    style={{
+                        background: 'rgba(15, 19, 24, 0.98)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        borderRadius: '16px',
+                        width: '90%',
+                        maxWidth: '550px',
+                        maxHeight: '85vh',
+                        overflowY: 'auto',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)'
+                    }}
+                >
+                    {/* Modal Header */}
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '24px 28px',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+                    }}>
+                        <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 600, color: '#ffffff' }}>
+                            Add Participants
+                        </h2>
+                        <button
+                            onClick={() => setShowParticipantModal(false)}
+                            style={{
+                                width: '32px',
+                                height: '32px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                border: 'none',
+                                borderRadius: '8px',
+                                color: 'rgba(255, 255, 255, 0.6)',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
+
+                    {/* Modal Body */}
+                    <div style={{ padding: '28px' }}>
+                        {error && (
+                            <div style={{
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.4)',
+                                color: '#f87171',
+                                padding: '14px',
+                                borderRadius: '10px',
+                                marginBottom: '24px',
+                                fontSize: '0.9rem'
+                            }}>
+                                {error}
+                            </div>
+                        )}
+
+                        {allUsers.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '48px 24px', color: 'rgba(255, 255, 255, 0.5)' }}>
+                                <p style={{ margin: 0, lineHeight: 1.6 }}>
+                                    No players available. Create players in the Manage Users page first.
+                                </p>
+                            </div>
+                        ) : (
+                            <div style={{ maxHeight: '420px', overflowY: 'auto' }}>
+                                {allUsers.map(user => (
+                                    <label
+                                        key={user.id}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '14px',
+                                            padding: '14px 16px',
+                                            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                                            cursor: 'pointer',
+                                            borderRadius: '8px'
+                                        }}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedUserIds.includes(user.id)}
+                                            onChange={() => toggleUserSelection(user.id)}
+                                            style={{
+                                                width: '20px',
+                                                height: '20px',
+                                                margin: 0,
+                                                cursor: 'pointer',
+                                                accentColor: '#FDE68A'
+                                            }}
+                                        />
+                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <span style={{ color: '#ffffff', fontWeight: 500, fontSize: '0.95rem' }}>
+                                                {user.firstName && user.lastName
+                                                    ? `${user.firstName} ${user.lastName}`
+                                                    : user.username
+                                                }
+                                            </span>
+                                            <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.85rem' }}>
+                                                {user.email}
+                                            </span>
+                                        </div>
+                                    </label>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Modal Footer */}
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        gap: '14px',
+                        padding: '24px 28px',
+                        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                        background: 'rgba(255, 255, 255, 0.02)'
+                    }}>
+                        <button
+                            onClick={() => setShowParticipantModal(false)}
+                            style={{
+                                padding: '12px 24px',
+                                background: 'transparent',
+                                border: '1.5px solid rgba(255, 255, 255, 0.15)',
+                                borderRadius: '10px',
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                fontSize: '0.95rem',
+                                fontWeight: 500,
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={addParticipants}
+                            disabled={selectedUserIds.length === 0 || loading}
+                            style={{
+                                padding: '12px 28px',
+                                background: 'rgba(253, 230, 138, 0.15)',
+                                border: '1.5px solid rgba(253, 230, 138, 0.5)',
+                                borderRadius: '10px',
+                                color: '#FDE68A',
+                                fontSize: '0.95rem',
+                                fontWeight: 600,
+                                cursor: selectedUserIds.length === 0 || loading ? 'not-allowed' : 'pointer',
+                                opacity: selectedUserIds.length === 0 || loading ? 0.5 : 1
+                            }}
+                        >
+                            {loading ? 'Adding...' : `Add ${selectedUserIds.length} Participant${selectedUserIds.length !== 1 ? 's' : ''}`}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
 
     </div>);
 };

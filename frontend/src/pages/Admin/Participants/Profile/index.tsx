@@ -43,6 +43,7 @@ const ParticipantProfile: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [participant, setParticipant] = useState<Participant | null>(null);
+    const [hoveredCard, setHoveredCard] = useState<number | null>(null);
 
     useEffect(() => {
         setTimeout(() => setParticipant({ ...mockParticipant, id: Number(id) }), 300);
@@ -53,105 +54,246 @@ const ParticipantProfile: React.FC = () => {
     };
 
     if (!participant) return (
-        <div className="p-12 text-center text-white/50">Loading...</div>
+        <div style={{ padding: '48px', textAlign: 'center', color: 'rgba(255, 255, 255, 0.5)' }}>
+            <div style={{
+                width: '32px',
+                height: '32px',
+                border: '2px solid rgba(253, 230, 138, 0.2)',
+                borderTopColor: '#FDE68A',
+                borderRadius: '50%',
+                margin: '0 auto 16px',
+                animation: 'spin 1s linear infinite'
+            }}></div>
+            Loading...
+        </div>
     );
 
     return (
-        <div className="max-w-[1000px]">
+        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
             {/* Back Button */}
             <button
-                className="flex items-center gap-2 py-2.5 px-4.5 bg-transparent border border-white/10 text-white/70 rounded-full font-inherit text-[0.9rem] cursor-pointer mb-6 transition-all duration-200 hover:border-white/20 hover:text-white"
                 onClick={() => navigate('/admin/participants')}
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 18px',
+                    background: 'transparent',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '100px',
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    marginBottom: '24px'
+                }}
             >
                 <ArrowLeft size={18} /> Back to Participants
             </button>
 
             {/* Profile Header */}
-            <div className="flex items-center gap-6 mb-8">
-                <div className="w-20 h-20 bg-yellow-200/15 text-yellow-200 rounded-full flex items-center justify-center font-semibold text-[2rem]">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginBottom: '32px' }}>
+                <div style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '50%',
+                    background: '#FBBF24',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 600,
+                    fontSize: '2rem',
+                    color: '#000000'
+                }}>
                     {participant.username.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                    <h1 className="text-[1.75rem] font-semibold m-0 mb-3 bg-gradient-to-r from-yellow-200 to-yellow-500 bg-clip-text text-transparent">
+                    <h1 style={{
+                        fontSize: '1.75rem',
+                        fontWeight: 600,
+                        margin: 0,
+                        marginBottom: '12px',
+                        color: '#ffffff'
+                    }}>
                         {participant.username}
                     </h1>
-                    <div className="flex gap-6 text-white/50 text-[0.9rem]">
-                        <span className="flex items-center gap-2"><Mail size={14} /> {participant.email}</span>
-                        <span className="flex items-center gap-2"><Calendar size={14} /> Joined {participant.joinedAt}</span>
+                    <div style={{ display: 'flex', gap: '24px', color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.9rem' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Mail size={14} /> {participant.email}
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Calendar size={14} /> Joined {participant.joinedAt}
+                        </span>
                     </div>
                 </div>
             </div>
 
             {/* Stats Row */}
-            <div className="flex gap-5 mb-8 max-md:flex-col">
-                <div className="flex-1 flex items-center gap-4 py-5 px-6 bg-white/[0.03] border border-white/[0.08] rounded-2xl text-yellow-200">
-                    <Trophy size={20} />
+            <div style={{ display: 'flex', gap: '20px', marginBottom: '32px' }}>
+                <div style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    padding: '20px 24px',
+                    background: 'rgba(20, 20, 22, 0.6)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '16px'
+                }}>
+                    <Trophy size={20} style={{ color: '#FDE68A' }} />
                     <div>
-                        <span className="block text-2xl font-semibold text-white">{participant.totalContests}</span>
-                        <span className="text-xs text-white/50 uppercase">Contests</span>
+                        <span style={{ display: 'block', fontSize: '1.5rem', fontWeight: 600, color: '#ffffff' }}>
+                            {participant.totalContests}
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase' }}>
+                            Contests
+                        </span>
                     </div>
                 </div>
-                <div className="flex-1 flex items-center gap-4 py-5 px-6 bg-white/[0.03] border border-white/[0.08] rounded-2xl text-yellow-200">
-                    <FileText size={20} />
+                <div style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    padding: '20px 24px',
+                    background: 'rgba(20, 20, 22, 0.6)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '16px'
+                }}>
+                    <FileText size={20} style={{ color: '#FDE68A' }} />
                     <div>
-                        <span className="block text-2xl font-semibold text-white">{participant.totalSubmissions}</span>
-                        <span className="text-xs text-white/50 uppercase">Submissions</span>
+                        <span style={{ display: 'block', fontSize: '1.5rem', fontWeight: 600, color: '#ffffff' }}>
+                            {participant.totalSubmissions}
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase' }}>
+                            Submissions
+                        </span>
                     </div>
                 </div>
-                <div className="flex-1 flex items-center gap-4 py-5 px-6 bg-white/[0.03] border border-white/[0.08] rounded-2xl text-yellow-200">
-                    <TrendingUp size={20} />
+                <div style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    padding: '20px 24px',
+                    background: 'rgba(20, 20, 22, 0.6)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '16px'
+                }}>
+                    <TrendingUp size={20} style={{ color: '#FDE68A' }} />
                     <div>
-                        <span className="block text-2xl font-semibold text-white">{participant.successRate}%</span>
-                        <span className="text-xs text-white/50 uppercase">Success Rate</span>
+                        <span style={{ display: 'block', fontSize: '1.5rem', fontWeight: 600, color: '#FBBF24' }}>
+                            {participant.successRate}%
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase' }}>
+                            Success Rate
+                        </span>
                     </div>
                 </div>
             </div>
 
             {/* Assigned Contests Section */}
-            <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl overflow-hidden">
-                <div className="flex justify-between items-center py-5 px-6 border-b border-white/[0.08]">
-                    <h2 className="m-0 text-[1.1rem] font-medium text-white">Assigned Contests</h2>
-                    <span className="text-[0.85rem] text-white/50">{participant.contests.length} contests</span>
+            <div style={{
+                background: 'rgba(20, 20, 22, 0.6)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '16px',
+                overflow: 'hidden'
+            }}>
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '20px 24px',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+                }}>
+                    <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 500, color: '#ffffff' }}>
+                        Assigned Contests
+                    </h2>
+                    <span style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.5)' }}>
+                        {participant.contests.length} contests
+                    </span>
                 </div>
-                <div className="grid grid-cols-2 gap-4 p-5 max-md:grid-cols-1">
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: '16px',
+                    padding: '20px'
+                }}>
                     {participant.contests.map(contest => (
                         <div
                             key={contest.id}
-                            className="group bg-white/[0.03] border border-white/[0.08] rounded-xl p-5 cursor-pointer transition-all duration-200 hover:border-yellow-200/30 hover:bg-yellow-200/[0.03]"
                             onClick={() => handleContestClick(contest.id)}
+                            onMouseEnter={() => setHoveredCard(contest.id)}
+                            onMouseLeave={() => setHoveredCard(null)}
+                            style={{
+                                background: hoveredCard === contest.id ? 'rgba(253, 230, 138, 0.03)' : 'rgba(255, 255, 255, 0.03)',
+                                border: hoveredCard === contest.id ? '1px solid rgba(253, 230, 138, 0.3)' : '1px solid rgba(255, 255, 255, 0.08)',
+                                borderRadius: '12px',
+                                padding: '20px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                            }}
                         >
-                            <div className="flex justify-between items-start mb-4">
-                                <h3 className="m-0 text-[1rem] font-medium text-white">{contest.title}</h3>
-                                <span className={`text-[0.7rem] py-1 px-2.5 rounded-full capitalize ${contest.status === 'completed'
-                                    ? 'bg-emerald-500/15 text-emerald-500'
-                                    : 'bg-blue-500/15 text-blue-400'
-                                    }`}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 500, color: '#ffffff' }}>
+                                    {contest.title}
+                                </h3>
+                                <span style={{
+                                    padding: '4px 10px',
+                                    borderRadius: '100px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 500,
+                                    textTransform: 'capitalize',
+                                    background: contest.status === 'completed' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                                    color: contest.status === 'completed' ? '#10b981' : '#3b82f6'
+                                }}>
                                     {contest.status}
                                 </span>
                             </div>
-                            <div className="flex gap-6 mb-4">
+                            <div style={{ display: 'flex', gap: '24px', marginBottom: '16px' }}>
                                 <div>
-                                    <span className="block text-[1.1rem] font-semibold text-white">{contest.submissionsCount}</span>
-                                    <span className="text-[0.7rem] text-white/40 uppercase">Submissions</span>
+                                    <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: 600, color: '#ffffff' }}>
+                                        {contest.submissionsCount}
+                                    </span>
+                                    <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase' }}>
+                                        Submissions
+                                    </span>
                                 </div>
                                 <div>
-                                    <span className="block text-[1.1rem] font-semibold text-white">{contest.score > 0 ? contest.score : '-'}</span>
-                                    <span className="text-[0.7rem] text-white/40 uppercase">Score</span>
+                                    <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: 600, color: '#ffffff' }}>
+                                        {contest.score > 0 ? contest.score : '-'}
+                                    </span>
+                                    <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase' }}>
+                                        Score
+                                    </span>
                                 </div>
                                 <div>
-                                    <span className="block text-[1.1rem] font-semibold text-white">{contest.date}</span>
-                                    <span className="text-[0.7rem] text-white/40 uppercase">Date</span>
+                                    <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: 600, color: '#ffffff' }}>
+                                        {contest.date}
+                                    </span>
+                                    <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase' }}>
+                                        Date
+                                    </span>
                                 </div>
                             </div>
-                            <div className="text-[0.85rem] text-yellow-200 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                            <div style={{
+                                fontSize: '0.85rem',
+                                color: '#FDE68A',
+                                opacity: hoveredCard === contest.id ? 1 : 0,
+                                transition: 'opacity 0.2s ease'
+                            }}>
                                 View Submissions →
                             </div>
                         </div>
                     ))}
                 </div>
             </div>
-        </div>
 
+            <style>{`
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+            `}</style>
+        </div>
     );
 };
 
