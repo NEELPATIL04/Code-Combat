@@ -406,6 +406,21 @@ const Contests: React.FC = () => {
                         >
                             <Plus size={18} /> Create your first contest
                         </button>
+                    </div>
+                ) : (
+                    filteredContests.map(contest => (
+                        <div key={contest.id} className="flex items-center justify-between py-5 px-6 bg-white/[0.02] border border-white/[0.08] rounded-xl transition-all duration-200 hover:border-white/15">
+                            <div className="flex items-center gap-4">
+                                <span className={`w-2.5 h-2.5 rounded-full ${contest.status === 'active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
+                                    contest.status === 'upcoming' ? 'bg-amber-500' :
+                                        'bg-gray-500'
+                                    }`}></span>
+                                <div>
+                                    <h3 className="text-[1rem] font-medium m-0 mb-1 text-white">{contest.title}</h3>
+                                    <span className="text-[0.75rem] text-white/40 py-0.5 px-2 bg-white/5 rounded-full mr-2">
+                                        {contest.difficulty}
+                                    </span>
+                                    {contest.isStarted && <span className="text-[0.7rem] py-0.5 px-2.5 bg-emerald-500/20 text-emerald-500 rounded-full font-semibold uppercase">Started</span>}
                                 </div>
                             </div>
                             <div className="flex gap-8">

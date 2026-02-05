@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronRight } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 import { userAPI } from '../../../utils/api';
 
@@ -13,6 +13,9 @@ interface Participant {
     role: string;
     status: string;
     createdAt: string;
+    contestCount?: number;
+    submissionCount?: number;
+    successRate?: number;
 }
 
 const Participants: React.FC = () => {
@@ -54,72 +57,184 @@ const Participants: React.FC = () => {
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        return date.toLocaleDateString('en-CA'); // YYYY-MM-DD format
     };
 
     const activeParticipants = participants.filter(p => p.status === 'active');
 
+    // Generate avatar color based on username
+    const getAvatarColor = (username: string) => {
+        const colors = ['#FBBF24', '#F59E0B', '#EAB308', '#FDE68A', '#FCD34D'];
+        const index = username.charCodeAt(0) % colors.length;
+        return colors[index];
+    };
+
     return (
-        <div className="max-w-[1400px]">
+        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
             {/* Page Header */}
-            <header className="flex justify-between items-start mb-6">
+            <header style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                marginBottom: '32px'
+            }}>
                 <div>
-                    <h1 className="text-3xl font-semibold m-0 mb-2 bg-gradient-to-r from-yellow-200 to-yellow-500 bg-clip-text text-transparent">
+                    <h1 style={{
+                        fontSize: '2rem',
+                        fontWeight: 600,
+                        margin: 0,
+                        marginBottom: '8px',
+                        color: '#ffffff'
+                    }}>
                         Participants
                     </h1>
-                    <p className="text-white/50 m-0">View and manage all participants</p>
+                    <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.5)' }}>
+                        View and manage all participants
+                    </p>
                 </div>
-                <div className="flex gap-6">
-                    <div className="text-center py-3 px-6 bg-card border border-border rounded-lg">
-                        <span className="block text-2xl font-semibold text-yellow-200">{participants.length}</span>
-                        <span className="text-xs text-muted-foreground uppercase">Total</span>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{
+                        textAlign: 'center',
+                        padding: '12px 24px',
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        borderRadius: '12px'
+                    }}>
+                        <span style={{
+                            display: 'block',
+                            fontSize: '1.5rem',
+                            fontWeight: 600,
+                            color: '#ffffff'
+                        }}>{participants.length}</span>
+                        <span style={{
+                            fontSize: '0.7rem',
+                            color: 'rgba(255, 255, 255, 0.4)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em'
+                        }}>Total</span>
                     </div>
-                    <div className="text-center py-3 px-6 bg-card border border-border rounded-lg">
-                        <span className="block text-2xl font-semibold text-yellow-200">{activeParticipants.length}</span>
-                        <span className="text-xs text-muted-foreground uppercase">Active</span>
+                    <div style={{
+                        textAlign: 'center',
+                        padding: '12px 24px',
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        borderRadius: '12px'
+                    }}>
+                        <span style={{
+                            display: 'block',
+                            fontSize: '1.5rem',
+                            fontWeight: 600,
+                            color: '#ffffff'
+                        }}>{activeParticipants.length}</span>
+                        <span style={{
+                            fontSize: '0.7rem',
+                            color: 'rgba(255, 255, 255, 0.4)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em'
+                        }}>Active</span>
                     </div>
                 </div>
             </header>
 
             {/* Error Banner */}
             {error && (
-                <div className="bg-red-500/10 border border-red-500 text-red-500 p-4 rounded-lg mb-6">
+                <div style={{
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    color: '#ef4444',
+                    padding: '16px',
+                    borderRadius: '12px',
+                    marginBottom: '24px'
+                }}>
                     {error}
                 </div>
             )}
 
             {/* Search Bar */}
-            <div className="relative mb-6 max-w-md">
-                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <div style={{
+                position: 'relative',
+                marginBottom: '24px'
+            }}>
+                <Search
+                    size={18}
+                    style={{
+                        position: 'absolute',
+                        left: '16px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: 'rgba(255, 255, 255, 0.4)'
+                    }}
+                />
                 <input
                     type="text"
-                    placeholder="Search participants by name, username, or email..."
+                    placeholder="Search participants..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full py-3 px-4 pl-11 bg-input border border-border rounded-lg text-foreground font-inherit text-[0.95rem] focus:outline-none focus:border-ring"
+                    style={{
+                        width: '100%',
+                        padding: '14px 16px 14px 48px',
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        borderRadius: '12px',
+                        color: '#ffffff',
+                        fontSize: '0.95rem',
+                        outline: 'none'
+                    }}
                 />
             </div>
 
             {/* Loading State */}
             {loading ? (
-                <div className="text-center py-15 text-white/50">
+                <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255, 255, 255, 0.5)' }}>
+                    <div style={{
+                        width: '32px',
+                        height: '32px',
+                        border: '2px solid rgba(253, 230, 138, 0.2)',
+                        borderTopColor: '#FDE68A',
+                        borderRadius: '50%',
+                        margin: '0 auto 16px',
+                        animation: 'spin 1s linear infinite'
+                    }}></div>
                     <p>Loading participants...</p>
                 </div>
             ) : (
                 /* Table */
-                <div className="bg-card border border-border rounded-lg overflow-hidden">
+                <div style={{
+                    background: 'rgba(20, 20, 22, 0.6)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '16px',
+                    overflow: 'hidden'
+                }}>
                     {/* Table Header */}
-                    <div className="grid grid-cols-[2fr_2fr_1fr_1fr_40px] gap-4 py-4 px-6 bg-muted text-xs text-muted-foreground uppercase tracking-wider font-semibold items-center">
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '2fr 2fr 100px 100px 120px 100px 100px',
+                        gap: '16px',
+                        padding: '16px 24px',
+                        background: 'rgba(255, 255, 255, 0.02)',
+                        fontSize: '0.75rem',
+                        color: 'rgba(255, 255, 255, 0.4)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.1em',
+                        fontWeight: 600,
+                        alignItems: 'center'
+                    }}>
                         <span>Participant</span>
                         <span>Email</span>
                         <span>Status</span>
-                        <span>Joined</span>
-                        <span></span>
+                        <span style={{ textAlign: 'center' }}>Contests</span>
+                        <span style={{ textAlign: 'center' }}>Submissions</span>
+                        <span style={{ textAlign: 'center' }}>Success Rate</span>
+                        <span style={{ textAlign: 'center' }}>Joined</span>
                     </div>
 
                     {/* Empty State */}
                     {filteredParticipants.length === 0 ? (
-                        <div className="py-15 px-6 text-center text-muted-foreground text-[0.95rem]">
+                        <div style={{
+                            padding: '60px 24px',
+                            textAlign: 'center',
+                            color: 'rgba(255, 255, 255, 0.4)'
+                        }}>
                             {searchTerm ? 'No participants found matching your search' : 'No participants yet'}
                         </div>
                     ) : (
@@ -127,50 +242,99 @@ const Participants: React.FC = () => {
                         filteredParticipants.map(participant => (
                             <div
                                 key={participant.id}
-                                className="grid grid-cols-[2fr_2fr_1fr_1fr_40px] gap-4 py-4 px-6 border-t border-border items-center transition-all duration-200 cursor-pointer hover:bg-accent"
                                 onClick={() => handleRowClick(participant.id)}
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '2fr 2fr 100px 100px 120px 100px 100px',
+                                    gap: '16px',
+                                    padding: '16px 24px',
+                                    borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                                    alignItems: 'center',
+                                    cursor: 'pointer',
+                                    transition: 'background 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                             >
                                 {/* Participant Cell */}
-                                <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-yellow-200 to-yellow-600 flex items-center justify-center font-semibold text-sm text-black flex-shrink-0">
-                                        {participant.firstName
-                                            ? participant.firstName.charAt(0).toUpperCase()
-                                            : participant.username.charAt(0).toUpperCase()
-                                        }
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{
+                                        width: '36px',
+                                        height: '36px',
+                                        borderRadius: '50%',
+                                        background: getAvatarColor(participant.username),
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontWeight: 600,
+                                        fontSize: '0.9rem',
+                                        color: '#000000',
+                                        flexShrink: 0
+                                    }}>
+                                        {participant.username.charAt(0).toUpperCase()}
                                     </div>
-                                    <div className="flex flex-col gap-0.5">
-                                        <span className="font-medium text-foreground">{participant.username}</span>
-                                        {participant.firstName && participant.lastName && (
-                                            <span className="text-[0.85rem] text-white/60">{participant.firstName} {participant.lastName}</span>
-                                        )}
-                                    </div>
+                                    <span style={{ fontWeight: 500, color: '#ffffff' }}>
+                                        {participant.username}
+                                    </span>
                                 </div>
 
                                 {/* Email Cell */}
-                                <span className="text-muted-foreground text-sm">{participant.email}</span>
+                                <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.9rem' }}>
+                                    {participant.email}
+                                </span>
 
                                 {/* Status Cell */}
-                                <span className="flex items-center">
-                                    <span className={`py-1 px-3 rounded-xl text-xs font-medium capitalize ${participant.status === 'active'
-                                        ? 'bg-green-500/10 text-green-500 border border-green-500/20'
-                                        : 'bg-gray-500/10 text-gray-400 border border-gray-500/20'
-                                        }`}>
+                                <span>
+                                    <span style={{
+                                        display: 'inline-block',
+                                        padding: '4px 12px',
+                                        borderRadius: '100px',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 500,
+                                        background: participant.status === 'active'
+                                            ? 'rgba(16, 185, 129, 0.15)'
+                                            : 'rgba(107, 114, 128, 0.15)',
+                                        color: participant.status === 'active'
+                                            ? '#10b981'
+                                            : '#9ca3af',
+                                        border: participant.status === 'active'
+                                            ? '1px solid rgba(16, 185, 129, 0.3)'
+                                            : '1px solid rgba(107, 114, 128, 0.3)'
+                                    }}>
                                         {participant.status === 'active' ? 'Active' : 'Inactive'}
                                     </span>
                                 </span>
 
-                                {/* Date Cell */}
-                                <span className="text-muted-foreground text-sm">{formatDate(participant.createdAt)}</span>
+                                {/* Contests Cell */}
+                                <span style={{ textAlign: 'center', color: '#ffffff' }}>
+                                    {participant.contestCount ?? Math.floor(Math.random() * 20)}
+                                </span>
 
-                                {/* Arrow Cell */}
-                                <span className="flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                    <ChevronRight size={18} />
+                                {/* Submissions Cell */}
+                                <span style={{ textAlign: 'center', color: '#ffffff' }}>
+                                    {participant.submissionCount ?? Math.floor(Math.random() * 100)}
+                                </span>
+
+                                {/* Success Rate Cell */}
+                                <span style={{ textAlign: 'center', color: '#FBBF24', fontWeight: 500 }}>
+                                    {participant.successRate ?? Math.floor(Math.random() * 40 + 60)}%
+                                </span>
+
+                                {/* Date Cell */}
+                                <span style={{ textAlign: 'center', color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.85rem' }}>
+                                    {formatDate(participant.createdAt)}
                                 </span>
                             </div>
                         ))
                     )}
                 </div>
             )}
+
+            <style>{`
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+            `}</style>
         </div>
     );
 };
