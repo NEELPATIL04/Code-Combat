@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Trophy, Play, Lock, LogOut } from 'lucide-react';
+import { 
+    Clock, 
+    Trophy, 
+    Lock, 
+    ArrowRight, 
+    CheckCircle2,
+    Timer,
+    ChevronRight
+} from 'lucide-react';
 import { contestAPI } from '../../utils/api';
 
 interface Contest {
@@ -27,44 +35,42 @@ const ParticipantDashboard: React.FC = () => {
     const [password, setPassword] = useState<string>('');
 
     useEffect(() => {
-        loadMyContests();
+        loadData();
     }, []);
 
-    const loadMyContests = async () => {
+    const loadData = async () => {
         try {
             setLoading(true);
-            const data = await contestAPI.getMyContests();
-            setContests(data.contests || []);
+            const contestsData = await contestAPI.getMyContests();
+            setContests(contestsData.contests || []);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load contests');
+            setError(err instanceof Error ? err.message : 'Failed to load data');
         } finally {
             setLoading(false);
         }
     };
 
+    // Separate active and completed contests
+    const activeContests = contests.filter(c => c.status !== 'completed');
+    const completedContests = contests.filter(c => c.status === 'completed');
+
     const handleStartContest = (contest: Contest) => {
-        // Check if contest is started by admin
         if (!contest.isStarted) {
             alert('This contest has not been started yet. Please wait for the admin to start it.');
             return;
         }
 
-        // If contest has password, show password modal
         if (contest.startPassword && !contest.hasStarted) {
             setSelectedContest(contest);
             setShowPasswordModal(true);
         } else {
-            // Navigate to contest tasks
             navigate(`/contest/${contest.id}`);
         }
     };
 
     const handlePasswordSubmit = async () => {
         if (!selectedContest) return;
-
         try {
-            // Verify password on backend (you'll need to implement this endpoint)
-            // For now, just navigate to the contest
             setShowPasswordModal(false);
             navigate(`/contest/${selectedContest.id}`);
         } catch (err) {
@@ -72,154 +78,524 @@ const ParticipantDashboard: React.FC = () => {
         }
     };
 
-    const getDifficultyColorClass = (difficulty: string) => {
+    const getDifficultyStyles = (difficulty: string) => {
         switch (difficulty) {
-            case 'Easy': return 'bg-emerald-500';
-            case 'Medium': return 'bg-amber-500';
-            case 'Hard': return 'bg-red-500';
-            default: return 'bg-gray-500';
+            case 'Easy':
+                return {
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    color: '#34d399',
+                    border: '1px solid rgba(16, 185, 129, 0.3)'
+                };
+            case 'Medium':
+                return {
+                    background: 'rgba(251, 191, 36, 0.15)',
+                    color: '#fbbf24',
+                    border: '1px solid rgba(251, 191, 36, 0.3)'
+                };
+            case 'Hard':
+                return {
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    color: '#f87171',
+                    border: '1px solid rgba(239, 68, 68, 0.3)'
+                };
+            default:
+                return {
+                    background: 'rgba(148, 163, 184, 0.15)',
+                    color: '#94a3b8',
+                    border: '1px solid rgba(148, 163, 184, 0.3)'
+                };
         }
     };
 
     const getStatusBadge = (contest: Contest) => {
+        const baseStyle: React.CSSProperties = {
+            padding: '3px 8px',
+            borderRadius: '100px',
+            fontSize: '0.6rem',
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em'
+        };
+
         if (!contest.isStarted) {
-            return <span className="py-1 px-3 rounded-md text-xs font-semibold uppercase bg-slate-500/20 text-slate-400">Not Started</span>;
+            return (
+                <span style={{
+                    ...baseStyle,
+                    background: 'rgba(148, 163, 184, 0.15)',
+                    color: '#94a3b8',
+                    border: '1px solid rgba(148, 163, 184, 0.3)'
+                }}>
+                    Pending
+                </span>
+            );
         } else if (contest.hasStarted) {
-            return <span className="py-1 px-3 rounded-md text-xs font-semibold uppercase bg-amber-500/20 text-amber-500">In Progress</span>;
-        } else if (contest.status === 'completed') {
-            return <span className="py-1 px-3 rounded-md text-xs font-semibold uppercase bg-blue-500/20 text-blue-500">Completed</span>;
+            return (
+                <span style={{
+                    ...baseStyle,
+                    background: 'rgba(251, 191, 36, 0.15)',
+                    color: '#fbbf24',
+                    border: '1px solid rgba(251, 191, 36, 0.3)'
+                }}>
+                    In Progress
+                </span>
+            );
         } else {
-            return <span className="py-1 px-3 rounded-md text-xs font-semibold uppercase bg-emerald-500/20 text-emerald-500">Ready to Start</span>;
+            return (
+                <span style={{
+                    ...baseStyle,
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    color: '#34d399',
+                    border: '1px solid rgba(16, 185, 129, 0.3)'
+                }}>
+                    Ready
+                </span>
+            );
         }
     };
 
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-8">
-            <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h1 className="text-3xl text-slate-50 mb-2 font-bold">My Contests</h1>
-                    <p className="text-slate-400 text-base">Your assigned coding challenges</p>
-                </div>
-                <div className="flex items-center gap-4">
-                    <span className="text-slate-50 font-medium">{sessionStorage.getItem('username')}</span>
-                    <button
-                        onClick={() => { sessionStorage.clear(); navigate('/'); }}
-                        className="py-2 px-4 bg-red-500/10 border border-red-500 text-red-500 rounded-lg cursor-pointer transition-all duration-300 hover:bg-red-500/20 flex items-center gap-2"
-                    >
-                        <LogOut size={16} /> Logout
-                    </button>
-                </div>
+    if (loading) {
+        return (
+            <div style={{
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '60px 0',
+                color: 'rgba(255, 255, 255, 0.5)'
+            }}>
+                <div style={{
+                    width: '32px',
+                    height: '32px',
+                    border: '3px solid rgba(253, 230, 138, 0.2)',
+                    borderTopColor: '#FDE68A',
+                    borderRadius: '50%',
+                    marginBottom: '14px',
+                    animation: 'spin 1s linear infinite'
+                }} />
+                <p style={{ fontSize: '0.85rem', margin: 0 }}>Loading...</p>
             </div>
+        );
+    }
 
+    return (
+        <div style={{
+            fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif",
+            width: '100%',
+            maxWidth: '800px',
+            margin: '0 auto'
+        }}>
+            {/* Error Message */}
             {error && (
-                <div className="bg-red-500/10 border border-red-500 text-red-500 p-4 rounded-lg mb-6">
+                <div style={{
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                    color: '#f87171',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    marginBottom: '20px',
+                    fontSize: '0.8rem'
+                }}>
                     {error}
                 </div>
             )}
 
-            {loading ? (
-                <div className="text-center py-16 text-slate-400">
-                    <p>Loading contests...</p>
-                </div>
-            ) : contests.length === 0 ? (
-                <div className="text-center py-16 text-slate-400">
-                    <Trophy size={64} className="mx-auto mb-4 text-slate-600" />
-                    <h2 className="text-2xl text-slate-50 mb-2 font-semibold">No Contests Assigned</h2>
-                    <p>You don't have any contests assigned yet. Please contact your administrator.</p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(350px,1fr))] gap-6">
-                    {contests.map(contest => (
-                        <div key={contest.id} className="bg-slate-800/60 border border-slate-400/20 rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:border-slate-400/40 hover:shadow-2xl hover:shadow-black/30">
-                            <div className="flex justify-between items-start mb-4">
-                                <h3 className="text-slate-50 text-xl m-0 font-semibold">{contest.title}</h3>
-                                {getStatusBadge(contest)}
-                            </div>
-
-                            {contest.description && (
-                                <p className="text-slate-400 text-[0.9rem] leading-relaxed mb-4 line-clamp-2">{contest.description}</p>
-                            )}
-
-                            <div className="flex gap-4 mb-4 pb-4 border-b border-slate-400/20">
-                                <div className="flex items-center gap-2 text-slate-400 text-[0.9rem]">
-                                    <Clock size={16} className="text-slate-500" />
-                                    <span>{contest.duration} minutes</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-slate-400 text-[0.9rem]">
-                                    <span className={`py-1 px-3 rounded-md text-xs font-semibold text-white ${getDifficultyColorClass(contest.difficulty)}`}>
-                                        {contest.difficulty}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {contest.hasStarted && contest.score !== undefined && (
-                                <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg mb-4 text-amber-500 font-semibold">
-                                    <Trophy size={20} />
-                                    <span>Score: {contest.score} points</span>
-                                </div>
-                            )}
-
-                            <button
-                                className={`w-full py-3 bg-gradient-to-br from-blue-500 to-blue-600 text-white border-none rounded-lg font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all duration-300 ${(!contest.isStarted || contest.status === 'completed') ? 'opacity-50 cursor-not-allowed bg-slate-500 from-transparent to-transparent bg-slate-500/30 text-slate-500' : 'hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/40'
-                                    }`}
-                                onClick={() => handleStartContest(contest)}
-                                disabled={!contest.isStarted || contest.status === 'completed'}
-                            >
-                                {!contest.isStarted ? (
-                                    <>
-                                        <Lock size={18} />
-                                        Waiting for Admin
-                                    </>
-                                ) : contest.hasStarted ? (
-                                    <>
-                                        <Play size={18} />
-                                        Continue Contest
-                                    </>
-                                ) : (
-                                    <>
-                                        <Play size={18} />
-                                        Start Contest
-                                    </>
-                                )}
-                            </button>
+            {/* Vertical Stacked Layout */}
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '20px'
+            }}>
+                {/* Current Contests Card */}
+                <div style={{
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '16px',
+                    padding: '20px 24px'
+                }}>
+                    {/* Header with Count Badge */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '16px'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <Timer size={18} style={{ color: '#FDE68A' }} />
+                            <h3 style={{
+                                margin: 0,
+                                fontSize: '1rem',
+                                fontWeight: 600,
+                                color: '#ffffff'
+                            }}>Current Contests</h3>
                         </div>
-                    ))}
+                        {/* Count Badge */}
+                        <div style={{
+                            background: 'rgba(253, 230, 138, 0.12)',
+                            border: '1px solid rgba(253, 230, 138, 0.25)',
+                            borderRadius: '8px',
+                            padding: '6px 12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                        }}>
+                            <span style={{
+                                fontSize: '1rem',
+                                fontWeight: 700,
+                                color: '#FDE68A'
+                            }}>{activeContests.length}</span>
+                            <span style={{
+                                fontSize: '0.7rem',
+                                color: 'rgba(253, 230, 138, 0.8)',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.03em'
+                            }}>Tasks</span>
+                        </div>
+                    </div>
+
+                    {/* Contest List */}
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px'
+                    }}>
+                        {activeContests.length === 0 ? (
+                            <div style={{
+                                textAlign: 'center',
+                                padding: '32px 16px',
+                                color: 'rgba(255, 255, 255, 0.4)'
+                            }}>
+                                <Trophy size={32} style={{ marginBottom: '12px', color: '#FDE68A' }} />
+                                <p style={{ margin: 0, fontSize: '0.85rem' }}>No active contests</p>
+                            </div>
+                        ) : (
+                            activeContests.map(contest => (
+                                <div
+                                    key={contest.id}
+                                    onClick={() => handleStartContest(contest)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        padding: '12px 16px',
+                                        background: 'rgba(255, 255, 255, 0.02)',
+                                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                                        borderRadius: '10px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.15s ease'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.borderColor = 'rgba(253, 230, 138, 0.3)';
+                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                                    }}
+                                >
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '10px',
+                                            marginBottom: '6px'
+                                        }}>
+                                            <h4 style={{
+                                                margin: 0,
+                                                fontSize: '0.9rem',
+                                                fontWeight: 600,
+                                                color: '#ffffff',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap'
+                                            }}>{contest.title}</h4>
+                                            {getStatusBadge(contest)}
+                                        </div>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px'
+                                        }}>
+                                            <span style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                                fontSize: '0.75rem',
+                                                color: 'rgba(255, 255, 255, 0.5)'
+                                            }}>
+                                                <Clock size={12} />
+                                                {contest.duration} min
+                                            </span>
+                                            <span style={{
+                                                padding: '2px 8px',
+                                                borderRadius: '100px',
+                                                fontSize: '0.65rem',
+                                                fontWeight: 600,
+                                                ...getDifficultyStyles(contest.difficulty)
+                                            }}>
+                                                {contest.difficulty}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div style={{ marginLeft: '12px' }}>
+                                        {!contest.isStarted ? (
+                                            <Lock size={16} style={{ color: 'rgba(148, 163, 184, 0.6)' }} />
+                                        ) : (
+                                            <ChevronRight size={18} style={{ color: '#FDE68A' }} />
+                                        )}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
                 </div>
-            )}
+
+                {/* Contest History Card */}
+                <div style={{
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '16px',
+                    padding: '20px 24px'
+                }}>
+                    {/* Header with Count Badge */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '16px'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <CheckCircle2 size={18} style={{ color: '#34d399' }} />
+                            <h3 style={{
+                                margin: 0,
+                                fontSize: '1rem',
+                                fontWeight: 600,
+                                color: '#ffffff'
+                            }}>Contest History</h3>
+                        </div>
+                        {/* Count Badge */}
+                        <div style={{
+                            background: 'rgba(16, 185, 129, 0.12)',
+                            border: '1px solid rgba(16, 185, 129, 0.25)',
+                            borderRadius: '8px',
+                            padding: '6px 12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                        }}>
+                            <span style={{
+                                fontSize: '1rem',
+                                fontWeight: 700,
+                                color: '#34d399'
+                            }}>{completedContests.length}</span>
+                            <span style={{
+                                fontSize: '0.7rem',
+                                color: 'rgba(16, 185, 129, 0.8)',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.03em'
+                            }}>Done</span>
+                        </div>
+                    </div>
+
+                    {/* History List */}
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px'
+                    }}>
+                        {completedContests.length === 0 ? (
+                            <div style={{
+                                textAlign: 'center',
+                                padding: '32px 16px',
+                                color: 'rgba(255, 255, 255, 0.4)'
+                            }}>
+                                <Trophy size={32} style={{ marginBottom: '12px', color: '#34d399' }} />
+                                <p style={{ margin: 0, fontSize: '0.85rem' }}>No completed contests</p>
+                                <p style={{ margin: '4px 0 0', fontSize: '0.75rem', opacity: 0.7 }}>
+                                    Complete contests to see them here
+                                </p>
+                            </div>
+                        ) : (
+                            completedContests.map(contest => (
+                                <div
+                                    key={contest.id}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        padding: '12px 16px',
+                                        background: 'rgba(255, 255, 255, 0.02)',
+                                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                                        borderRadius: '10px'
+                                    }}
+                                >
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <h4 style={{
+                                            margin: 0,
+                                            fontSize: '0.9rem',
+                                            fontWeight: 600,
+                                            color: '#ffffff',
+                                            marginBottom: '4px',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                        }}>{contest.title}</h4>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '10px'
+                                        }}>
+                                            <span style={{
+                                                padding: '2px 8px',
+                                                borderRadius: '100px',
+                                                fontSize: '0.65rem',
+                                                fontWeight: 600,
+                                                ...getDifficultyStyles(contest.difficulty)
+                                            }}>
+                                                {contest.difficulty}
+                                            </span>
+                                            <span style={{
+                                                fontSize: '0.7rem',
+                                                color: 'rgba(255, 255, 255, 0.5)'
+                                            }}>
+                                                {contest.duration} min
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        padding: '6px 12px',
+                                        background: 'rgba(253, 230, 138, 0.12)',
+                                        border: '1px solid rgba(253, 230, 138, 0.25)',
+                                        borderRadius: '8px'
+                                    }}>
+                                        <Trophy size={14} style={{ color: '#FDE68A' }} />
+                                        <span style={{
+                                            fontSize: '0.9rem',
+                                            fontWeight: 700,
+                                            color: '#FDE68A'
+                                        }}>{contest.score || 0}</span>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            </div>
 
             {/* Password Modal */}
             {showPasswordModal && selectedContest && (
-                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[1000] animate-fade-in" onClick={() => setShowPasswordModal(false)}>
-                    <div className="bg-slate-800 border border-slate-400/20 rounded-2xl w-[90%] max-w-[500px] shadow-2xl animate-slide-up" onClick={e => e.stopPropagation()}>
-                        <div className="p-6 border-b border-slate-400/20">
-                            <h2 className="text-slate-50 m-0 text-2xl font-bold">Enter Contest Password</h2>
+                <div
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(0, 0, 0, 0.75)',
+                        backdropFilter: 'blur(6px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 2000
+                    }}
+                    onClick={() => setShowPasswordModal(false)}
+                >
+                    <div
+                        style={{
+                            background: '#111113',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '14px',
+                            width: '90%',
+                            maxWidth: '340px',
+                            overflow: 'hidden',
+                            boxShadow: '0 16px 32px rgba(0, 0, 0, 0.4)'
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div style={{
+                            padding: '14px 18px',
+                            borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+                        }}>
+                            <h2 style={{
+                                margin: 0,
+                                fontSize: '0.95rem',
+                                fontWeight: 600,
+                                color: '#ffffff'
+                            }}>Enter Password</h2>
                         </div>
-                        <div className="p-6">
-                            <p className="text-slate-400 mb-4">This contest requires a password to start.</p>
-                            <div className="mb-4">
-                                <label className="block text-slate-50 font-medium mb-2">Password</label>
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Enter password..."
-                                    className="w-full p-3 bg-slate-900/60 border border-slate-400/20 rounded-lg text-slate-50 text-base focus:outline-none focus:border-blue-500 transition-colors"
-                                    onKeyPress={(e) => e.key === 'Enter' && handlePasswordSubmit()}
-                                />
-                            </div>
+                        <div style={{ padding: '14px 18px' }}>
+                            <p style={{
+                                margin: '0 0 12px',
+                                color: 'rgba(255, 255, 255, 0.5)',
+                                fontSize: '0.8rem',
+                                lineHeight: 1.4
+                            }}>
+                                Enter the password from your administrator.
+                            </p>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Password..."
+                                style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    background: 'rgba(255, 255, 255, 0.04)',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    borderRadius: '6px',
+                                    color: '#ffffff',
+                                    fontSize: '0.85rem',
+                                    outline: 'none',
+                                    boxSizing: 'border-box'
+                                }}
+                                onFocus={(e) => {
+                                    e.currentTarget.style.borderColor = 'rgba(253, 230, 138, 0.5)';
+                                }}
+                                onBlur={(e) => {
+                                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                }}
+                                onKeyPress={(e) => e.key === 'Enter' && handlePasswordSubmit()}
+                            />
                         </div>
-                        <div className="p-6 border-t border-slate-400/20 flex gap-4 justify-end">
+                        <div style={{
+                            padding: '12px 18px',
+                            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                            display: 'flex',
+                            gap: '8px',
+                            justifyContent: 'flex-end'
+                        }}>
                             <button
-                                className="py-3 px-6 bg-transparent border border-slate-400/30 text-slate-400 rounded-lg cursor-pointer transition-all duration-300 hover:bg-slate-400/10 hover:text-slate-200"
                                 onClick={() => setShowPasswordModal(false)}
+                                style={{
+                                    padding: '6px 14px',
+                                    background: 'transparent',
+                                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                                    borderRadius: '6px',
+                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 500,
+                                    cursor: 'pointer'
+                                }}
                             >
                                 Cancel
                             </button>
                             <button
-                                className="py-3 px-6 bg-gradient-to-br from-blue-500 to-blue-600 border-none text-white rounded-lg font-semibold cursor-pointer transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/40"
                                 onClick={handlePasswordSubmit}
+                                style={{
+                                    padding: '6px 16px',
+                                    background: 'rgba(253, 230, 138, 0.1)',
+                                    border: '1px solid rgba(253, 230, 138, 0.25)',
+                                    borderRadius: '6px',
+                                    color: '#FDE68A',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '5px'
+                                }}
                             >
-                                Start Contest
+                                Start <ArrowRight size={11} />
                             </button>
                         </div>
                     </div>

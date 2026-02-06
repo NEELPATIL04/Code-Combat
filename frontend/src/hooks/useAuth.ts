@@ -23,11 +23,18 @@ export const useAuth = () => {
     sessionStorage.clear();
   };
 
+  // User object for components that need user info
+  const user = {
+    name: sessionStorage.getItem('username'),
+    email: sessionStorage.getItem('email')
+  };
+
   return {
     isAuthenticated,
     getUserRole,
     getToken,
     getUsername,
-    logout
+    logout,
+    user
   };
 };

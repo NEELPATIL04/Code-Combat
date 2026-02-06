@@ -1,5 +1,6 @@
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import { Plus, Edit2, Trash2, X, Play, Users } from 'lucide-react';
+import Editor from '@monaco-editor/react';
 
 import { contestAPI, userAPI } from '../../../utils/api';
 
@@ -19,6 +20,7 @@ interface Contest {
 interface Task {
     title: string;
     description: string;
+    descriptionType: 'text' | 'html';
     difficulty: string;
     maxPoints: number;
     allowedLanguages: string[];
@@ -78,6 +80,7 @@ const Contests: React.FC = () => {
     const [taskInput, setTaskInput] = useState<Task>({
         title: '',
         description: '',
+        descriptionType: 'text',
         difficulty: 'Medium',
         maxPoints: 100,
         allowedLanguages: ['javascript', 'typescript', 'python', 'java', 'cpp'],
@@ -181,6 +184,7 @@ const Contests: React.FC = () => {
         setTaskInput({
             title: '',
             description: '',
+            descriptionType: 'text',
             difficulty: 'Medium',
             maxPoints: 100,
             allowedLanguages: ['javascript', 'typescript', 'python', 'java', 'cpp'],
@@ -228,6 +232,7 @@ const Contests: React.FC = () => {
             setTaskInput({
                 title: '',
                 description: '',
+                descriptionType: 'text',
                 difficulty: 'Medium',
                 maxPoints: 100,
                 allowedLanguages: ['javascript', 'typescript', 'python', 'java', 'cpp'],
@@ -681,33 +686,22 @@ const Contests: React.FC = () => {
             </div>
         </div>
 
-
-        {/* Contest Modal */}
+        {/* Contest Modal - Full Page */}
         {showModal && (
             <div
-                onClick={closeModal}
                 style={{
                     position: 'fixed',
                     inset: 0,
-                    background: 'rgba(0, 0, 0, 0.8)',
-                    backdropFilter: 'blur(4px)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000
+                    background: '#0a0a0a',
+                    zIndex: 1000,
+                    overflowY: 'auto'
                 }}
             >
                 <div
                     onClick={e => e.stopPropagation()}
                     style={{
-                        background: 'rgba(15, 19, 24, 0.98)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        borderRadius: '16px',
-                        width: '90%',
-                        maxWidth: '650px',
-                        maxHeight: '85vh',
-                        overflowY: 'auto',
-                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)'
+                        minHeight: '100vh',
+                        padding: '32px 48px'
                     }}
                 >
                     {/* Modal Header */}
@@ -933,25 +927,131 @@ const Contests: React.FC = () => {
                                         />
                                     </div>
                                     <div style={{ marginBottom: '16px' }}>
-                                        <textarea
-                                            name="description"
-                                            value={taskInput.description}
-                                            onChange={handleTaskInputChange}
-                                            placeholder="Task description..."
-                                            rows={2}
-                                            style={{
-                                                width: '100%',
-                                                padding: '14px 16px',
-                                                background: 'rgba(255, 255, 255, 0.04)',
-                                                border: '1.5px solid rgba(255, 255, 255, 0.1)',
+                                        {/* Description Type Toggle */}
+                                        <div style={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            justifyContent: 'space-between',
+                                            marginBottom: '10px' 
+                                        }}>
+                                            <label style={{ 
+                                                color: 'rgba(255, 255, 255, 0.7)', 
+                                                fontSize: '0.85rem', 
+                                                fontWeight: 500 
+                                            }}>
+                                                Description
+                                            </label>
+                                            <div style={{ 
+                                                display: 'flex', 
+                                                background: 'rgba(255, 255, 255, 0.05)',
+                                                borderRadius: '8px',
+                                                padding: '3px'
+                                            }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setTaskInput(prev => ({ ...prev, descriptionType: 'text' }))}
+                                                    style={{
+                                                        padding: '6px 14px',
+                                                        borderRadius: '6px',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 600,
+                                                        cursor: 'pointer',
+                                                        border: 'none',
+                                                        background: taskInput.descriptionType === 'text' 
+                                                            ? 'rgba(253, 230, 138, 0.2)' 
+                                                            : 'transparent',
+                                                        color: taskInput.descriptionType === 'text' 
+                                                            ? '#FDE68A' 
+                                                            : 'rgba(255, 255, 255, 0.5)',
+                                                        transition: 'all 0.2s ease'
+                                                    }}
+                                                >
+                                                    Text
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setTaskInput(prev => ({ ...prev, descriptionType: 'html' }))}
+                                                    style={{
+                                                        padding: '6px 14px',
+                                                        borderRadius: '6px',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 600,
+                                                        cursor: 'pointer',
+                                                        border: 'none',
+                                                        background: taskInput.descriptionType === 'html' 
+                                                            ? 'rgba(59, 130, 246, 0.2)' 
+                                                            : 'transparent',
+                                                        color: taskInput.descriptionType === 'html' 
+                                                            ? '#3b82f6' 
+                                                            : 'rgba(255, 255, 255, 0.5)',
+                                                        transition: 'all 0.2s ease'
+                                                    }}
+                                                >
+                                                    HTML
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {taskInput.descriptionType === 'html' ? (
+                                            <div style={{
+                                                border: '1.5px solid rgba(59, 130, 246, 0.3)',
                                                 borderRadius: '10px',
-                                                color: '#ffffff',
-                                                fontSize: '0.95rem',
-                                                outline: 'none',
-                                                resize: 'vertical',
-                                                minHeight: '70px'
-                                            }}
-                                        />
+                                                overflow: 'hidden'
+                                            }}>
+                                                <Editor
+                                                    height="280px"
+                                                    defaultLanguage="html"
+                                                    value={taskInput.description}
+                                                    onChange={(value) => setTaskInput(prev => ({ ...prev, description: value || '' }))}
+                                                    theme="vs-dark"
+                                                    options={{
+                                                        minimap: { enabled: false },
+                                                        fontSize: 14,
+                                                        lineNumbers: 'on',
+                                                        scrollBeyondLastLine: false,
+                                                        wordWrap: 'on',
+                                                        automaticLayout: true,
+                                                        tabSize: 2,
+                                                        formatOnPaste: true,
+                                                        formatOnType: true,
+                                                        autoClosingBrackets: 'always',
+                                                        autoClosingQuotes: 'always',
+                                                        suggestOnTriggerCharacters: true,
+                                                        quickSuggestions: true,
+                                                        padding: { top: 12, bottom: 12 }
+                                                    }}
+                                                />
+                                            </div>
+                                        ) : (
+                                            <textarea
+                                                name="description"
+                                                value={taskInput.description}
+                                                onChange={handleTaskInputChange}
+                                                placeholder="Task description..."
+                                                rows={3}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '14px 16px',
+                                                    background: 'rgba(255, 255, 255, 0.04)',
+                                                    border: '1.5px solid rgba(255, 255, 255, 0.1)',
+                                                    borderRadius: '10px',
+                                                    color: '#ffffff',
+                                                    fontSize: '0.95rem',
+                                                    outline: 'none',
+                                                    resize: 'vertical',
+                                                    minHeight: '70px',
+                                                    lineHeight: '1.5'
+                                                }}
+                                            />
+                                        )}
+                                        {taskInput.descriptionType === 'html' && (
+                                            <p style={{ 
+                                                margin: '8px 0 0', 
+                                                fontSize: '0.7rem', 
+                                                color: 'rgba(59, 130, 246, 0.7)' 
+                                            }}>
+                                                💡 Monaco Editor with HTML autocompletion. Type tags like &lt;div&gt; for auto-closing.
+                                            </p>
+                                        )}
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: '14px', marginBottom: '16px' }}>
                                         <select

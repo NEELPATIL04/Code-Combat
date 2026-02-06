@@ -18,10 +18,6 @@ const menuSections: MenuSection[] = [
     {
         items: [
             { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/admin' },
-        ]
-    },
-    {
-        items: [
             { icon: <Users size={20} />, label: 'Participants', path: '/admin/participants' },
             { icon: <Trophy size={20} />, label: 'Contests', path: '/admin/contests' },
             { icon: <UserCog size={20} />, label: 'Manage Users', path: '/admin/manage-users' },
