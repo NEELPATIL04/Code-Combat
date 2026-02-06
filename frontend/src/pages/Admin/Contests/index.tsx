@@ -30,7 +30,15 @@ const Contests: React.FC = () => {
         fullScreenMode: true,
     });
 
+    // Rich text editor modal state
+    const [showRichTextModal, setShowRichTextModal] = useState<boolean>(false);
+
     const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+
+    // Step navigation for 2-step wizard
+    const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+
+
 
     useEffect(() => {
         loadContests();
@@ -102,6 +110,7 @@ const Contests: React.FC = () => {
                 tasks: [],
                 fullScreenMode: true,
             });
+            setCurrentStep(1);
             setShowModal(true);
             setError('');
         }
@@ -119,6 +128,7 @@ const Contests: React.FC = () => {
             tasks: [],
             fullScreenMode: true,
         });
+        setCurrentStep(1);
         setError('');
     };
 
