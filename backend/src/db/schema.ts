@@ -168,6 +168,112 @@ export const contestParticipants = pgTable('contest_participants', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+/**
+ * Test Cases Table
+ * Stores test cases for each task
+ */
+export const testCases = pgTable('test_cases', {
+  // Primary key - auto-incrementing ID
+  id: serial('id').primaryKey(),
+
+  // Associated task ID
+  taskId: integer('task_id').notNull(),
+
+  // Input data for the test case
+  input: text('input').notNull(),
+
+  // Expected output for the test case
+  expectedOutput: text('expected_output').notNull(),
+
+  // Whether this test case is visible to participants
+  isHidden: boolean('is_hidden').notNull().default(false),
+
+  // Order/position of test case
+  orderIndex: integer('order_index').notNull().default(0),
+
+  // Timestamp when test case was created
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+/**
+ * Submissions Status Enum
+ * Defines the status of code submissions
+ */
+export const submissionStatusEnum = pgEnum('submission_status', [
+  'pending',
+  'processing',
+  'accepted',
+  'wrong_answer',
+  'time_limit_exceeded',
+  'memory_limit_exceeded',
+  'runtime_error',
+  'compilation_error',
+  'internal_error'
+]);
+
+/**
+ * Submissions Table
+ * Stores code submissions from participants
+ */
+export const submissions = pgTable('submissions', {
+  // Primary key - auto-incrementing ID
+  id: serial('id').primaryKey(),
+
+  // User who submitted
+  userId: integer('user_id').notNull(),
+
+  // Task being solved
+  taskId: integer('task_id').notNull(),
+
+  // Contest ID
+  contestId: integer('contest_id').notNull(),
+
+  // Programming language used
+  language: varchar('language', { length: 50 }).notNull(),
+
+  // Judge0 language ID
+  languageId: integer('language_id').notNull(),
+
+  // Source code submitted
+  sourceCode: text('source_code').notNull(),
+
+  // Submission status
+  status: submissionStatusEnum('status').notNull().default('pending'),
+
+  // Judge0 submission token
+  judge0Token: varchar('judge0_token', { length: 255 }),
+
+  // Test results (JSON array)
+  testResults: json('test_results').$type<any[]>(),
+
+  // Number of test cases passed
+  passedTests: integer('passed_tests').default(0),
+
+  // Total number of test cases
+  totalTests: integer('total_tests').default(0),
+
+  // Execution time in milliseconds
+  executionTime: integer('execution_time'),
+
+  // Memory used in KB
+  memoryUsed: integer('memory_used'),
+
+  // Score achieved
+  score: integer('score').default(0),
+
+  // Compilation error message
+  compileOutput: text('compile_output'),
+
+  // Runtime error message
+  stderr: text('stderr'),
+
+  // Timestamp when submitted
+  submittedAt: timestamp('submitted_at').defaultNow().notNull(),
+
+  // Timestamp when processed
+  processedAt: timestamp('processed_at'),
+});
+
 // TypeScript types inferred from the schema
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -180,3 +286,9 @@ export type NewTask = typeof tasks.$inferInsert;
 
 export type ContestParticipant = typeof contestParticipants.$inferSelect;
 export type NewContestParticipant = typeof contestParticipants.$inferInsert;
+
+export type TestCase = typeof testCases.$inferSelect;
+export type NewTestCase = typeof testCases.$inferInsert;
+
+export type Submission = typeof submissions.$inferSelect;
+export type NewSubmission = typeof submissions.$inferInsert;

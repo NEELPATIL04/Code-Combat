@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Play, Send, XCircle, Clock, GripVertical, ChevronRight, Check, X, Plus } from 'lucide-react';
 import Editor from '@monaco-editor/react';
+import Split from 'react-split';
 
 interface Task {
     id: number;
@@ -338,7 +339,7 @@ const TaskPage: React.FC = () => {
                         Exit
                     </button>
                 </div>
-            </nav>
+            </div>
 
             {/* Main Content */}
             <div ref={containerRef} style={{ flex: 1, display: 'flex', padding: 6, gap: 0, overflow: 'hidden' }}>
