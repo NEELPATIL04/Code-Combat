@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 import { Play, Send, XCircle, Clock, ChevronRight, Check, X, GripHorizontal, Minimize2 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
+import { submissionAPI } from '../../utils/api';
 
 
 interface Task {
@@ -652,51 +653,135 @@ const TaskPage: React.FC = () => {
 
     const handleRun = useCallback(async () => {
         const currentCode = codeRef.current;
-        console.log('Running code:', currentCode);
+        console.log('Running code against test cases...');
         setIsRunning(true);
         setShowTestCases(true);
 
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        try {
+            if (!task) {
+                throw new Error('Task not found');
+            }
 
-        setTestCases((prevCases: TestCase[]) => prevCases.map(tc => ({
-            ...tc,
-            actualOutput: tc.expectedOutput,
-            passed: Math.random() > 0.3,
-            executionTime: Math.floor(Math.random() * 100) + 10,
-        })));
+            // Run code against ALL test cases (not just first one)
+            const result = await submissionAPI.run({
+                taskId: task.id,
+                code: currentCode,
+                language: language,
+            });
+
+            console.log('✅ Run Result:', result);
+
+            if (result.success && result.data) {
+                const { results } = result.data;
+
+                // Update test cases with actual results
+                setTestCases((prevCases: TestCase[]) => prevCases.map((tc, index) => {
+                    const testResult = results[index];
+                    if (testResult) {
+                        return {
+                            ...tc,
+                            actualOutput: testResult.actualOutput || 'No output',
+                            passed: testResult.passed,
+                            executionTime: testResult.executionTime,
+                        };
+                    }
+                    return tc;
+                }));
+            }
+        } catch (error: any) {
+            console.error('❌ Run error:', error);
+            setTestCases((prevCases: TestCase[]) => prevCases.map((tc, index) => ({
+                ...tc,
+                actualOutput: `Error: ${error.message}`,
+                passed: false,
+            })));
+        }
+
         setIsRunning(false);
-    }, []);
+    }, [language, task]);
 
     const handleSubmit = useCallback(async () => {
         const currentCode = codeRef.current;
-        console.log('Submitting code:', currentCode);
+        console.log('Submitting code solution...');
         setIsRunning(true);
         setShowTestCases(true);
 
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+            if (!task || !contest) {
+                throw new Error('Task or Contest not found');
+            }
 
-        const status = Math.random() > 0.5 ? 'Accepted' : 'Wrong Answer';
+            // Submit code solution (runs against ALL test cases including hidden ones)
+            const result = await submissionAPI.submit({
+                taskId: task.id,
+                contestId: contest.id,
+                code: currentCode,
+                language: language,
+            });
 
-        setSubmissions((prev: SubmissionHistory[]) => {
-            const newSubmission: SubmissionHistory = {
-                id: prev.length + 1,
-                timestamp: new Date(),
-                status: status as any,
-                runtime: `${Math.floor(Math.random() * 100) + 20} ms`,
-                memory: `${(Math.random() * 10 + 40).toFixed(1)} MB`,
-                language: language.charAt(0).toUpperCase() + language.slice(1),
-            };
-            return [newSubmission, ...prev];
-        });
+            console.log('✅ Submit Result:', result);
 
-        setTestCases((prevCases: TestCase[]) => prevCases.map(tc => ({
-            ...tc,
-            actualOutput: tc.expectedOutput,
-            passed: status === 'Accepted',
-            executionTime: Math.floor(Math.random() * 100) + 10,
-        })));
+            if (result.success && result.data) {
+                const { passed, total, results, status, score } = result.data;
+
+                // Determine overall status
+                const submissionStatus = status || (passed === total ? 'Accepted' : 'Wrong Answer');
+
+                // Add to submission history
+                setSubmissions((prev: SubmissionHistory[]) => {
+                    const avgTime = results.reduce((sum: number, r: any) => sum + (r.executionTime || 0), 0) / results.length;
+                    const avgMemory = results.reduce((sum: number, r: any) => sum + (r.memory || 0), 0) / results.length / 1024;
+
+                    const newSubmission: SubmissionHistory = {
+                        id: prev.length + 1,
+                        timestamp: new Date(),
+                        status: submissionStatus as any,
+                        runtime: `${avgTime.toFixed(0)} ms`,
+                        memory: `${avgMemory.toFixed(1)} MB`,
+                        language: language.charAt(0).toUpperCase() + language.slice(1),
+                    };
+                    return [newSubmission, ...prev];
+                });
+
+                // Update test cases with results (only visible ones)
+                setTestCases((prevCases: TestCase[]) => prevCases.map((tc, index) => {
+                    const result = results[index];
+                    if (result) {
+                        return {
+                            ...tc,
+                            actualOutput: result.actualOutput || 'No output',
+                            passed: result.passed,
+                            executionTime: result.executionTime,
+                        };
+                    }
+                    return tc;
+                }));
+            }
+        } catch (error: any) {
+            console.error('❌ Submit error:', error);
+
+            // Add failed submission to history
+            setSubmissions((prev: SubmissionHistory[]) => {
+                const newSubmission: SubmissionHistory = {
+                    id: prev.length + 1,
+                    timestamp: new Date(),
+                    status: 'Runtime Error',
+                    runtime: 'N/A',
+                    memory: 'N/A',
+                    language: language.charAt(0).toUpperCase() + language.slice(1),
+                };
+                return [newSubmission, ...prev];
+            });
+
+            setTestCases((prevCases: TestCase[]) => prevCases.map(tc => ({
+                ...tc,
+                actualOutput: `Error: ${error.message}`,
+                passed: false,
+            })));
+        }
+
         setIsRunning(false);
-    }, [language]);
+    }, [language, task, contest]);
 
     const handleTestCaseTabChange = useCallback((index: number) => {
         setTestCaseActiveTab(index);

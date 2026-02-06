@@ -3,19 +3,21 @@
  * Provides helpers for making authenticated API requests
  */
 
-// Backend URLs from environment variables
-const LOCAL_BACKEND = import.meta.env.VITE_LOCAL_BACKEND_URL || 'http://localhost:5000/api';
-const LIVE_BACKEND = import.meta.env.VITE_LIVE_BACKEND_URL || 'http://49.13.223.175:5000/api';
-
-// Get backend mode from environment variable
-// Set VITE_BACKEND_MODE to 'local' or 'live' in .env file
+// Backend mode from environment variable
 const backendMode = import.meta.env.VITE_BACKEND_MODE || 'local';
 
-// Select API URL based on mode
-const API_BASE_URL = backendMode === 'live' ? LIVE_BACKEND : LOCAL_BACKEND;
+// Use relative URL for API calls (Vite proxy will handle routing)
+// Vite proxy automatically routes /api/* to the correct backend based on mode
+const API_BASE_URL = '/api';
+
+// Get actual backend URL for logging
+const LOCAL_BACKEND = import.meta.env.VITE_LOCAL_BACKEND_URL || 'http://localhost:5000/api';
+const LIVE_BACKEND = import.meta.env.VITE_LIVE_BACKEND_URL || 'http://49.13.223.175:5000/api';
+const actualBackend = backendMode === 'live' ? LIVE_BACKEND : LOCAL_BACKEND;
 
 // Log current backend mode for debugging
-console.log(`🔗 API Mode: ${backendMode.toUpperCase()} → ${API_BASE_URL}`);
+console.log(`🔗 API Mode: ${backendMode.toUpperCase()} → ${actualBackend}`);
+console.log(`📡 Requests go to: ${API_BASE_URL} (proxied by Vite)`);
 
 /**
  * Get authorization headers with JWT token
@@ -179,6 +181,66 @@ export const userAPI = {
   // Get profile
   getProfile: async () => {
     const response = await fetch(`${API_BASE_URL}/users/profile`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
+
+/**
+ * Submission/Code Execution API
+ */
+export const submissionAPI = {
+  /**
+   * Run code against test cases (no save to database)
+   * This tests your code against the task's test cases
+   */
+  run: async (params: {
+    taskId: number;
+    code: string;
+    language: string;
+  }) => {
+    const response = await fetch(`${API_BASE_URL}/submissions/run`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(params),
+    });
+    return handleResponse(response);
+  },
+
+  /**
+   * Submit code solution (saves to database)
+   * This is the final submission that gets scored
+   */
+  submit: async (params: {
+    taskId: number;
+    contestId: number;
+    code: string;
+    language: string;
+  }) => {
+    const response = await fetch(`${API_BASE_URL}/submissions/submit`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(params),
+    });
+    return handleResponse(response);
+  },
+
+  /**
+   * Get submission history for a specific task
+   */
+  getTaskSubmissions: async (taskId: number) => {
+    const response = await fetch(`${API_BASE_URL}/submissions/task/${taskId}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  /**
+   * Health check for Judge0 service
+   */
+  healthCheck: async () => {
+    const response = await fetch(`${API_BASE_URL}/submissions/health`, {
       headers: getAuthHeaders(),
     });
     return handleResponse(response);
