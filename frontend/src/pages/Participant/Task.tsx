@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Play, Send, XCircle, Clock } from 'lucide-react';
+import { Play, Send, XCircle, Clock, GripVertical, ChevronRight, Check, X, Plus } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 
 interface Task {
@@ -21,15 +21,30 @@ interface Contest {
     status: string;
 }
 
+interface TestCase {
+    id: number;
+    input: string;
+    expectedOutput: string;
+    actualOutput?: string;
+    passed?: boolean;
+    executionTime?: number;
+}
+
+interface SubmissionHistory {
+    id: number;
+    timestamp: Date;
+    status: 'Accepted' | 'Wrong Answer' | 'Time Limit Exceeded' | 'Runtime Error';
+    runtime: string;
+    memory: string;
+    language: string;
+}
+
 const LANGUAGE_BOILERPLATES: Record<string, string> = {
-    javascript: '// Write your JavaScript solution here\nfunction solve() {\n    \n}\n',
-    typescript: '// Write your TypeScript solution here\nfunction solve() {\n    \n}\n',
-    python: '# Write your Python solution here\ndef solve():\n    pass\n',
-    java: '// Write your Java solution here\nclass Solution {\n    public static void main(String[] args) {\n        \n    }\n}\n',
-    cpp: '// Write your C++ solution here\n#include <iostream>\nusing namespace std;\n\nint main() {\n    return 0;\n}\n',
-    csharp: '// Write your C# solution here\nusing System;\n\nclass Solution {\n    static void Main() {\n        \n    }\n}\n',
-    go: '// Write your Go solution here\npackage main\n\nimport "fmt"\n\nfunc main() {\n    \n}\n',
-    rust: '// Write your Rust solution here\nfn main() {\n    \n}\n',
+    javascript: '// Write your JavaScript solution here\nfunction solve(nums, target) {\n    // Your code here\n    return [];\n}\n',
+    typescript: '// Write your TypeScript solution here\nfunction solve(nums: number[], target: number): number[] {\n    // Your code here\n    return [];\n}\n',
+    python: '# Write your Python solution here\ndef solve(nums, target):\n    # Your code here\n    pass\n',
+    java: '// Write your Java solution here\nclass Solution {\n    public int[] solve(int[] nums, int target) {\n        // Your code here\n        return new int[]{};\n    }\n}\n',
+    cpp: '// Write your C++ solution here\n#include <vector>\nusing namespace std;\n\nclass Solution {\npublic:\n    vector<int> solve(vector<int>& nums, int target) {\n        // Your code here\n        return {};\n    }\n};\n',
 };
 
 const getFileExtension = (lang: string): string => {
@@ -39,9 +54,6 @@ const getFileExtension = (lang: string): string => {
         case 'python': return 'py';
         case 'java': return 'java';
         case 'cpp': return 'cpp';
-        case 'csharp': return 'cs';
-        case 'go': return 'go';
-        case 'rust': return 'rs';
         default: return 'txt';
     }
 };
@@ -49,93 +61,167 @@ const getFileExtension = (lang: string): string => {
 const TaskPage: React.FC = () => {
     const navigate = useNavigate();
     const { id: contestId } = useParams<{ id: string }>();
+
+    // Data state
     const [task, setTask] = useState<Task | null>(null);
     const [contest, setContest] = useState<Contest | null>(null);
-    const [time, setTime] = useState<number>(45 * 60 + 22);
-    const [language, setLanguage] = useState<string>('typescript');
-    const [code, setCode] = useState<string>(LANGUAGE_BOILERPLATES['typescript']);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
 
+    // Timer state
+    const [time, setTime] = useState<number>(45 * 60);
+
+    // Editor state
+    const [language, setLanguage] = useState<string>('javascript');
+    const [code, setCode] = useState<string>(LANGUAGE_BOILERPLATES['javascript']);
+
+    // Panel resize state
+    const [leftPanelWidth, setLeftPanelWidth] = useState<number>(40);
+    const [editorHeight, setEditorHeight] = useState<number>(60);
+    const [isResizingHorizontal, setIsResizingHorizontal] = useState<boolean>(false);
+    const [isResizingVertical, setIsResizingVertical] = useState<boolean>(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const rightPanelRef = useRef<HTMLDivElement>(null);
+
+    // Tab state
+    const [leftActiveTab, setLeftActiveTab] = useState<'description' | 'submissions'>('description');
+    const [testCaseActiveTab, setTestCaseActiveTab] = useState<number>(0);
+
+    // Test execution state
+    const [showTestCases, setShowTestCases] = useState<boolean>(false);
+    const [isRunning, setIsRunning] = useState<boolean>(false);
+    const [testCases, setTestCases] = useState<TestCase[]>([
+        { id: 1, input: 'nums = [2,7,11,15], target = 9', expectedOutput: '[0,1]' },
+        { id: 2, input: 'nums = [3,2,4], target = 6', expectedOutput: '[1,2]' },
+        { id: 3, input: 'nums = [3,3], target = 6', expectedOutput: '[0,1]' },
+    ]);
+
+    // Submission history
+    const [submissions, setSubmissions] = useState<SubmissionHistory[]>([
+        { id: 1, timestamp: new Date(Date.now() - 3600000), status: 'Wrong Answer', runtime: '52 ms', memory: '42.1 MB', language: 'JavaScript' },
+        { id: 2, timestamp: new Date(Date.now() - 7200000), status: 'Time Limit Exceeded', runtime: 'N/A', memory: 'N/A', language: 'JavaScript' },
+    ]);
+
+    // Fetch task data
     useEffect(() => {
         const fetchTaskData = async () => {
             try {
-                console.log('Contest ID from URL:', contestId);
                 const token = sessionStorage.getItem('token');
-                console.log('Token exists:', !!token);
-
                 if (!token) {
-                    console.log('No token found, redirecting to login');
                     navigate('/login');
                     return;
                 }
 
-                const apiUrl = `/api/contests/${contestId}/tasks`;
-                console.log('Fetching from:', apiUrl);
-
-                // Fetch tasks for the contest
-                const response = await fetch(apiUrl, {
+                const response = await fetch(`/api/contests/${contestId}/tasks`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json',
                     },
                 });
 
-                console.log('Response status:', response.status);
-                console.log('Response OK:', response.ok);
-
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-                    console.error('API Error:', errorData);
-                    throw new Error(errorData.message || 'Failed to fetch tasks');
+                    throw new Error('Failed to fetch tasks');
                 }
 
                 const data = await response.json();
-                console.log('Received data:', data);
-
                 if (data.tasks && data.tasks.length > 0) {
-                    console.log('Setting task:', data.tasks[0]);
-                    setTask(data.tasks[0]); // Get the first task
+                    setTask(data.tasks[0]);
                     setContest(data.contest);
-
-                    // Set initial language if available
-                    if (data.tasks[0].allowedLanguages && data.tasks[0].allowedLanguages.length > 0) {
+                    if (data.tasks[0].allowedLanguages?.length > 0) {
                         const initialLang = data.tasks[0].allowedLanguages[0];
                         setLanguage(initialLang);
-                        setCode(LANGUAGE_BOILERPLATES[initialLang] || LANGUAGE_BOILERPLATES['typescript']);
+                        setCode(LANGUAGE_BOILERPLATES[initialLang] || LANGUAGE_BOILERPLATES['javascript']);
                     }
-
-                    // Set timer based on contest duration
                     if (data.contest?.duration) {
                         setTime(data.contest.duration * 60);
                     }
                 } else {
-                    console.log('No tasks found in response');
-                    setError('No tasks found for this contest');
+                    setError('No tasks found');
                 }
-
                 setLoading(false);
             } catch (err) {
-                console.error('Error fetching task:', err);
                 setError(err instanceof Error ? err.message : 'Failed to load task');
                 setLoading(false);
             }
         };
 
-        if (contestId) {
-            console.log('Starting fetch with contest ID:', contestId);
-            fetchTaskData();
-        } else {
-            console.log('No contest ID provided');
-            setError('No contest ID provided');
+        if (contestId) fetchTaskData();
+        else {
+            setError('No contest ID');
             setLoading(false);
         }
     }, [contestId, navigate]);
 
+    // Timer countdown
     useEffect(() => {
         const interval = setInterval(() => setTime(prev => prev > 0 ? prev - 1 : 0), 1000);
         return () => clearInterval(interval);
     }, []);
+
+    // Horizontal resize handlers
+    const handleHorizontalMouseDown = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        setIsResizingHorizontal(true);
+    }, []);
+
+    const handleHorizontalMouseMove = useCallback((e: MouseEvent) => {
+        if (!isResizingHorizontal || !containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const newWidth = ((e.clientX - rect.left) / rect.width) * 100;
+        setLeftPanelWidth(Math.min(70, Math.max(25, newWidth)));
+    }, [isResizingHorizontal]);
+
+    const handleHorizontalMouseUp = useCallback(() => {
+        setIsResizingHorizontal(false);
+    }, []);
+
+    // Vertical resize handlers
+    const handleVerticalMouseDown = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        setIsResizingVertical(true);
+    }, []);
+
+    const handleVerticalMouseMove = useCallback((e: MouseEvent) => {
+        if (!isResizingVertical || !rightPanelRef.current) return;
+        const rect = rightPanelRef.current.getBoundingClientRect();
+        const newHeight = ((e.clientY - rect.top) / rect.height) * 100;
+        setEditorHeight(Math.min(85, Math.max(30, newHeight)));
+    }, [isResizingVertical]);
+
+    const handleVerticalMouseUp = useCallback(() => {
+        setIsResizingVertical(false);
+    }, []);
+
+    // Mouse event listeners
+    useEffect(() => {
+        if (isResizingHorizontal) {
+            document.addEventListener('mousemove', handleHorizontalMouseMove);
+            document.addEventListener('mouseup', handleHorizontalMouseUp);
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        }
+        return () => {
+            document.removeEventListener('mousemove', handleHorizontalMouseMove);
+            document.removeEventListener('mouseup', handleHorizontalMouseUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+    }, [isResizingHorizontal, handleHorizontalMouseMove, handleHorizontalMouseUp]);
+
+    useEffect(() => {
+        if (isResizingVertical) {
+            document.addEventListener('mousemove', handleVerticalMouseMove);
+            document.addEventListener('mouseup', handleVerticalMouseUp);
+            document.body.style.cursor = 'row-resize';
+            document.body.style.userSelect = 'none';
+        }
+        return () => {
+            document.removeEventListener('mousemove', handleVerticalMouseMove);
+            document.removeEventListener('mouseup', handleVerticalMouseUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+    }, [isResizingVertical, handleVerticalMouseMove, handleVerticalMouseUp]);
 
     const formatTime = (seconds: number): string => {
         const m = Math.floor(seconds / 60);
@@ -144,200 +230,353 @@ const TaskPage: React.FC = () => {
     };
 
     const handleLanguageChange = (newLang: string) => {
-        // Only reset code if it's currently a boilerplate or empty
         const currentBoilerplate = LANGUAGE_BOILERPLATES[language];
-        const isDefaultCode = !code.trim() || code === currentBoilerplate;
-
-        if (!isDefaultCode) {
-            const confirmReset = window.confirm('Switching languages will reset your current code. Do you want to proceed?');
-            if (!confirmReset) return;
-        }
-
-        setCode(LANGUAGE_BOILERPLATES[newLang] || LANGUAGE_BOILERPLATES['typescript']);
+        if (code !== currentBoilerplate && !window.confirm('Switching languages will reset your code. Continue?')) return;
+        setCode(LANGUAGE_BOILERPLATES[newLang] || LANGUAGE_BOILERPLATES['javascript']);
         setLanguage(newLang);
     };
 
-    const handleEditorChange = (value: string | undefined) => {
-        if (value !== undefined) {
-            setCode(value);
+    const handleRun = async () => {
+        setIsRunning(true);
+        setShowTestCases(true);
+        setEditorHeight(60);
+
+        // Simulate test execution
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        const updatedCases = testCases.map(tc => ({
+            ...tc,
+            actualOutput: tc.expectedOutput,
+            passed: Math.random() > 0.3,
+            executionTime: Math.floor(Math.random() * 100) + 10,
+        }));
+        setTestCases(updatedCases);
+        setIsRunning(false);
+    };
+
+    const handleSubmit = async () => {
+        setIsRunning(true);
+        setShowTestCases(true);
+        setEditorHeight(60);
+
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        const newSubmission: SubmissionHistory = {
+            id: submissions.length + 1,
+            timestamp: new Date(),
+            status: Math.random() > 0.5 ? 'Accepted' : 'Wrong Answer',
+            runtime: `${Math.floor(Math.random() * 100) + 20} ms`,
+            memory: `${(Math.random() * 10 + 40).toFixed(1)} MB`,
+            language: language.charAt(0).toUpperCase() + language.slice(1),
+        };
+        setSubmissions([newSubmission, ...submissions]);
+
+        const updatedCases = testCases.map(tc => ({
+            ...tc,
+            actualOutput: tc.expectedOutput,
+            passed: newSubmission.status === 'Accepted',
+            executionTime: Math.floor(Math.random() * 100) + 10,
+        }));
+        setTestCases(updatedCases);
+        setIsRunning(false);
+    };
+
+    const getDifficultyStyles = (difficulty: string) => {
+        switch (difficulty) {
+            case 'Easy': return { background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' };
+            case 'Medium': return { background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24', border: '1px solid rgba(251, 191, 36, 0.3)' };
+            case 'Hard': return { background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)' };
+            default: return { background: 'rgba(148, 163, 184, 0.15)', color: '#94a3b8', border: '1px solid rgba(148, 163, 184, 0.3)' };
         }
     };
 
-    const handleRunTests = () => {
-        console.log('Running tests with code:', code);
-        // TODO: Implement test runner
-    };
-
-    const handleSubmit = () => {
-        console.log('Submitting code:', code);
-        // TODO: Implement submission
-    };
+    // Log contest for debugging
+    console.log('Contest:', contest?.title);
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-black text-white flex items-center justify-center">
-                <div className="text-xl">Loading task...</div>
+            <div style={{ minHeight: '100vh', background: '#0a0a0b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{ width: 32, height: 32, border: '3px solid rgba(253, 230, 138, 0.2)', borderTopColor: '#FDE68A', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 14px' }} />
+                    <p style={{ fontSize: '0.85rem', margin: 0, color: 'rgba(255, 255, 255, 0.5)' }}>Loading...</p>
+                </div>
             </div>
         );
     }
 
     if (error || !task) {
         return (
-            <div className="min-h-screen bg-black text-white flex items-center justify-center">
-                <div className="text-xl text-red-500">{error || 'Task not found'}</div>
+            <div style={{ minHeight: '100vh', background: '#0a0a0b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+                <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', color: '#f87171', padding: '16px 24px', borderRadius: 12, fontSize: '0.9rem' }}>
+                    {error || 'Task not found'}
+                </div>
             </div>
         );
     }
 
-    const getDifficultyColor = (difficulty: string) => {
-        switch (difficulty) {
-            case 'Easy':
-                return 'bg-emerald-500/15 text-emerald-500';
-            case 'Medium':
-                return 'bg-amber-500/15 text-amber-500';
-            case 'Hard':
-                return 'bg-red-500/15 text-red-500';
-            default:
-                return 'bg-amber-500/15 text-amber-500';
-        }
-    };
-
     return (
-        <div className="min-h-screen bg-black text-white" style={{ fontFamily: "'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
-            {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-[100] py-4 px-8 border-b" style={{
-                background: 'rgba(0, 0, 0, 0.8)',
-                backdropFilter: 'blur(20px)',
-                borderColor: 'rgba(255, 255, 255, 0.08)'
-            }}>
-                <div className="flex justify-between items-center">
-                    <a href="/" className="flex items-center gap-2.5 no-underline text-white font-semibold">
-                        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                            <circle cx="14" cy="14" r="12" stroke="url(#logoGrad3)" strokeWidth="1.5" />
-                            <circle cx="14" cy="14" r="5" fill="url(#logoGrad3)" />
-                            <defs>
-                                <linearGradient id="logoGrad3" x1="0" y1="0" x2="28" y2="28">
-                                    <stop offset="0%" stopColor="#FDE68A" />
-                                    <stop offset="100%" stopColor="#FBBF24" />
-                                </linearGradient>
-                            </defs>
-                        </svg>
-                        <span style={{
-                            background: 'linear-gradient(90deg, #FDE68A 0%, #FBBF24 100%)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text'
-                        }}>Code Combat</span>
-                    </a>
-                    <div className="flex items-center gap-5">
-                        <span className="text-white/70 text-[0.95rem]">{contest?.title || 'Contest'}</span>
-                        <div className="flex items-center gap-2 text-[1.1rem] font-semibold text-yellow-200 font-mono">
-                            <Clock size={16} />{formatTime(time)}
-                        </div>
-                        <button
-                            className="flex items-center gap-1.5 py-2 px-4 bg-red-500/10 border border-red-500/30 text-red-500 rounded-full font-inherit text-[0.9rem] cursor-pointer transition-all duration-200 hover:bg-red-500/20"
-                            onClick={() => navigate('/player')}
-                        >
-                            <XCircle size={16} /> Abort
-                        </button>
+        <div style={{ height: '100vh', width: '100vw', background: '#0a0a0b', color: '#fff', fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif", display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Navbar */}
+            <nav style={{ height: 56, minHeight: 56, background: '#111113', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
+                        <circle cx="14" cy="14" r="12" stroke="url(#lg)" strokeWidth="1.5" />
+                        <circle cx="14" cy="14" r="5" fill="url(#lg)" />
+                        <defs><linearGradient id="lg" x1="0" y1="0" x2="28" y2="28"><stop offset="0%" stopColor="#FDE68A" /><stop offset="100%" stopColor="#F59E0B" /></linearGradient></defs>
+                    </svg>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: '#FDE68A' }}>Code Combat</span>
+                    <ChevronRight size={14} style={{ color: 'rgba(255,255,255,0.3)' }} />
+                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{task.title}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: 'rgba(253,230,138,0.1)', border: '1px solid rgba(253,230,138,0.2)', borderRadius: 6 }}>
+                        <Clock size={13} style={{ color: '#FDE68A' }} />
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#FDE68A', fontFamily: 'monospace' }}>{formatTime(time)}</span>
                     </div>
+                    <button onClick={() => navigate('/player')} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, color: '#f87171', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                        <XCircle size={14} />
+                        Exit
+                    </button>
                 </div>
             </nav>
 
             {/* Main Content */}
-            <div
-                className="relative z-[1] grid grid-cols-2 gap-6 px-8 pb-8 box-border overflow-hidden"
-                style={{ paddingTop: '120px', height: '100vh' }}
-            >
-                {/* Left Side - Task Description */}
-                <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl overflow-hidden flex flex-col">
-                    <div className="py-4 px-6 border-b border-white/[0.08] flex items-center justify-between bg-white/[0.02]">
-                        <div className="flex items-center gap-3">
-                            <span className={`py-1 px-3 rounded-full text-[0.7rem] font-semibold uppercase tracking-wider ${getDifficultyColor(task.difficulty)}`}>
-                                {task.difficulty}
-                            </span>
-                            <h1 className="m-0 text-[1.1rem] font-semibold text-white">{task.title}</h1>
-                        </div>
-                        <div className="text-white/40 text-[0.8rem] font-medium">
-                            Max Points: {task.maxPoints}
-                        </div>
+            <div ref={containerRef} style={{ flex: 1, display: 'flex', padding: 6, gap: 0, overflow: 'hidden' }}>
+                {/* Left Panel */}
+                <div style={{ width: `calc(${leftPanelWidth}% - 4px)`, height: '100%', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 8, display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
+                    {/* Left Tabs */}
+                    <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255, 255, 255, 0.03)' }}>
+                        {(['description', 'submissions'] as const).map(tab => (
+                            <button
+                                key={tab}
+                                onClick={() => setLeftActiveTab(tab)}
+                                style={{
+                                    padding: '10px 16px',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    borderBottom: leftActiveTab === tab ? '2px solid #FDE68A' : '2px solid transparent',
+                                    color: leftActiveTab === tab ? '#FDE68A' : 'rgba(255,255,255,0.5)',
+                                    fontSize: 13,
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                    textTransform: 'capitalize',
+                                }}
+                            >
+                                {tab}
+                            </button>
+                        ))}
                     </div>
-                    <div className="p-6 overflow-y-auto flex-1">
-                        <div className="text-white/70 leading-[1.7] whitespace-pre-wrap">
-                            {task.description}
-                        </div>
+
+                    {/* Left Content */}
+                    <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+                        {leftActiveTab === 'description' ? (
+                            <>
+                                {/* Task Header */}
+                                <div style={{ marginBottom: 16 }}>
+                                    <h1 style={{ margin: '0 0 10px', fontSize: 18, fontWeight: 600 }}>{task.title}</h1>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        <span style={{ padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, ...getDifficultyStyles(task.difficulty) }}>
+                                            {task.difficulty}
+                                        </span>
+                                        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                                            {task.maxPoints} pts
+                                        </span>
+                                    </div>
+                                </div>
+                                {/* Description */}
+                                <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                                    {task.description}
+                                </div>
+                                {/* Example Section */}
+                                <div style={{ marginTop: 20 }}>
+                                    <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, color: 'rgba(255,255,255,0.9)' }}>Examples</h3>
+                                    {testCases.slice(0, 2).map((tc, i) => (
+                                        <div key={tc.id} style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: 12, marginBottom: 10, fontFamily: 'monospace', fontSize: 13 }}>
+                                            <div style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>Example {i + 1}:</div>
+                                            <div style={{ color: 'rgba(255,255,255,0.8)' }}>Input: {tc.input}</div>
+                                            <div style={{ color: 'rgba(255,255,255,0.8)' }}>Output: {tc.expectedOutput}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        ) : (
+                            /* Submissions Tab */
+                            <div>
+                                <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Submission History</h3>
+                                {submissions.length === 0 ? (
+                                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>No submissions yet</p>
+                                ) : (
+                                    submissions.map(sub => (
+                                        <div key={sub.id} style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: 12, marginBottom: 8 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                                <span style={{ fontSize: 13, fontWeight: 600, color: sub.status === 'Accepted' ? '#34d399' : '#f87171' }}>
+                                                    {sub.status}
+                                                </span>
+                                                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+                                                    {sub.timestamp.toLocaleTimeString()}
+                                                </span>
+                                            </div>
+                                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                                                {sub.language} • {sub.runtime} • {sub.memory}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Right Side - Monaco Editor */}
-                <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl overflow-hidden flex flex-col">
-                    <div className="py-3 px-4 border-b border-white/[0.08] flex items-center justify-between bg-white/[0.02]">
-                        <div className="flex items-center gap-3">
-                            <span className="text-yellow-200/80 font-semibold text-[0.8rem] uppercase tracking-wider">Select Language:</span>
-                            <select
-                                value={language}
-                                onChange={(e) => handleLanguageChange(e.target.value)}
-                                className="bg-yellow-200/10 border border-yellow-200/30 rounded-lg py-1.5 px-3 text-yellow-200 text-[0.85rem] font-medium focus:outline-none focus:border-yellow-200/60 focus:ring-1 focus:ring-yellow-200/20 transition-all cursor-pointer"
-                            >
-                                {task?.allowedLanguages && task.allowedLanguages.length > 0 ? (
-                                    task.allowedLanguages.map(lang => (
-                                        <option key={lang} value={lang} className="bg-[#1e1e1e] text-white">
-                                            {lang.charAt(0).toUpperCase() + lang.slice(1)}
-                                        </option>
-                                    ))
-                                ) : (
-                                    <>
-                                        <option value="typescript" className="bg-[#1e1e1e] text-white">TypeScript</option>
-                                        <option value="javascript" className="bg-[#1e1e1e] text-white">JavaScript</option>
-                                    </>
-                                )}
-                            </select>
-                        </div>
-                        <div className="flex items-center">
-                            <span className="py-1 px-3 bg-yellow-200/10 text-yellow-200 rounded-lg text-[0.8rem] font-medium font-mono">
+                {/* Horizontal Resize Handle */}
+                <div
+                    onMouseDown={handleHorizontalMouseDown}
+                    style={{ width: 8, cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                >
+                    <div style={{ width: 3, height: 30, borderRadius: 2, background: isResizingHorizontal ? 'rgba(253,230,138,0.5)' : 'rgba(255,255,255,0.1)', transition: 'background 0.15s' }}>
+                        <GripVertical size={10} style={{ opacity: 0 }} />
+                    </div>
+                </div>
+
+                {/* Right Panel */}
+                <div ref={rightPanelRef} style={{ width: `calc(${100 - leftPanelWidth}% - 4px)`, height: '100%', display: 'flex', flexDirection: 'column', gap: 0, flexShrink: 0 }}>
+                    {/* Editor Section */}
+                    <div style={{ height: showTestCases ? `calc(${editorHeight}% - 4px)` : '100%', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 8, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                        {/* Editor Header */}
+                        <div style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.03)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <select
+                                    value={language}
+                                    onChange={(e) => handleLanguageChange(e.target.value)}
+                                    style={{ padding: '5px 24px 5px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 5, color: '#fff', fontSize: 12, cursor: 'pointer' }}
+                                >
+                                    {(task?.allowedLanguages?.length ? task.allowedLanguages : ['javascript', 'typescript', 'python']).map(lang => (
+                                        <option key={lang} value={lang} style={{ background: 'rgba(255, 255, 255, 0.03)' }}>{lang.charAt(0).toUpperCase() + lang.slice(1)}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
                                 solution.{getFileExtension(language)}
                             </span>
                         </div>
+
+                        {/* Monaco Editor */}
+                        <div style={{ flex: 1, overflow: 'hidden' }}>
+                            <Editor
+                                key={`${task.id}-${language}`}
+                                height="100%"
+                                language={language}
+                                value={code}
+                                onChange={(v) => v !== undefined && setCode(v)}
+                                theme="vs-dark"
+                                options={{ minimap: { enabled: false }, fontSize: 14, lineNumbers: 'on', scrollBeyondLastLine: false, automaticLayout: true, tabSize: 2, wordWrap: 'on', padding: { top: 12 }, fontFamily: "'JetBrains Mono', monospace" }}
+                            />
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div style={{ padding: '8px 12px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                            <button
+                                onClick={handleRun}
+                                disabled={isRunning}
+                                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, color: 'rgba(255,255,255,0.8)', fontSize: 13, cursor: isRunning ? 'not-allowed' : 'pointer', opacity: isRunning ? 0.6 : 1 }}
+                            >
+                                <Play size={14} />
+                                {isRunning ? 'Running...' : 'Run'}
+                            </button>
+                            <button
+                                onClick={handleSubmit}
+                                disabled={isRunning}
+                                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 6, color: '#34d399', fontSize: 13, fontWeight: 500, cursor: isRunning ? 'not-allowed' : 'pointer', opacity: isRunning ? 0.6 : 1 }}
+                            >
+                                <Send size={14} />
+                                Submit
+                            </button>
+                        </div>
                     </div>
-                    <div className="flex-1 overflow-hidden text-left tracking-normal" style={{ letterSpacing: 'normal' }}>
-                        <Editor
-                            key={`${task.id}-${language}`}
-                            height="100%"
-                            defaultLanguage={language}
-                            language={language}
-                            value={code}
-                            onChange={handleEditorChange}
-                            theme="vs-dark"
-                            options={{
-                                minimap: { enabled: false },
-                                fontSize: 14,
-                                lineNumbers: 'on',
-                                scrollBeyondLastLine: false,
-                                automaticLayout: true,
-                                tabSize: 2,
-                                wordWrap: 'on',
-                                padding: { top: 16, bottom: 16 },
-                                fontFamily: "'Consolas', 'Monaco', 'Courier New', monospace",
-                                fontLigatures: false,
-                                renderWhitespace: 'selection',
-                                fixedOverflowWidgets: true,
-                            }}
-                        />
-                    </div>
-                    <div className="p-4 border-t border-white/[0.08] flex justify-end gap-3">
-                        <button
-                            className="flex items-center gap-2 py-2.5 px-5 rounded-full font-inherit text-[0.9rem] cursor-pointer bg-white/5 border border-white/15 text-white transition-all duration-200 hover:bg-white/10"
-                            onClick={handleRunTests}
+
+                    {/* Vertical Resize Handle (only when test cases visible) */}
+                    {showTestCases && (
+                        <div
+                            onMouseDown={handleVerticalMouseDown}
+                            style={{ height: 8, cursor: 'row-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                         >
-                            <Play size={16} /> Run Tests
-                        </button>
-                        <button
-                            className="flex items-center gap-2 py-2.5 px-5 rounded-full font-inherit text-[0.9rem] cursor-pointer bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 transition-all duration-200 hover:bg-emerald-500/25"
-                            onClick={handleSubmit}
-                        >
-                            <Send size={16} /> Submit
-                        </button>
-                    </div>
+                            <div style={{ width: 30, height: 3, borderRadius: 2, background: isResizingVertical ? 'rgba(253,230,138,0.5)' : 'rgba(255,255,255,0.1)', transition: 'background 0.15s' }} />
+                        </div>
+                    )}
+
+                    {/* Test Cases Section */}
+                    {showTestCases && (
+                        <div style={{ height: `calc(${100 - editorHeight}% - 4px)`, background: 'rgba(255, 255, 255, 0.02)', borderRadius: 8, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                            {/* Test Case Tabs */}
+                            <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '0 8px', background: 'rgba(255, 255, 255, 0.03)', gap: 2 }}>
+                                <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.6)', padding: '8px 8px 8px 4px' }}>Testcase</span>
+                                {testCases.map((tc, i) => (
+                                    <button
+                                        key={tc.id}
+                                        onClick={() => setTestCaseActiveTab(i)}
+                                        style={{
+                                            padding: '6px 12px',
+                                            background: testCaseActiveTab === i ? 'rgba(255,255,255,0.08)' : 'transparent',
+                                            border: 'none',
+                                            borderRadius: 4,
+                                            color: testCaseActiveTab === i ? '#fff' : 'rgba(255,255,255,0.5)',
+                                            fontSize: 12,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 4,
+                                        }}
+                                    >
+                                        {tc.passed !== undefined && (
+                                            tc.passed ? <Check size={12} style={{ color: '#34d399' }} /> : <X size={12} style={{ color: '#f87171' }} />
+                                        )}
+                                        Case {i + 1}
+                                    </button>
+                                ))}
+                                <button style={{ padding: '4px 8px', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>
+                                    <Plus size={14} />
+                                </button>
+                            </div>
+
+                            {/* Test Case Content */}
+                            <div style={{ flex: 1, overflow: 'auto', padding: 12 }}>
+                                {testCases[testCaseActiveTab] && (
+                                    <div style={{ fontFamily: 'monospace', fontSize: 13 }}>
+                                        <div style={{ marginBottom: 12 }}>
+                                            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginBottom: 4 }}>Input</div>
+                                            <div style={{ background: 'rgba(0,0,0,0.3)', padding: 10, borderRadius: 4, color: 'rgba(255,255,255,0.9)' }}>
+                                                {testCases[testCaseActiveTab].input}
+                                            </div>
+                                        </div>
+                                        <div style={{ marginBottom: 12 }}>
+                                            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginBottom: 4 }}>Expected Output</div>
+                                            <div style={{ background: 'rgba(0,0,0,0.3)', padding: 10, borderRadius: 4, color: 'rgba(255,255,255,0.9)' }}>
+                                                {testCases[testCaseActiveTab].expectedOutput}
+                                            </div>
+                                        </div>
+                                        {testCases[testCaseActiveTab].actualOutput && (
+                                            <div>
+                                                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginBottom: 4 }}>Your Output</div>
+                                                <div style={{
+                                                    background: testCases[testCaseActiveTab].passed ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+                                                    border: `1px solid ${testCases[testCaseActiveTab].passed ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                                                    padding: 10,
+                                                    borderRadius: 4,
+                                                    color: testCases[testCaseActiveTab].passed ? '#34d399' : '#f87171',
+                                                }}>
+                                                    {testCases[testCaseActiveTab].actualOutput}
+                                                    {testCases[testCaseActiveTab].executionTime && (
+                                                        <span style={{ marginLeft: 12, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+                                                            {testCases[testCaseActiveTab].executionTime}ms
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

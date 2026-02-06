@@ -67,9 +67,19 @@ const App: React.FC = () => {
                     </PrivateRoute>
                 }>
                     <Route path="/player" element={<ParticipantDashboard />} />
-                    <Route path="/contest/:id" element={<TaskPage />} />
-                    <Route path="/task" element={<TaskPage />} />
                 </Route>
+
+                {/* Task Page - Standalone without ParticipantLayout navbar */}
+                <Route path="/contest/:id" element={
+                    <PrivateRoute allowedRoles={['player']}>
+                        <TaskPage />
+                    </PrivateRoute>
+                } />
+                <Route path="/task" element={
+                    <PrivateRoute allowedRoles={['player']}>
+                        <TaskPage />
+                    </PrivateRoute>
+                } />
 
                 {/* Catch all */}
                 <Route path="*" element={<Navigate to="/" replace />} />
