@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Play, Send, XCircle, Clock, GripVertical, ChevronRight, Check, X, Plus } from 'lucide-react';
+import { Play, Send, XCircle, Clock, ChevronRight, Check, X, Plus, GripHorizontal, Minimize2 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 
 interface Task {
@@ -39,6 +39,9 @@ interface SubmissionHistory {
     language: string;
 }
 
+// Panel types for drag-drop
+type PanelType = 'description' | 'editor' | 'testcases';
+
 const LANGUAGE_BOILERPLATES: Record<string, string> = {
     javascript: '// Write your JavaScript solution here\nfunction solve(nums, target) {\n    // Your code here\n    return [];\n}\n',
     typescript: '// Write your TypeScript solution here\nfunction solve(nums: number[], target: number): number[] {\n    // Your code here\n    return [];\n}\n',
@@ -75,13 +78,22 @@ const TaskPage: React.FC = () => {
     const [language, setLanguage] = useState<string>('javascript');
     const [code, setCode] = useState<string>(LANGUAGE_BOILERPLATES['javascript']);
 
+    // Panel layout state - which panel is in which position
+    const [leftPanel, setLeftPanel] = useState<PanelType>('description');
+    const [rightTopPanel, setRightTopPanel] = useState<PanelType>('editor');
+    const [rightBottomPanel, setRightBottomPanel] = useState<PanelType>('testcases');
+
     // Panel resize state
     const [leftPanelWidth, setLeftPanelWidth] = useState<number>(40);
-    const [editorHeight, setEditorHeight] = useState<number>(60);
+    const [editorHeight, setEditorHeight] = useState<number>(65);
     const [isResizingHorizontal, setIsResizingHorizontal] = useState<boolean>(false);
     const [isResizingVertical, setIsResizingVertical] = useState<boolean>(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const rightPanelRef = useRef<HTMLDivElement>(null);
+
+    // Drag state
+    const [draggedPanel, setDraggedPanel] = useState<PanelType | null>(null);
+    const [dragOverPosition, setDragOverPosition] = useState<'left' | 'rightTop' | 'rightBottom' | null>(null);
 
     // Tab state
     const [leftActiveTab, setLeftActiveTab] = useState<'description' | 'submissions'>('description');
@@ -102,6 +114,68 @@ const TaskPage: React.FC = () => {
         { id: 2, timestamp: new Date(Date.now() - 7200000), status: 'Time Limit Exceeded', runtime: 'N/A', memory: 'N/A', language: 'JavaScript' },
     ]);
 
+    // Drag and Drop handlers
+    const handleDragStart = (panel: PanelType) => (e: React.DragEvent) => {
+        setDraggedPanel(panel);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', panel);
+    };
+
+    const handleDragOver = (position: 'left' | 'rightTop' | 'rightBottom') => (e: React.DragEvent) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        setDragOverPosition(position);
+    };
+
+    const handleDragLeave = () => {
+        setDragOverPosition(null);
+    };
+
+    const handleDrop = (targetPosition: 'left' | 'rightTop' | 'rightBottom') => (e: React.DragEvent) => {
+        e.preventDefault();
+        setDragOverPosition(null);
+
+        if (!draggedPanel) return;
+
+        // Find which position the dragged panel is currently in
+        let sourcePosition: 'left' | 'rightTop' | 'rightBottom';
+        if (leftPanel === draggedPanel) sourcePosition = 'left';
+        else if (rightTopPanel === draggedPanel) sourcePosition = 'rightTop';
+        else sourcePosition = 'rightBottom';
+
+        if (sourcePosition === targetPosition) {
+            setDraggedPanel(null);
+            return;
+        }
+
+        // Get the panel in the target position
+        let targetPanel: PanelType;
+        if (targetPosition === 'left') targetPanel = leftPanel;
+        else if (targetPosition === 'rightTop') targetPanel = rightTopPanel;
+        else targetPanel = rightBottomPanel;
+
+        // Swap panels
+        if (sourcePosition === 'left') setLeftPanel(targetPanel);
+        else if (sourcePosition === 'rightTop') setRightTopPanel(targetPanel);
+        else setRightBottomPanel(targetPanel);
+
+        if (targetPosition === 'left') setLeftPanel(draggedPanel);
+        else if (targetPosition === 'rightTop') setRightTopPanel(draggedPanel);
+        else setRightBottomPanel(draggedPanel);
+
+        // Show test cases if we're moving testcases panel
+        if (draggedPanel === 'testcases' || targetPanel === 'testcases') {
+            setShowTestCases(true);
+        }
+
+        setDraggedPanel(null);
+    };
+
+    const handleDragEnd = () => {
+        setDraggedPanel(null);
+        setDragOverPosition(null);
+    };
+
     // Fetch task data
     useEffect(() => {
         const fetchTaskData = async () => {
@@ -119,9 +193,7 @@ const TaskPage: React.FC = () => {
                     },
                 });
 
-                if (!response.ok) {
-                    throw new Error('Failed to fetch tasks');
-                }
+                if (!response.ok) throw new Error('Failed to fetch tasks');
 
                 const data = await response.json();
                 if (data.tasks && data.tasks.length > 0) {
@@ -132,9 +204,7 @@ const TaskPage: React.FC = () => {
                         setLanguage(initialLang);
                         setCode(LANGUAGE_BOILERPLATES[initialLang] || LANGUAGE_BOILERPLATES['javascript']);
                     }
-                    if (data.contest?.duration) {
-                        setTime(data.contest.duration * 60);
-                    }
+                    if (data.contest?.duration) setTime(data.contest.duration * 60);
                 } else {
                     setError('No tasks found');
                 }
@@ -146,10 +216,7 @@ const TaskPage: React.FC = () => {
         };
 
         if (contestId) fetchTaskData();
-        else {
-            setError('No contest ID');
-            setLoading(false);
-        }
+        else { setError('No contest ID'); setLoading(false); }
     }, [contestId, navigate]);
 
     // Timer countdown
@@ -185,7 +252,7 @@ const TaskPage: React.FC = () => {
         if (!isResizingVertical || !rightPanelRef.current) return;
         const rect = rightPanelRef.current.getBoundingClientRect();
         const newHeight = ((e.clientY - rect.top) / rect.height) * 100;
-        setEditorHeight(Math.min(85, Math.max(30, newHeight)));
+        setEditorHeight(Math.min(85, Math.max(25, newHeight)));
     }, [isResizingVertical]);
 
     const handleVerticalMouseUp = useCallback(() => {
@@ -239,9 +306,7 @@ const TaskPage: React.FC = () => {
     const handleRun = async () => {
         setIsRunning(true);
         setShowTestCases(true);
-        setEditorHeight(60);
 
-        // Simulate test execution
         await new Promise(resolve => setTimeout(resolve, 1500));
 
         const updatedCases = testCases.map(tc => ({
@@ -257,7 +322,6 @@ const TaskPage: React.FC = () => {
     const handleSubmit = async () => {
         setIsRunning(true);
         setShowTestCases(true);
-        setEditorHeight(60);
 
         await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -290,7 +354,297 @@ const TaskPage: React.FC = () => {
         }
     };
 
-    // Log contest for debugging
+    // Panel header component with drag handle
+    const PanelHeader: React.FC<{
+        title: string;
+        panelType: PanelType;
+        onClose?: () => void;
+        showClose?: boolean;
+    }> = ({ title, panelType, onClose, showClose }) => (
+        <div
+            draggable
+            onDragStart={handleDragStart(panelType)}
+            onDragEnd={handleDragEnd}
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '6px 12px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                cursor: 'grab',
+            }}
+        >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <GripHorizontal size={14} style={{ color: 'rgba(255, 255, 255, 0.3)' }} />
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255, 255, 255, 0.7)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    {title}
+                </span>
+            </div>
+            {showClose && onClose && (
+                <button
+                    onClick={onClose}
+                    style={{
+                        background: 'transparent',
+                        border: 'none',
+                        padding: 4,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
+                >
+                    <Minimize2 size={14} style={{ color: 'rgba(255, 255, 255, 0.4)' }} />
+                </button>
+            )}
+        </div>
+    );
+
+    // Description Panel Content
+    const DescriptionContent = () => (
+        <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: 2, marginBottom: 16 }}>
+                {(['description', 'submissions'] as const).map(tab => (
+                    <button
+                        key={tab}
+                        onClick={() => setLeftActiveTab(tab)}
+                        style={{
+                            padding: '8px 14px',
+                            background: leftActiveTab === tab ? 'rgba(253, 230, 138, 0.1)' : 'transparent',
+                            border: leftActiveTab === tab ? '1px solid rgba(253, 230, 138, 0.25)' : '1px solid transparent',
+                            borderRadius: 6,
+                            color: leftActiveTab === tab ? '#FDE68A' : 'rgba(255, 255, 255, 0.5)',
+                            fontSize: 13,
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            textTransform: 'capitalize',
+                        }}
+                    >
+                        {tab}
+                    </button>
+                ))}
+            </div>
+
+            {leftActiveTab === 'description' && task ? (
+                <>
+                    <div style={{ marginBottom: 16 }}>
+                        <h1 style={{ margin: '0 0 10px', fontSize: 18, fontWeight: 600 }}>{task.title}</h1>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span style={{ padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, ...getDifficultyStyles(task.difficulty) }}>
+                                {task.difficulty}
+                            </span>
+                            <span style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.5)' }}>{task.maxPoints} pts</span>
+                        </div>
+                    </div>
+                    <div style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                        {task.description}
+                    </div>
+                    <div style={{ marginTop: 20 }}>
+                        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, color: 'rgba(255, 255, 255, 0.9)' }}>Examples</h3>
+                        {testCases.slice(0, 2).map((tc, i) => (
+                            <div key={tc.id} style={{ background: 'rgba(0, 0, 0, 0.2)', borderRadius: 6, padding: 12, marginBottom: 10, fontFamily: 'monospace', fontSize: 13 }}>
+                                <div style={{ color: 'rgba(255, 255, 255, 0.5)', marginBottom: 4 }}>Example {i + 1}:</div>
+                                <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>Input: {tc.input}</div>
+                                <div style={{ color: 'rgba(255, 255, 255, 0.8)' }}>Output: {tc.expectedOutput}</div>
+                            </div>
+                        ))}
+                    </div>
+                </>
+            ) : (
+                <div>
+                    <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Submission History</h3>
+                    {submissions.length === 0 ? (
+                        <p style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 13 }}>No submissions yet</p>
+                    ) : (
+                        submissions.map(sub => (
+                            <div key={sub.id} style={{ background: 'rgba(0, 0, 0, 0.2)', borderRadius: 6, padding: 12, marginBottom: 8 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                                    <span style={{ fontSize: 13, fontWeight: 600, color: sub.status === 'Accepted' ? '#34d399' : '#f87171' }}>{sub.status}</span>
+                                    <span style={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.4)' }}>{sub.timestamp.toLocaleTimeString()}</span>
+                                </div>
+                                <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.5)' }}>{sub.language} • {sub.runtime} • {sub.memory}</div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            )}
+        </div>
+    );
+
+    // Editor Panel Content
+    const EditorContent = () => (
+        <>
+            {/* Editor Header */}
+            <div style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255, 255, 255, 0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.02)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <select
+                        value={language}
+                        onChange={(e) => handleLanguageChange(e.target.value)}
+                        style={{ padding: '5px 24px 5px 10px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 5, color: '#fff', fontSize: 12, cursor: 'pointer' }}
+                    >
+                        {(task?.allowedLanguages?.length ? task.allowedLanguages : ['javascript', 'typescript', 'python']).map(lang => (
+                            <option key={lang} value={lang} style={{ background: '#111113' }}>{lang.charAt(0).toUpperCase() + lang.slice(1)}</option>
+                        ))}
+                    </select>
+                </div>
+                <span style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.4)', fontFamily: 'monospace' }}>
+                    solution.{getFileExtension(language)}
+                </span>
+            </div>
+
+            {/* Monaco Editor */}
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+                <Editor
+                    key={`${task?.id}-${language}`}
+                    height="100%"
+                    language={language}
+                    value={code}
+                    onChange={(v) => v !== undefined && setCode(v)}
+                    theme="vs-dark"
+                    options={{ minimap: { enabled: false }, fontSize: 14, lineNumbers: 'on', scrollBeyondLastLine: false, automaticLayout: true, tabSize: 2, wordWrap: 'on', padding: { top: 12 }, fontFamily: "'JetBrains Mono', monospace" }}
+                />
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ padding: '8px 12px', borderTop: '1px solid rgba(255, 255, 255, 0.06)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button
+                    onClick={handleRun}
+                    disabled={isRunning}
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'transparent', border: '1px solid rgba(255, 255, 255, 0.15)', borderRadius: 6, color: 'rgba(255, 255, 255, 0.8)', fontSize: 13, cursor: isRunning ? 'not-allowed' : 'pointer', opacity: isRunning ? 0.6 : 1 }}
+                >
+                    <Play size={14} />
+                    {isRunning ? 'Running...' : 'Run'}
+                </button>
+                <button
+                    onClick={handleSubmit}
+                    disabled={isRunning}
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 6, color: '#34d399', fontSize: 13, fontWeight: 500, cursor: isRunning ? 'not-allowed' : 'pointer', opacity: isRunning ? 0.6 : 1 }}
+                >
+                    <Send size={14} />
+                    Submit
+                </button>
+            </div>
+        </>
+    );
+
+    // Test Cases Panel Content
+    const TestCasesContent = () => (
+        <>
+            {/* Test Case Tabs */}
+            <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.06)', padding: '0 8px', background: 'rgba(255, 255, 255, 0.02)', gap: 2 }}>
+                <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255, 255, 255, 0.6)', padding: '8px 8px 8px 4px' }}>Testcase</span>
+                {testCases.map((tc, i) => (
+                    <button
+                        key={tc.id}
+                        onClick={() => setTestCaseActiveTab(i)}
+                        style={{
+                            padding: '6px 12px',
+                            background: testCaseActiveTab === i ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                            border: 'none',
+                            borderRadius: 4,
+                            color: testCaseActiveTab === i ? '#fff' : 'rgba(255, 255, 255, 0.5)',
+                            fontSize: 12,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                        }}
+                    >
+                        {tc.passed !== undefined && (
+                            tc.passed ? <Check size={12} style={{ color: '#34d399' }} /> : <X size={12} style={{ color: '#f87171' }} />
+                        )}
+                        Case {i + 1}
+                    </button>
+                ))}
+                <button style={{ padding: '4px 8px', background: 'transparent', border: 'none', color: 'rgba(255, 255, 255, 0.4)', cursor: 'pointer' }}>
+                    <Plus size={14} />
+                </button>
+            </div>
+
+            {/* Test Case Content */}
+            <div style={{ flex: 1, overflow: 'auto', padding: 12 }}>
+                {testCases[testCaseActiveTab] && (
+                    <div style={{ fontFamily: 'monospace', fontSize: 13 }}>
+                        <div style={{ marginBottom: 12 }}>
+                            <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 11, marginBottom: 4 }}>Input</div>
+                            <div style={{ background: 'rgba(0, 0, 0, 0.3)', padding: 10, borderRadius: 4, color: 'rgba(255, 255, 255, 0.9)' }}>
+                                {testCases[testCaseActiveTab].input}
+                            </div>
+                        </div>
+                        <div style={{ marginBottom: 12 }}>
+                            <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 11, marginBottom: 4 }}>Expected Output</div>
+                            <div style={{ background: 'rgba(0, 0, 0, 0.3)', padding: 10, borderRadius: 4, color: 'rgba(255, 255, 255, 0.9)' }}>
+                                {testCases[testCaseActiveTab].expectedOutput}
+                            </div>
+                        </div>
+                        {testCases[testCaseActiveTab].actualOutput && (
+                            <div>
+                                <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 11, marginBottom: 4 }}>Your Output</div>
+                                <div style={{
+                                    background: testCases[testCaseActiveTab].passed ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                    border: `1px solid ${testCases[testCaseActiveTab].passed ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                                    padding: 10,
+                                    borderRadius: 4,
+                                    color: testCases[testCaseActiveTab].passed ? '#34d399' : '#f87171',
+                                }}>
+                                    {testCases[testCaseActiveTab].actualOutput}
+                                    {testCases[testCaseActiveTab].executionTime && (
+                                        <span style={{ marginLeft: 12, fontSize: 11, color: 'rgba(255, 255, 255, 0.4)' }}>
+                                            {testCases[testCaseActiveTab].executionTime}ms
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        </>
+    );
+
+    // Render panel by type
+    const renderPanel = (panelType: PanelType, position: 'left' | 'rightTop' | 'rightBottom') => {
+        const isOver = dragOverPosition === position;
+        const baseStyle: React.CSSProperties = {
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: isOver ? '2px solid rgba(253, 230, 138, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: 10,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            transition: 'border-color 0.15s ease',
+        };
+
+        const content = () => {
+            switch (panelType) {
+                case 'description': return <DescriptionContent />;
+                case 'editor': return <EditorContent />;
+                case 'testcases': return <TestCasesContent />;
+            }
+        };
+
+        const title = panelType === 'description' ? 'Problem' : panelType === 'editor' ? 'Code' : 'Testcase';
+        const showClose = panelType === 'testcases' && position === 'rightBottom';
+
+        return (
+            <div
+                style={{ ...baseStyle, height: '100%' }}
+                onDragOver={handleDragOver(position)}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop(position)}
+            >
+                <PanelHeader
+                    title={title}
+                    panelType={panelType}
+                    showClose={showClose}
+                    onClose={showClose ? () => setShowTestCases(false) : undefined}
+                />
+                {content()}
+            </div>
+        );
+    };
+
     console.log('Contest:', contest?.title);
 
     if (loading) {
@@ -317,114 +671,34 @@ const TaskPage: React.FC = () => {
     return (
         <div style={{ height: '100vh', width: '100vw', background: '#0a0a0b', color: '#fff', fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif", display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             {/* Navbar */}
-            <nav style={{ height: 56, minHeight: 56, background: '#111113', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
+            <nav style={{ height: 52, minHeight: 52, background: '#111113', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
                         <circle cx="14" cy="14" r="12" stroke="url(#lg)" strokeWidth="1.5" />
                         <circle cx="14" cy="14" r="5" fill="url(#lg)" />
                         <defs><linearGradient id="lg" x1="0" y1="0" x2="28" y2="28"><stop offset="0%" stopColor="#FDE68A" /><stop offset="100%" stopColor="#F59E0B" /></linearGradient></defs>
                     </svg>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: '#FDE68A' }}>Code Combat</span>
-                    <ChevronRight size={14} style={{ color: 'rgba(255,255,255,0.3)' }} />
-                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{task.title}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#FDE68A' }}>Code Combat</span>
+                    <ChevronRight size={12} style={{ color: 'rgba(255, 255, 255, 0.3)' }} />
+                    <span style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>{task.title}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: 'rgba(253,230,138,0.1)', border: '1px solid rgba(253,230,138,0.2)', borderRadius: 6 }}>
-                        <Clock size={13} style={{ color: '#FDE68A' }} />
-                        <span style={{ fontSize: 13, fontWeight: 600, color: '#FDE68A', fontFamily: 'monospace' }}>{formatTime(time)}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', background: 'rgba(253, 230, 138, 0.1)', border: '1px solid rgba(253, 230, 138, 0.2)', borderRadius: 6 }}>
+                        <Clock size={12} style={{ color: '#FDE68A' }} />
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#FDE68A', fontFamily: 'monospace' }}>{formatTime(time)}</span>
                     </div>
-                    <button onClick={() => navigate('/player')} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, color: '#f87171', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-                        <XCircle size={14} />
+                    <button onClick={() => navigate('/player')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 6, color: '#f87171', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                        <XCircle size={12} />
                         Exit
                     </button>
                 </div>
             </nav>
 
             {/* Main Content */}
-            <div ref={containerRef} style={{ flex: 1, display: 'flex', padding: 6, gap: 0, overflow: 'hidden' }}>
+            <div ref={containerRef} style={{ flex: 1, display: 'flex', padding: 8, gap: 0, overflow: 'hidden' }}>
                 {/* Left Panel */}
-                <div style={{ width: `calc(${leftPanelWidth}% - 4px)`, height: '100%', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 8, display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
-                    {/* Left Tabs */}
-                    <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255, 255, 255, 0.03)' }}>
-                        {(['description', 'submissions'] as const).map(tab => (
-                            <button
-                                key={tab}
-                                onClick={() => setLeftActiveTab(tab)}
-                                style={{
-                                    padding: '10px 16px',
-                                    background: 'transparent',
-                                    border: 'none',
-                                    borderBottom: leftActiveTab === tab ? '2px solid #FDE68A' : '2px solid transparent',
-                                    color: leftActiveTab === tab ? '#FDE68A' : 'rgba(255,255,255,0.5)',
-                                    fontSize: 13,
-                                    fontWeight: 500,
-                                    cursor: 'pointer',
-                                    textTransform: 'capitalize',
-                                }}
-                            >
-                                {tab}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* Left Content */}
-                    <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
-                        {leftActiveTab === 'description' ? (
-                            <>
-                                {/* Task Header */}
-                                <div style={{ marginBottom: 16 }}>
-                                    <h1 style={{ margin: '0 0 10px', fontSize: 18, fontWeight: 600 }}>{task.title}</h1>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                        <span style={{ padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, ...getDifficultyStyles(task.difficulty) }}>
-                                            {task.difficulty}
-                                        </span>
-                                        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
-                                            {task.maxPoints} pts
-                                        </span>
-                                    </div>
-                                </div>
-                                {/* Description */}
-                                <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-                                    {task.description}
-                                </div>
-                                {/* Example Section */}
-                                <div style={{ marginTop: 20 }}>
-                                    <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, color: 'rgba(255,255,255,0.9)' }}>Examples</h3>
-                                    {testCases.slice(0, 2).map((tc, i) => (
-                                        <div key={tc.id} style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: 12, marginBottom: 10, fontFamily: 'monospace', fontSize: 13 }}>
-                                            <div style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>Example {i + 1}:</div>
-                                            <div style={{ color: 'rgba(255,255,255,0.8)' }}>Input: {tc.input}</div>
-                                            <div style={{ color: 'rgba(255,255,255,0.8)' }}>Output: {tc.expectedOutput}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </>
-                        ) : (
-                            /* Submissions Tab */
-                            <div>
-                                <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Submission History</h3>
-                                {submissions.length === 0 ? (
-                                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>No submissions yet</p>
-                                ) : (
-                                    submissions.map(sub => (
-                                        <div key={sub.id} style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: 12, marginBottom: 8 }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                                                <span style={{ fontSize: 13, fontWeight: 600, color: sub.status === 'Accepted' ? '#34d399' : '#f87171' }}>
-                                                    {sub.status}
-                                                </span>
-                                                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
-                                                    {sub.timestamp.toLocaleTimeString()}
-                                                </span>
-                                            </div>
-                                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
-                                                {sub.language} • {sub.runtime} • {sub.memory}
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        )}
-                    </div>
+                <div style={{ width: `calc(${leftPanelWidth}% - 4px)`, height: '100%', flexShrink: 0 }}>
+                    {renderPanel(leftPanel, 'left')}
                 </div>
 
                 {/* Horizontal Resize Handle */}
@@ -432,149 +706,30 @@ const TaskPage: React.FC = () => {
                     onMouseDown={handleHorizontalMouseDown}
                     style={{ width: 8, cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                 >
-                    <div style={{ width: 3, height: 30, borderRadius: 2, background: isResizingHorizontal ? 'rgba(253,230,138,0.5)' : 'rgba(255,255,255,0.1)', transition: 'background 0.15s' }}>
-                        <GripVertical size={10} style={{ opacity: 0 }} />
-                    </div>
+                    <div style={{ width: 3, height: 30, borderRadius: 2, background: isResizingHorizontal ? 'rgba(253, 230, 138, 0.5)' : 'rgba(255, 255, 255, 0.1)', transition: 'background 0.15s' }} />
                 </div>
 
                 {/* Right Panel */}
                 <div ref={rightPanelRef} style={{ width: `calc(${100 - leftPanelWidth}% - 4px)`, height: '100%', display: 'flex', flexDirection: 'column', gap: 0, flexShrink: 0 }}>
-                    {/* Editor Section */}
-                    <div style={{ height: showTestCases ? `calc(${editorHeight}% - 4px)` : '100%', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 8, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                        {/* Editor Header */}
-                        <div style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.03)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <select
-                                    value={language}
-                                    onChange={(e) => handleLanguageChange(e.target.value)}
-                                    style={{ padding: '5px 24px 5px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 5, color: '#fff', fontSize: 12, cursor: 'pointer' }}
-                                >
-                                    {(task?.allowedLanguages?.length ? task.allowedLanguages : ['javascript', 'typescript', 'python']).map(lang => (
-                                        <option key={lang} value={lang} style={{ background: 'rgba(255, 255, 255, 0.03)' }}>{lang.charAt(0).toUpperCase() + lang.slice(1)}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
-                                solution.{getFileExtension(language)}
-                            </span>
-                        </div>
-
-                        {/* Monaco Editor */}
-                        <div style={{ flex: 1, overflow: 'hidden' }}>
-                            <Editor
-                                key={`${task.id}-${language}`}
-                                height="100%"
-                                language={language}
-                                value={code}
-                                onChange={(v) => v !== undefined && setCode(v)}
-                                theme="vs-dark"
-                                options={{ minimap: { enabled: false }, fontSize: 14, lineNumbers: 'on', scrollBeyondLastLine: false, automaticLayout: true, tabSize: 2, wordWrap: 'on', padding: { top: 12 }, fontFamily: "'JetBrains Mono', monospace" }}
-                            />
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div style={{ padding: '8px 12px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                            <button
-                                onClick={handleRun}
-                                disabled={isRunning}
-                                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, color: 'rgba(255,255,255,0.8)', fontSize: 13, cursor: isRunning ? 'not-allowed' : 'pointer', opacity: isRunning ? 0.6 : 1 }}
-                            >
-                                <Play size={14} />
-                                {isRunning ? 'Running...' : 'Run'}
-                            </button>
-                            <button
-                                onClick={handleSubmit}
-                                disabled={isRunning}
-                                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 6, color: '#34d399', fontSize: 13, fontWeight: 500, cursor: isRunning ? 'not-allowed' : 'pointer', opacity: isRunning ? 0.6 : 1 }}
-                            >
-                                <Send size={14} />
-                                Submit
-                            </button>
-                        </div>
+                    {/* Right Top */}
+                    <div style={{ height: showTestCases ? `calc(${editorHeight}% - 4px)` : '100%', flexShrink: 0 }}>
+                        {renderPanel(rightTopPanel, 'rightTop')}
                     </div>
 
-                    {/* Vertical Resize Handle (only when test cases visible) */}
+                    {/* Vertical Resize Handle */}
                     {showTestCases && (
                         <div
                             onMouseDown={handleVerticalMouseDown}
                             style={{ height: 8, cursor: 'row-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                         >
-                            <div style={{ width: 30, height: 3, borderRadius: 2, background: isResizingVertical ? 'rgba(253,230,138,0.5)' : 'rgba(255,255,255,0.1)', transition: 'background 0.15s' }} />
+                            <div style={{ width: 30, height: 3, borderRadius: 2, background: isResizingVertical ? 'rgba(253, 230, 138, 0.5)' : 'rgba(255, 255, 255, 0.1)', transition: 'background 0.15s' }} />
                         </div>
                     )}
 
-                    {/* Test Cases Section */}
+                    {/* Right Bottom (Test Cases) */}
                     {showTestCases && (
-                        <div style={{ height: `calc(${100 - editorHeight}% - 4px)`, background: 'rgba(255, 255, 255, 0.02)', borderRadius: 8, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                            {/* Test Case Tabs */}
-                            <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '0 8px', background: 'rgba(255, 255, 255, 0.03)', gap: 2 }}>
-                                <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.6)', padding: '8px 8px 8px 4px' }}>Testcase</span>
-                                {testCases.map((tc, i) => (
-                                    <button
-                                        key={tc.id}
-                                        onClick={() => setTestCaseActiveTab(i)}
-                                        style={{
-                                            padding: '6px 12px',
-                                            background: testCaseActiveTab === i ? 'rgba(255,255,255,0.08)' : 'transparent',
-                                            border: 'none',
-                                            borderRadius: 4,
-                                            color: testCaseActiveTab === i ? '#fff' : 'rgba(255,255,255,0.5)',
-                                            fontSize: 12,
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 4,
-                                        }}
-                                    >
-                                        {tc.passed !== undefined && (
-                                            tc.passed ? <Check size={12} style={{ color: '#34d399' }} /> : <X size={12} style={{ color: '#f87171' }} />
-                                        )}
-                                        Case {i + 1}
-                                    </button>
-                                ))}
-                                <button style={{ padding: '4px 8px', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>
-                                    <Plus size={14} />
-                                </button>
-                            </div>
-
-                            {/* Test Case Content */}
-                            <div style={{ flex: 1, overflow: 'auto', padding: 12 }}>
-                                {testCases[testCaseActiveTab] && (
-                                    <div style={{ fontFamily: 'monospace', fontSize: 13 }}>
-                                        <div style={{ marginBottom: 12 }}>
-                                            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginBottom: 4 }}>Input</div>
-                                            <div style={{ background: 'rgba(0,0,0,0.3)', padding: 10, borderRadius: 4, color: 'rgba(255,255,255,0.9)' }}>
-                                                {testCases[testCaseActiveTab].input}
-                                            </div>
-                                        </div>
-                                        <div style={{ marginBottom: 12 }}>
-                                            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginBottom: 4 }}>Expected Output</div>
-                                            <div style={{ background: 'rgba(0,0,0,0.3)', padding: 10, borderRadius: 4, color: 'rgba(255,255,255,0.9)' }}>
-                                                {testCases[testCaseActiveTab].expectedOutput}
-                                            </div>
-                                        </div>
-                                        {testCases[testCaseActiveTab].actualOutput && (
-                                            <div>
-                                                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginBottom: 4 }}>Your Output</div>
-                                                <div style={{
-                                                    background: testCases[testCaseActiveTab].passed ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-                                                    border: `1px solid ${testCases[testCaseActiveTab].passed ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
-                                                    padding: 10,
-                                                    borderRadius: 4,
-                                                    color: testCases[testCaseActiveTab].passed ? '#34d399' : '#f87171',
-                                                }}>
-                                                    {testCases[testCaseActiveTab].actualOutput}
-                                                    {testCases[testCaseActiveTab].executionTime && (
-                                                        <span style={{ marginLeft: 12, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
-                                                            {testCases[testCaseActiveTab].executionTime}ms
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
+                        <div style={{ height: `calc(${100 - editorHeight}% - 4px)`, flexShrink: 0 }}>
+                            {renderPanel(rightBottomPanel, 'rightBottom')}
                         </div>
                     )}
                 </div>
