@@ -1,33 +1,22 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
-import { Home, Code, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { User, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
-interface MenuItem {
-    icon: React.ReactNode;
+interface NavItem {
     label: string;
     path: string;
 }
 
-interface MenuSection {
-    title?: string;
-    items: MenuItem[];
-}
-
-const menuSections: MenuSection[] = [
-    {
-        items: [
-            { icon: <Home size={20} />, label: 'Dashboard', path: '/player' },
-            { icon: <Code size={20} />, label: 'My Tasks', path: '/task' },
-        ]
-    }
+const navItems: NavItem[] = [
+    { label: 'Dashboard', path: '/player' },
 ];
 
 const ParticipantLayout: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { logout } = useAuth();
-    const [collapsed, setCollapsed] = useState<boolean>(false);
+    const { logout, user } = useAuth();
+    const [showUserMenu, setShowUserMenu] = useState(false);
 
     const isActive = (path: string): boolean => {
         if (path === '/player') return location.pathname === '/player';
@@ -40,92 +29,262 @@ const ParticipantLayout: React.FC = () => {
     };
 
     return (
-        <div className="dark flex min-h-screen bg-background text-foreground font-['Geist',system-ui,sans-serif]">
-            {/* Sidebar */}
-            <aside className={`fixed left-0 top-0 bottom-0 bg-sidebar border-r border-sidebar-border flex flex-col z-[1000] transition-all duration-300 ease-in-out backdrop-blur-xl ${collapsed ? 'w-20' : 'w-[260px]'
-                } max-md:w-20 max-md:-translate-x-full max-md:show:translate-x-0`}>
-
-                {/* Sidebar Header */}
-                <div className={`h-[70px] px-5 border-b border-white/[0.08] flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between'
-                    }`}>
+        <div style={{
+            minHeight: '100vh',
+            background: '#0a0a0b',
+            color: '#ffffff',
+            fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif"
+        }}>
+            {/* Horizontal Navbar */}
+            <nav style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '64px',
+                background: '#111113',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 64px',
+                zIndex: 1000
+            }}>
+                {/* Left Section - Logo + Navigation */}
+                <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '32px'
+                }}>
                     {/* Logo */}
-                    <div className={`flex items-center gap-3 text-white overflow-hidden transition-opacity duration-200 ${collapsed ? 'hidden' : ''
-                        }`}>
+                    <div 
+                        onClick={() => navigate('/player')}
+                        style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '12px',
+                            cursor: 'pointer'
+                        }}
+                    >
                         <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                            <circle cx="14" cy="14" r="12" stroke="url(#logoGrad)" strokeWidth="1.5" />
-                            <circle cx="14" cy="14" r="5" fill="url(#logoGrad)" />
+                            <circle cx="14" cy="14" r="12" stroke="url(#logoGradNav)" strokeWidth="1.5" />
+                            <circle cx="14" cy="14" r="5" fill="url(#logoGradNav)" />
                             <defs>
-                                <linearGradient id="logoGrad" x1="0" y1="0" x2="28" y2="28">
-                                    <stop offset="0%" stopColor="#8A2BE2" />
-                                    <stop offset="100%" stopColor="#4B0082" />
+                                <linearGradient id="logoGradNav" x1="0" y1="0" x2="28" y2="28">
+                                    <stop offset="0%" stopColor="#FDE68A" />
+                                    <stop offset="100%" stopColor="#F59E0B" />
                                 </linearGradient>
                             </defs>
                         </svg>
-                        {!collapsed && (
-                            <span className="text-[1.1rem] font-semibold bg-gradient-to-r from-purple-200 to-purple-500 bg-clip-text text-transparent whitespace-nowrap">
-                                Code Combat
-                            </span>
-                        )}
+                        <span style={{
+                            fontSize: '1.1rem',
+                            fontWeight: 600,
+                            background: 'linear-gradient(90deg, #FDE68A 0%, #FBBF24 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text'
+                        }}>Code Combat</span>
                     </div>
 
-                    {/* Collapse Button */}
-                    <button
-                        onClick={() => setCollapsed(!collapsed)}
-                        className={`flex items-center justify-center flex-shrink-0 relative z-[1001] transition-all duration-200 ${collapsed
-                            ? 'w-8 h-8 bg-transparent border-none'
-                            : 'w-7 h-7 bg-white/5 border border-white/10 text-white/50 rounded-md hover:bg-white/10 hover:text-white'
-                            }`}
-                    >
-                        {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-                    </button>
+                    {/* Navigation Links */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                    }}>
+                        {navItems.map(item => (
+                            <button
+                                key={item.path}
+                                onClick={() => navigate(item.path)}
+                                style={{
+                                    padding: '6px 0',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: isActive(item.path) ? '#FDE68A' : 'rgba(255, 255, 255, 0.5)',
+                                    fontSize: '0.9rem',
+                                    fontWeight: isActive(item.path) ? 600 : 500,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (!isActive(item.path)) {
+                                        e.currentTarget.style.color = 'rgba(255, 255, 255, 0.85)';
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (!isActive(item.path)) {
+                                        e.currentTarget.style.color = 'rgba(255, 255, 255, 0.5)';
+                                    }
+                                }}
+                            >
+                                {item.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
-                {/* Navigation */}
-                <nav className="flex-1 py-5 px-3 flex flex-col gap-6 overflow-y-auto overflow-x-hidden">
-                    {menuSections.map((section, sectionIndex) => (
-                        <div key={sectionIndex} className="flex flex-col gap-1">
-                            {section.title && !collapsed && (
-                                <div className="text-[0.7rem] font-bold text-white/30 uppercase tracking-widest px-4 pb-2 whitespace-nowrap">
-                                    {section.title}
+                {/* Right Section - Profile */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    minWidth: '200px',
+                    justifyContent: 'flex-end'
+                }}>
+                    {/* User Profile Dropdown */}
+                    <div style={{ position: 'relative' }}>
+                        <button
+                            onClick={() => setShowUserMenu(!showUserMenu)}
+                            style={{
+                                width: '40px',
+                                height: '40px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: 'linear-gradient(135deg, #FDE68A 0%, #F59E0B 100%)',
+                                border: 'none',
+                                borderRadius: '50%',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                overflow: 'hidden'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'scale(1.05)';
+                                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(253, 230, 138, 0.25)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'scale(1)';
+                                e.currentTarget.style.boxShadow = 'none';
+                            }}
+                        >
+                            <User size={18} style={{ color: '#0a0a0b' }} />
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        {showUserMenu && (
+                            <>
+                                <div 
+                                    style={{
+                                        position: 'fixed',
+                                        inset: 0,
+                                        zIndex: 1001
+                                    }}
+                                    onClick={() => setShowUserMenu(false)}
+                                />
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 'calc(100% + 12px)',
+                                    right: 0,
+                                    width: '220px',
+                                    background: '#1a1a1c',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    borderRadius: '12px',
+                                    padding: '8px',
+                                    boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)',
+                                    zIndex: 1002
+                                }}>
+                                    {/* User Info */}
+                                    <div style={{
+                                        padding: '12px 14px',
+                                        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                                        marginBottom: '8px'
+                                    }}>
+                                        <p style={{
+                                            margin: 0,
+                                            fontSize: '0.95rem',
+                                            fontWeight: 600,
+                                            color: '#ffffff'
+                                        }}>{user?.name || 'Participant'}</p>
+                                        <p style={{
+                                            margin: '4px 0 0',
+                                            fontSize: '0.8rem',
+                                            color: 'rgba(255, 255, 255, 0.5)'
+                                        }}>{user?.email || 'user@example.com'}</p>
+                                    </div>
+
+                                    {/* Menu Items */}
+                                    <button
+                                        onClick={() => {
+                                            setShowUserMenu(false);
+                                            navigate('/player/settings');
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px',
+                                            padding: '12px 14px',
+                                            background: 'transparent',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            color: 'rgba(255, 255, 255, 0.7)',
+                                            fontSize: '0.9rem',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.15s ease'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                                            e.currentTarget.style.color = '#ffffff';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = 'transparent';
+                                            e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                                        }}
+                                    >
+                                        <Settings size={18} />
+                                        Settings
+                                    </button>
+
+                                    <div style={{
+                                        height: '1px',
+                                        background: 'rgba(255, 255, 255, 0.08)',
+                                        margin: '8px 0'
+                                    }} />
+
+                                    <button
+                                        onClick={handleLogout}
+                                        style={{
+                                            width: '100%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px',
+                                            padding: '12px 14px',
+                                            background: 'transparent',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            color: '#f87171',
+                                            fontSize: '0.9rem',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.15s ease'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = 'transparent';
+                                        }}
+                                    >
+                                        <LogOut size={18} />
+                                        Logout
+                                    </button>
                                 </div>
-                            )}
-                            {section.items.map(item => (
-                                <button
-                                    key={item.path}
-                                    className={`flex items-center gap-3 py-2.5 px-4 border border-transparent rounded-lg font-medium text-[0.95rem] cursor-pointer transition-all duration-200 text-left w-full ${collapsed ? 'justify-center p-3' : ''
-                                        } ${isActive(item.path)
-                                            ? 'bg-purple-500/10 text-purple-200 border-purple-500/20'
-                                            : 'bg-transparent text-white/60 hover:bg-white/5 hover:text-white'
-                                        }`}
-                                    onClick={() => navigate(item.path)}
-                                    title={collapsed ? item.label : undefined}
-                                >
-                                    {item.icon}
-                                    {!collapsed && <span>{item.label}</span>}
-                                </button>
-                            ))}
-                        </div>
-                    ))}
-                </nav>
-
-                {/* Sidebar Footer - Logout */}
-                <div className="p-5 border-t border-white/[0.08] mt-auto">
-                    <button
-                        className={`flex items-center gap-3 py-2.5 px-4 bg-transparent border border-red-500/20 text-red-500 rounded-lg font-medium text-[0.95rem] cursor-pointer transition-all duration-200 text-left w-full hover:bg-red-500/10 hover:text-red-400 ${collapsed ? 'justify-center p-3' : ''
-                            }`}
-                        onClick={handleLogout}
-                        title={collapsed ? 'Logout' : undefined}
-                    >
-                        <LogOut size={20} />
-                        {!collapsed && <span>Logout</span>}
-                    </button>
+                            </>
+                        )}
+                    </div>
                 </div>
-            </aside>
+            </nav>
 
             {/* Main Content */}
-            <main className={`flex-1 py-10 px-8 relative z-[1] transition-all duration-300 ease-in-out ${collapsed ? 'ml-20' : 'ml-[260px]'
-                } max-lg:py-8 max-lg:px-6 max-md:ml-0 max-md:p-4`}>
-                <div className="w-full">
+            <main style={{
+                paddingTop: '64px',
+                minHeight: '100vh',
+                display: 'flex',
+                justifyContent: 'center'
+            }}>
+                <div style={{
+                    width: '100%',
+                    maxWidth: '1200px',
+                    padding: '32px 40px'
+                }}>
                     <Outlet />
                 </div>
             </main>
