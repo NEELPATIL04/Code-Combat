@@ -242,6 +242,22 @@ export const submissionAPI = {
   healthCheck: async () => {
     const response = await fetch(`${API_BASE_URL}/submissions/health`, {
       headers: getAuthHeaders(),
+ * Upload API
+ */
+export const uploadAPI = {
+  // Upload an image
+  uploadImage: async (file: File) => {
+    const token = sessionStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await fetch(`${API_BASE_URL}/upload`, {
+      method: 'POST',
+      headers: {
+        // Don't set Content-Type for FormData, browser sets it with boundary
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
     });
     return handleResponse(response);
   },

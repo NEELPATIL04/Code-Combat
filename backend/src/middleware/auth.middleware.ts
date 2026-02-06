@@ -52,3 +52,25 @@ export function authenticate(
     });
   }
 }
+
+/**
+ * Require Admin Middleware
+ * Ensures the authenticated user is an admin or super_admin
+ * Must be used AFTER authenticate middleware
+ */
+export function requireAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  const user = req.user;
+  
+  if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+    res.status(403).json({
+      message: 'Admin access required'
+    });
+    return;
+  }
+  
+  next();
+}
