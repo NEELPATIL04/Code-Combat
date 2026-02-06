@@ -19,9 +19,9 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
     console.log('Query:', req.query);
     console.log('Body keys:', Object.keys(req.body));
     
-    const { title, description, difficulty, duration, startPassword, contestTasks, participantIds } = req.body;
-    
-    console.log(`Title: ${title}, Duration: ${duration}, Tasks: ${contestTasks?.length || 0}`);
+    const { title, description, difficulty, duration, startPassword, contestTasks, participantIds, fullScreenMode } = req.body;
+
+    console.log(`Title: ${title}, Duration: ${duration}, Tasks: ${contestTasks?.length || 0}, Full Screen: ${fullScreenMode}`);
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -48,6 +48,7 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
       startPassword: hashedPassword,
       createdBy: userId,
       status: 'upcoming',
+      fullScreenMode: fullScreenMode !== undefined ? fullScreenMode : true,
     }).returning();
 
     // Create tasks if provided
@@ -197,7 +198,7 @@ export const getContestById = async (req: Request, res: Response, next: NextFunc
 export const updateContest = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const contestId = parseInt(req.params.id);
-    const { title, description, difficulty, duration, status, startPassword, contestTasks } = req.body;
+    const { title, description, difficulty, duration, status, startPassword, contestTasks, fullScreenMode } = req.body;
 
     const [existingContest] = await db
       .select()
@@ -218,6 +219,7 @@ export const updateContest = async (req: Request, res: Response, next: NextFunct
     if (startPassword) {
       updateData.startPassword = await hashPassword(startPassword);
     }
+    if (fullScreenMode !== undefined) updateData.fullScreenMode = fullScreenMode;
     updateData.updatedAt = new Date();
 
     const [updatedContest] = await db
@@ -492,6 +494,7 @@ export const getContestTasks = async (req: Request, res: Response, next: NextFun
         difficulty: contest.difficulty,
         duration: contest.duration,
         status: contest.status,
+        fullScreenMode: contest.fullScreenMode,
       },
       tasks: contestTasks,
     });

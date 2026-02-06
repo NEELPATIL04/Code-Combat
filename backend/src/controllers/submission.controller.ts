@@ -3,6 +3,7 @@ import { db } from '../config/database';
 import { submissions, testCases, tasks, contestParticipants } from '../db/schema';
 import { judge0Service } from '../services/judge0.service';
 import { getJudge0LanguageId } from '../utils/judge0.util';
+import { wrapCodeWithTestRunner } from '../utils/codeWrapper.util';
 import { eq, and, desc } from 'drizzle-orm';
 
 /**
@@ -21,6 +22,20 @@ export const runCode = async (req: Request, res: Response, next: NextFunction) =
       });
     }
 
+    // Get task details
+    const [task] = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.id, taskId))
+      .limit(1);
+
+    if (!task) {
+      return res.status(404).json({
+        success: false,
+        message: 'Task not found',
+      });
+    }
+
     // Get test cases for the task
     const taskTestCases = await db
       .select()
@@ -35,10 +50,15 @@ export const runCode = async (req: Request, res: Response, next: NextFunction) =
       });
     }
 
+    // Get test runner template for this language
+    const testRunnerTemplate = task.testRunnerTemplate?.[language];
+
     // Execute code against test cases
     const results = await judge0Service.executeTestCases({
       sourceCode: code,
       language,
+      functionName: task.functionName || undefined,
+      testRunnerTemplate,
       testCases: taskTestCases.map(tc => ({
         input: tc.input,
         expectedOutput: tc.expectedOutput,
@@ -106,6 +126,20 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
       });
     }
 
+    // Get task details
+    const [task] = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.id, taskId))
+      .limit(1);
+
+    if (!task) {
+      return res.status(404).json({
+        success: false,
+        message: 'Task not found',
+      });
+    }
+
     // Get test cases
     const taskTestCases = await db
       .select()
@@ -120,10 +154,15 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
       });
     }
 
+    // Get test runner template for this language
+    const testRunnerTemplate = task.testRunnerTemplate?.[language];
+
     // Execute code against test cases
     const results = await judge0Service.executeTestCases({
       sourceCode: code,
       language,
+      functionName: task.functionName || undefined,
+      testRunnerTemplate,
       testCases: taskTestCases.map(tc => ({
         input: tc.input,
         expectedOutput: tc.expectedOutput,
@@ -134,14 +173,8 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
     const totalCount = results.length;
     const allPassed = passedCount === totalCount;
 
-    // Get task details for scoring
-    const task = await db
-      .select()
-      .from(tasks)
-      .where(eq(tasks.id, taskId))
-      .limit(1);
-
-    const maxPoints = task[0]?.maxPoints || 100;
+    // Calculate score based on task's max points
+    const maxPoints = task.maxPoints || 100;
     const score = allPassed ? maxPoints : Math.floor((passedCount / totalCount) * maxPoints);
 
     // Determine status

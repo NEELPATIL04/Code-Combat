@@ -21,6 +21,7 @@
         "dotenv": "^17.2.3",
         "drizzle-orm": "^0.45.1",
         "express": "^4.22.1",
+        "groq-sdk": "^0.37.0",
         "jsonwebtoken": "^9.0.3",
         "multer": "^2.0.2",
         "pg": "^8.18.0"

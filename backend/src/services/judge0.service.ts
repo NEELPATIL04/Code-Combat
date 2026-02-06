@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getJudge0LanguageId, mapJudge0Status, Judge0Submission, Judge0Result } from '../utils/judge0.util';
+import { wrapCodeWithTestRunner } from '../utils/codeWrapper.util';
 
 const JUDGE0_URL = process.env.JUDGE0_URL || 'http://localhost:2358';
 const JUDGE0_API_KEY = process.env.JUDGE0_API_KEY;
@@ -176,6 +177,8 @@ class Judge0Service {
   async executeTestCases(params: {
     sourceCode: string;
     language: string;
+    functionName?: string;
+    testRunnerTemplate?: string;
     testCases: Array<{ input: string; expectedOutput: string }>;
   }): Promise<Array<{
     passed: boolean;
@@ -190,10 +193,29 @@ class Judge0Service {
 
     for (const testCase of params.testCases) {
       try {
+        // Wrap user code with boilerplate for this test case
+        let finalCode = params.sourceCode;
+
+        if (params.functionName && testCase.input) {
+          finalCode = wrapCodeWithTestRunner({
+            userCode: params.sourceCode,
+            language: params.language,
+            functionName: params.functionName,
+            testInput: testCase.input,
+            testRunnerTemplate: params.testRunnerTemplate,
+          });
+
+          console.log('🔧 Wrapped code for test:', {
+            language: params.language,
+            functionName: params.functionName,
+            input: testCase.input.substring(0, 50) + '...',
+          });
+        }
+
         const result = await this.submitAndWait({
-          sourceCode: params.sourceCode,
+          sourceCode: finalCode,
           language: params.language,
-          stdin: testCase.input,
+          stdin: undefined, // No stdin needed, test data is in the code
           expectedOutput: testCase.expectedOutput,
         });
 
