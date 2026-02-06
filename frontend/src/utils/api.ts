@@ -3,7 +3,19 @@
  * Provides helpers for making authenticated API requests
  */
 
-const API_BASE_URL = '/api';
+// Backend URLs from environment variables
+const LOCAL_BACKEND = import.meta.env.VITE_LOCAL_BACKEND_URL || 'http://localhost:5000/api';
+const LIVE_BACKEND = import.meta.env.VITE_LIVE_BACKEND_URL || 'http://49.13.223.175:5000/api';
+
+// Get backend mode from environment variable
+// Set VITE_BACKEND_MODE to 'local' or 'live' in .env file
+const backendMode = import.meta.env.VITE_BACKEND_MODE || 'local';
+
+// Select API URL based on mode
+const API_BASE_URL = backendMode === 'live' ? LIVE_BACKEND : LOCAL_BACKEND;
+
+// Log current backend mode for debugging
+console.log(`🔗 API Mode: ${backendMode.toUpperCase()} → ${API_BASE_URL}`);
 
 /**
  * Get authorization headers with JWT token
