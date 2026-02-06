@@ -1,5 +1,6 @@
 import express, { Application } from 'express';
 import cors from 'cors';
+import path from 'path';
 import { env } from './config/env';
 import { testDatabaseConnection, closeDatabaseConnection } from './config/database';
 import routes from './routes';
@@ -29,10 +30,13 @@ app.use(cors({
 }));
 
 // Parse JSON request bodies
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 // Parse URL-encoded form data
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 /**
  * API Routes
