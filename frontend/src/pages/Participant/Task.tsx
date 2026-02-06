@@ -437,6 +437,93 @@ const TaskPage: React.FC = () => {
     const [leftActiveTab, setLeftActiveTab] = useState<'description' | 'submissions'>('description');
     const [testCaseActiveTab, setTestCaseActiveTab] = useState<number>(0);
 
+    // Fullscreen / Lockdown state
+    const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+    const [showLockout, setShowLockout] = useState<boolean>(false);
+    const hasExited = useRef<boolean>(false);
+
+    // Function to request fullscreen
+    const requestFullscreen = useCallback(() => {
+        const element = document.documentElement;
+        if (element.requestFullscreen) {
+            element.requestFullscreen().catch(err => {
+                console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+            });
+
+            // Try to lock the keyboard (Experimental API, mainly Chrome)
+            if ('keyboard' in navigator && (navigator as any).keyboard.lock) {
+                (navigator as any).keyboard.lock(['Escape']).catch(() => {
+                    console.log('Keyboard lock failed or not supported');
+                });
+            }
+        }
+    }, []);
+
+    // Effect for keyboard shortcuts and navigation lockdown
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Disable F5, Ctrl+R, Command+R (Reload) and Escape
+            if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key === 'r') || e.key === 'Escape') {
+                e.preventDefault();
+                return false;
+            }
+
+            // Disable F12, Ctrl+Shift+I, Command+Option+I (DevTools)
+            if (e.key === 'F12' || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'i') || (e.metaKey && e.altKey && e.key === 'i')) {
+                e.preventDefault();
+                return false;
+            }
+
+            // Disable Alt+ArrowKeys, Ctrl+W, Command+W (Navigation/Closing)
+            if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+                e.preventDefault();
+                return false;
+            }
+        };
+
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (hasExited.current) return;
+            e.preventDefault();
+            e.returnValue = ''; // Standard way to show "Are you sure?" prompt
+        };
+
+        const handleFullscreenChange = () => {
+            const isFull = !!document.fullscreenElement;
+            setIsFullscreen(isFull);
+            if (!isFull) {
+                setShowLockout(true);
+            } else {
+                setShowLockout(false);
+            }
+        };
+
+        const handleContextMenu = (e: MouseEvent) => {
+            e.preventDefault();
+        };
+
+        // Add listeners with capture: true for keydown to catch it before other handlers
+        window.addEventListener('keydown', handleKeyDown, { capture: true });
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('contextmenu', handleContextMenu);
+
+        // Attempt initial fullscreen entry
+        // Note: Browsers usually require a user gesture, so this might fail until the first click
+        requestFullscreen();
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown, { capture: true });
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            document.removeEventListener('contextmenu', handleContextMenu);
+
+            // Unlock keyboard if API exists
+            if ('keyboard' in navigator && (navigator as any).keyboard.unlock) {
+                (navigator as any).keyboard.unlock();
+            }
+        };
+    }, [requestFullscreen]);
+
     // Test execution state
     const [showTestCases, setShowTestCases] = useState<boolean>(false);
     const [isRunning, setIsRunning] = useState<boolean>(false);
@@ -820,7 +907,16 @@ const TaskPage: React.FC = () => {
                         <Clock size={12} style={{ color: '#FDE68A' }} />
                         <span style={{ fontSize: 12, fontWeight: 600, color: '#FDE68A', fontFamily: 'monospace' }}>{formatTime(time)}</span>
                     </div>
-                    <button onClick={() => navigate('/player')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 6, color: '#f87171', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                    <button
+                        onClick={() => {
+                            hasExited.current = true;
+                            if (document.fullscreenElement) {
+                                document.exitFullscreen().catch(() => { });
+                            }
+                            navigate('/player');
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 6, color: '#f87171', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+                    >
                         <XCircle size={12} />
                         Exit
                     </button>
@@ -868,6 +964,103 @@ const TaskPage: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {/* Lockout Overlay */}
+            {showLockout && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    background: 'rgba(0, 0, 0, 0.9)',
+                    backdropFilter: 'blur(8px)',
+                    zIndex: 9999,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 20,
+                    textAlign: 'center',
+                    padding: 20
+                }}>
+                    <div style={{ padding: 40, background: '#111113', border: '1px solid rgba(253, 230, 138, 0.2)', borderRadius: 16, maxWidth: 400, boxShadow: '0 20px 50px rgba(0,0,0,0.5)', fontFamily: "'DM Sans', sans-serif" }}>
+                        <XCircle size={64} style={{ color: '#f87171', marginBottom: 20 }} />
+                        <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12, color: '#fff' }}>Test Locked</h2>
+                        <p style={{ color: 'rgba(255, 255, 255, 0.6)', marginBottom: 30, lineHeight: 1.5 }}>
+                            You have exited full-screen mode. For security reasons, the test has been locked.
+                            Please re-enter full-screen to continue.
+                        </p>
+                        <button
+                            onClick={requestFullscreen}
+                            style={{
+                                width: '100%',
+                                padding: '12px 24px',
+                                background: '#FDE68A',
+                                color: '#000',
+                                border: 'none',
+                                borderRadius: 8,
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                transition: 'transform 0.2s',
+                            }}
+                        >
+                            Re-enter Full Screen
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Initial Entry Modal */}
+            {!isFullscreen && !showLockout && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    background: '#0a0a0b',
+                    zIndex: 10000,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 20,
+                    fontFamily: "'DM Sans', sans-serif"
+                }}>
+                    <div style={{ textAlign: 'center', maxWidth: 500, padding: 40 }}>
+                        <div style={{
+                            width: 80, height: 80, background: 'rgba(253, 230, 138, 0.1)',
+                            borderRadius: '50%', display: 'flex', alignItems: 'center',
+                            justifyContent: 'center', margin: '0 auto 24px'
+                        }}>
+                            <Play size={40} style={{ color: '#FDE68A', marginLeft: 4 }} />
+                        </div>
+                        <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 16, color: '#fff' }}>Ready to start?</h1>
+                        <p style={{ color: 'rgba(255, 255, 255, 0.5)', marginBottom: 40, fontSize: 16, lineHeight: 1.6 }}>
+                            This test will be conducted in full-screen mode. All browser shortcuts will be disabled.
+                            Ensure you are ready before proceeding.
+                        </p>
+                        <button
+                            onClick={requestFullscreen}
+                            style={{
+                                padding: '16px 48px',
+                                background: 'linear-gradient(135deg, #FDE68A 0%, #F59E0B 100%)',
+                                color: '#000',
+                                border: 'none',
+                                borderRadius: 12,
+                                fontWeight: 800,
+                                fontSize: 18,
+                                cursor: 'pointer',
+                                boxShadow: '0 10px 25px rgba(245, 158, 11, 0.3)',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            Enter Full Screen & Start
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
