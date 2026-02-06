@@ -2,6 +2,7 @@ import { Router } from 'express';
 import authRoutes from './auth.routes';
 import userRoutes from './user.routes';
 import contestRoutes from './contest.routes';
+import submissionRoutes from './submission.routes';
 
 /**
  * Main Router
@@ -22,6 +23,9 @@ router.use('/users', userRoutes);
 
 // Contest routes: /api/contests
 router.use('/contests', contestRoutes);
+
+// Submission routes: /api/submissions
+router.use('/submissions', submissionRoutes);
 
 /**
  * Health Check Endpoint

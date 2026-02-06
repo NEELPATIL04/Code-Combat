@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  judge0-server:
+    image: judge0/judge0:1.13.1
+    container_name: judge0-server
+    restart: always
+    ports:
+      - "2358:2358"
+    environment:
+      # Authentication
+      ENABLE_WAIT_RESULT: "true"
+
+      # Redis Configuration
+      REDIS_HOST: judge0-redis
+      REDIS_PORT: 6379
+
+      # Database Configuration
+      POSTGRES_HOST: judge0-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: judge0
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0password
+
+      # CRITICAL: Run without Docker isolation (for Windows compatibility)
+      RUN_ONLY_ALLOWED_LANGUAGES: "false"
+
+    depends_on:
+      - judge0-db
+      - judge0-redis
+    networks:
+      - judge0-network
+
+  judge0-workers:
+    image: judge0/judge0:1.13.1
+    container_name: judge0-workers
+    restart: always
+    command: ["./scripts/workers"]
+    environment:
+      # Redis Configuration
+      REDIS_HOST: judge0-redis
+      REDIS_PORT: 6379
+
+      # Database Configuration
+      POSTGRES_HOST: judge0-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: judge0
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0password
+
+      # CRITICAL: Run without Docker isolation
+      RUN_ONLY_ALLOWED_LANGUAGES: "false"
+
+    depends_on:
+      - judge0-db
+      - judge0-redis
+    privileged: true
+    shm_size: '512m'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - judge0-network
+
+  judge0-db:
+    image: postgres:13
+    container_name: judge0-db
+    restart: always
+    environment:
+      POSTGRES_DB: judge0
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0password
+    volumes:
+      - judge0-postgres-data:/var/lib/postgresql/data
+    networks:
+      - judge0-network
+
+  judge0-redis:
+    image: redis:6
+    container_name: judge0-redis
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - judge0-redis-data:/data
+    networks:
+      - judge0-network
+
+networks:
+  judge0-network:
+    driver: bridge
+
+volumes:
+  judge0-postgres-data:
+  judge0-redis-data:
