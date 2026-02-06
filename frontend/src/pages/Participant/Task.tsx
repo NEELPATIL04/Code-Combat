@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Play, Send, XCircle, Clock } from 'lucide-react';
+import { XCircle, Clock, ChevronUp, ChevronDown, CheckCircle2, XOctagon, AlertCircle } from 'lucide-react';
 import Editor from '@monaco-editor/react';
+import Split from 'react-split';
 
 interface Task {
     id: number;
@@ -21,6 +22,20 @@ interface Contest {
     status: string;
 }
 
+interface TestResult {
+    testCase: number;
+    passed: boolean;
+    input: string;
+    expectedOutput: string;
+    actualOutput: string;
+    error?: string;
+    executionTime?: number;
+    memory?: number;
+}
+
+type ConsoleTab = 'testcase' | 'result';
+type LeftTab = 'description' | 'submissions' | 'solutions';
+
 const LANGUAGE_BOILERPLATES: Record<string, string> = {
     javascript: '// Write your JavaScript solution here\nfunction solve() {\n    \n}\n',
     typescript: '// Write your TypeScript solution here\nfunction solve() {\n    \n}\n',
@@ -30,20 +45,11 @@ const LANGUAGE_BOILERPLATES: Record<string, string> = {
     csharp: '// Write your C# solution here\nusing System;\n\nclass Solution {\n    static void Main() {\n        \n    }\n}\n',
     go: '// Write your Go solution here\npackage main\n\nimport "fmt"\n\nfunc main() {\n    \n}\n',
     rust: '// Write your Rust solution here\nfn main() {\n    \n}\n',
-};
-
-const getFileExtension = (lang: string): string => {
-    switch (lang) {
-        case 'javascript': return 'js';
-        case 'typescript': return 'ts';
-        case 'python': return 'py';
-        case 'java': return 'java';
-        case 'cpp': return 'cpp';
-        case 'csharp': return 'cs';
-        case 'go': return 'go';
-        case 'rust': return 'rs';
-        default: return 'txt';
-    }
+    ruby: '# Write your Ruby solution here\ndef solve\n  \nend\n',
+    php: '<?php\n// Write your PHP solution here\nfunction solve() {\n    \n}\n?>',
+    swift: '// Write your Swift solution here\nimport Foundation\n\nfunc solve() {\n    \n}\n',
+    kotlin: '// Write your Kotlin solution here\nfun main() {\n    \n}\n',
+    sql: '-- Write your SQL solution here\nSELECT * FROM table;\n',
 };
 
 const TaskPage: React.FC = () => {
@@ -52,28 +58,28 @@ const TaskPage: React.FC = () => {
     const [task, setTask] = useState<Task | null>(null);
     const [contest, setContest] = useState<Contest | null>(null);
     const [time, setTime] = useState<number>(45 * 60 + 22);
-    const [language, setLanguage] = useState<string>('typescript');
-    const [code, setCode] = useState<string>(LANGUAGE_BOILERPLATES['typescript']);
+    const [language, setLanguage] = useState<string>('javascript');
+    const [code, setCode] = useState<string>(LANGUAGE_BOILERPLATES['javascript']);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
+
+    // UI State
+    const [consoleOpen, setConsoleOpen] = useState<boolean>(true);
+    const [consoleTab, setConsoleTab] = useState<ConsoleTab>('testcase');
+    const [leftTab, setLeftTab] = useState<LeftTab>('description');
+    const [testResults, setTestResults] = useState<TestResult[]>([]);
+    const [isRunning, setIsRunning] = useState<boolean>(false);
 
     useEffect(() => {
         const fetchTaskData = async () => {
             try {
-                console.log('Contest ID from URL:', contestId);
                 const token = sessionStorage.getItem('token');
-                console.log('Token exists:', !!token);
-
                 if (!token) {
-                    console.log('No token found, redirecting to login');
                     navigate('/login');
                     return;
                 }
 
                 const apiUrl = `/api/contests/${contestId}/tasks`;
-                console.log('Fetching from:', apiUrl);
-
-                // Fetch tasks for the contest
                 const response = await fetch(apiUrl, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -81,52 +87,40 @@ const TaskPage: React.FC = () => {
                     },
                 });
 
-                console.log('Response status:', response.status);
-                console.log('Response OK:', response.ok);
-
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-                    console.error('API Error:', errorData);
                     throw new Error(errorData.message || 'Failed to fetch tasks');
                 }
 
                 const data = await response.json();
-                console.log('Received data:', data);
 
                 if (data.tasks && data.tasks.length > 0) {
-                    console.log('Setting task:', data.tasks[0]);
-                    setTask(data.tasks[0]); // Get the first task
+                    setTask(data.tasks[0]);
                     setContest(data.contest);
 
-                    // Set initial language if available
                     if (data.tasks[0].allowedLanguages && data.tasks[0].allowedLanguages.length > 0) {
                         const initialLang = data.tasks[0].allowedLanguages[0];
                         setLanguage(initialLang);
-                        setCode(LANGUAGE_BOILERPLATES[initialLang] || LANGUAGE_BOILERPLATES['typescript']);
+                        setCode(LANGUAGE_BOILERPLATES[initialLang] || LANGUAGE_BOILERPLATES['javascript']);
                     }
 
-                    // Set timer based on contest duration
                     if (data.contest?.duration) {
                         setTime(data.contest.duration * 60);
                     }
                 } else {
-                    console.log('No tasks found in response');
                     setError('No tasks found for this contest');
                 }
 
                 setLoading(false);
             } catch (err) {
-                console.error('Error fetching task:', err);
                 setError(err instanceof Error ? err.message : 'Failed to load task');
                 setLoading(false);
             }
         };
 
         if (contestId) {
-            console.log('Starting fetch with contest ID:', contestId);
             fetchTaskData();
         } else {
-            console.log('No contest ID provided');
             setError('No contest ID provided');
             setLoading(false);
         }
@@ -144,7 +138,6 @@ const TaskPage: React.FC = () => {
     };
 
     const handleLanguageChange = (newLang: string) => {
-        // Only reset code if it's currently a boilerplate or empty
         const currentBoilerplate = LANGUAGE_BOILERPLATES[language];
         const isDefaultCode = !code.trim() || code === currentBoilerplate;
 
@@ -153,7 +146,7 @@ const TaskPage: React.FC = () => {
             if (!confirmReset) return;
         }
 
-        setCode(LANGUAGE_BOILERPLATES[newLang] || LANGUAGE_BOILERPLATES['typescript']);
+        setCode(LANGUAGE_BOILERPLATES[newLang] || LANGUAGE_BOILERPLATES['javascript']);
         setLanguage(newLang);
     };
 
@@ -163,19 +156,95 @@ const TaskPage: React.FC = () => {
         }
     };
 
-    const handleRunTests = () => {
-        console.log('Running tests with code:', code);
-        // TODO: Implement test runner
+    const handleRunTests = async () => {
+        if (!task) return;
+
+        setIsRunning(true);
+        setConsoleTab('result');
+        setConsoleOpen(true);
+        setTestResults([]);
+
+        try {
+            const token = sessionStorage.getItem('token');
+            const response = await fetch('/api/submissions/run', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    taskId: task.id,
+                    code: code,
+                    language: language,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to run code');
+            }
+
+            if (data.success && data.data.results) {
+                setTestResults(data.data.results);
+            }
+        } catch (err) {
+            console.error('Run code error:', err);
+            alert(err instanceof Error ? err.message : 'Failed to execute code. Please make sure Judge0 is running.');
+        } finally {
+            setIsRunning(false);
+        }
     };
 
-    const handleSubmit = () => {
-        console.log('Submitting code:', code);
-        // TODO: Implement submission
+    const handleSubmit = async () => {
+        if (!task || !contest) return;
+
+        setIsRunning(true);
+        setConsoleTab('result');
+        setConsoleOpen(true);
+        setTestResults([]);
+
+        try {
+            const token = sessionStorage.getItem('token');
+            const response = await fetch('/api/submissions/submit', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    taskId: task.id,
+                    contestId: contest.id,
+                    code: code,
+                    language: language,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to submit code');
+            }
+
+            if (data.success && data.data.results) {
+                setTestResults(data.data.results);
+                if (data.data.status === 'accepted') {
+                    alert(`🎉 Congratulations! All test cases passed! Score: ${data.data.score}`);
+                } else {
+                    alert(`${data.data.passed}/${data.data.total} test cases passed. Score: ${data.data.score}`);
+                }
+            }
+        } catch (err) {
+            console.error('Submit code error:', err);
+            alert(err instanceof Error ? err.message : 'Failed to submit code. Please make sure Judge0 is running.');
+        } finally {
+            setIsRunning(false);
+        }
     };
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-black text-white flex items-center justify-center">
+            <div className="min-h-screen bg-[#1a1a1a] text-white flex items-center justify-center">
                 <div className="text-xl">Loading task...</div>
             </div>
         );
@@ -183,162 +252,369 @@ const TaskPage: React.FC = () => {
 
     if (error || !task) {
         return (
-            <div className="min-h-screen bg-black text-white flex items-center justify-center">
+            <div className="min-h-screen bg-[#1a1a1a] text-white flex items-center justify-center">
                 <div className="text-xl text-red-500">{error || 'Task not found'}</div>
             </div>
         );
     }
 
-    const getDifficultyColor = (difficulty: string) => {
-        switch (difficulty) {
-            case 'Easy':
-                return 'bg-emerald-500/15 text-emerald-500';
-            case 'Medium':
-                return 'bg-amber-500/15 text-amber-500';
-            case 'Hard':
-                return 'bg-red-500/15 text-red-500';
-            default:
-                return 'bg-amber-500/15 text-amber-500';
-        }
-    };
+    const passedTests = testResults.filter(t => t.passed).length;
+    const totalTests = testResults.length;
 
     return (
-        <div className="min-h-screen bg-black text-white" style={{ fontFamily: "'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
-            {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-[100] py-4 px-8 border-b" style={{
-                background: 'rgba(0, 0, 0, 0.8)',
-                backdropFilter: 'blur(20px)',
-                borderColor: 'rgba(255, 255, 255, 0.08)'
-            }}>
-                <div className="flex justify-between items-center">
-                    <a href="/" className="flex items-center gap-2.5 no-underline text-white font-semibold">
-                        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                            <circle cx="14" cy="14" r="12" stroke="url(#logoGrad3)" strokeWidth="1.5" />
-                            <circle cx="14" cy="14" r="5" fill="url(#logoGrad3)" />
-                            <defs>
-                                <linearGradient id="logoGrad3" x1="0" y1="0" x2="28" y2="28">
-                                    <stop offset="0%" stopColor="#FDE68A" />
-                                    <stop offset="100%" stopColor="#FBBF24" />
-                                </linearGradient>
-                            </defs>
-                        </svg>
-                        <span style={{
-                            background: 'linear-gradient(90deg, #FDE68A 0%, #FBBF24 100%)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text'
-                        }}>Code Combat</span>
-                    </a>
-                    <div className="flex items-center gap-5">
-                        <span className="text-white/70 text-[0.95rem]">{contest?.title || 'Contest'}</span>
-                        <div className="flex items-center gap-2 text-[1.1rem] font-semibold text-yellow-200 font-mono">
-                            <Clock size={16} />{formatTime(time)}
+        <div className="h-screen bg-[#1a1a1a] text-white flex flex-col">
+            {/* Top Navigation */}
+            <div className="h-14 bg-[#262626] border-b border-[#3a3a3a] flex items-center justify-between px-6">
+                <div className="flex items-center gap-4">
+                    {/* Logo */}
+                    <button
+                        onClick={() => navigate('/player')}
+                        className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
+                    >
+                        <div className="relative">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 via-orange-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-white">
+                                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                            </div>
                         </div>
-                        <button
-                            className="flex items-center gap-1.5 py-2 px-4 bg-red-500/10 border border-red-500/30 text-red-500 rounded-full font-inherit text-[0.9rem] cursor-pointer transition-all duration-200 hover:bg-red-500/20"
-                            onClick={() => navigate('/player')}
-                        >
-                            <XCircle size={16} /> Abort
-                        </button>
-                    </div>
+                        <span className="text-base font-semibold bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
+                            Code Combat
+                        </span>
+                    </button>
+
+                    <div className="w-px h-6 bg-[#3a3a3a]"></div>
+
+                    <h1 className="text-sm font-medium text-gray-300">{task.title}</h1>
+                    <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                        task.difficulty === 'Easy' ? 'bg-green-500/10 text-green-500' :
+                        task.difficulty === 'Medium' ? 'bg-yellow-500/10 text-yellow-500' :
+                        'bg-red-500/10 text-red-500'
+                    }`}>
+                        {task.difficulty}
+                    </span>
                 </div>
-            </nav>
+                <div className="flex items-center gap-4">
+                    <span className="text-gray-400 text-sm">{contest?.title}</span>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-500/10 rounded-lg border border-orange-500/20">
+                        <Clock size={16} className="text-orange-500" />
+                        <span className="text-orange-500 font-mono text-sm font-semibold">
+                            {formatTime(time)}
+                        </span>
+                    </div>
+                    <button
+                        onClick={() => navigate('/player')}
+                        className="flex items-center gap-2 px-4 py-1.5 bg-red-500/10 border border-red-500/30 text-red-500 rounded-lg text-sm font-medium hover:bg-red-500/20 transition-colors"
+                    >
+                        <XCircle size={14} />
+                        End Contest
+                    </button>
+                </div>
+            </div>
 
             {/* Main Content */}
-            <div
-                className="relative z-[1] grid grid-cols-2 gap-6 px-8 pb-8 box-border overflow-hidden"
-                style={{ paddingTop: '120px', height: '100vh' }}
-            >
-                {/* Left Side - Task Description */}
-                <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl overflow-hidden flex flex-col">
-                    <div className="py-4 px-6 border-b border-white/[0.08] flex items-center justify-between bg-white/[0.02]">
-                        <div className="flex items-center gap-3">
-                            <span className={`py-1 px-3 rounded-full text-[0.7rem] font-semibold uppercase tracking-wider ${getDifficultyColor(task.difficulty)}`}>
-                                {task.difficulty}
-                            </span>
-                            <h1 className="m-0 text-[1.1rem] font-semibold text-white">{task.title}</h1>
-                        </div>
-                        <div className="text-white/40 text-[0.8rem] font-medium">
-                            Max Points: {task.maxPoints}
-                        </div>
-                    </div>
-                    <div className="p-6 overflow-y-auto flex-1">
-                        <div className="text-white/70 leading-[1.7] whitespace-pre-wrap">
-                            {task.description}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right Side - Monaco Editor */}
-                <div className="bg-white/[0.02] border border-white/[0.08] rounded-2xl overflow-hidden flex flex-col">
-                    <div className="py-3 px-4 border-b border-white/[0.08] flex items-center justify-between bg-white/[0.02]">
-                        <div className="flex items-center gap-3">
-                            <span className="text-yellow-200/80 font-semibold text-[0.8rem] uppercase tracking-wider">Select Language:</span>
-                            <select
-                                value={language}
-                                onChange={(e) => handleLanguageChange(e.target.value)}
-                                className="bg-yellow-200/10 border border-yellow-200/30 rounded-lg py-1.5 px-3 text-yellow-200 text-[0.85rem] font-medium focus:outline-none focus:border-yellow-200/60 focus:ring-1 focus:ring-yellow-200/20 transition-all cursor-pointer"
+            <div className="flex-1 overflow-hidden">
+                <Split
+                    className="flex h-full"
+                    sizes={[50, 50]}
+                    minSize={[400, 500]}
+                    gutterSize={6}
+                    gutterStyle={() => ({
+                        backgroundColor: '#3a3a3a',
+                        cursor: 'col-resize',
+                    })}
+                >
+                    {/* LEFT PANEL */}
+                    <div className="flex flex-col bg-[#262626] h-full">
+                        {/* Tabs */}
+                        <div className="flex items-center h-11 border-b border-[#3a3a3a] px-4 gap-6">
+                            <button
+                                onClick={() => setLeftTab('description')}
+                                className={`relative h-full text-sm font-medium transition-colors ${
+                                    leftTab === 'description' ? 'text-white' : 'text-gray-400 hover:text-gray-300'
+                                }`}
                             >
-                                {task?.allowedLanguages && task.allowedLanguages.length > 0 ? (
-                                    task.allowedLanguages.map(lang => (
-                                        <option key={lang} value={lang} className="bg-[#1e1e1e] text-white">
-                                            {lang.charAt(0).toUpperCase() + lang.slice(1)}
-                                        </option>
-                                    ))
-                                ) : (
-                                    <>
-                                        <option value="typescript" className="bg-[#1e1e1e] text-white">TypeScript</option>
-                                        <option value="javascript" className="bg-[#1e1e1e] text-white">JavaScript</option>
-                                    </>
+                                Description
+                                {leftTab === 'description' && (
+                                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white"></div>
                                 )}
-                            </select>
+                            </button>
+                            <button
+                                onClick={() => setLeftTab('solutions')}
+                                className={`relative h-full text-sm font-medium transition-colors ${
+                                    leftTab === 'solutions' ? 'text-white' : 'text-gray-400 hover:text-gray-300'
+                                }`}
+                            >
+                                Solutions
+                                {leftTab === 'solutions' && (
+                                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white"></div>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setLeftTab('submissions')}
+                                className={`relative h-full text-sm font-medium transition-colors ${
+                                    leftTab === 'submissions' ? 'text-white' : 'text-gray-400 hover:text-gray-300'
+                                }`}
+                            >
+                                Submissions
+                                {leftTab === 'submissions' && (
+                                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white"></div>
+                                )}
+                            </button>
                         </div>
-                        <div className="flex items-center">
-                            <span className="py-1 px-3 bg-yellow-200/10 text-yellow-200 rounded-lg text-[0.8rem] font-medium font-mono">
-                                solution.{getFileExtension(language)}
-                            </span>
+
+                        {/* Content Area */}
+                        <div className="flex-1 overflow-y-auto p-4">
+                            {leftTab === 'description' && (
+                                <div className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
+                                    {task.description}
+                                </div>
+                            )}
+                            {leftTab === 'solutions' && (
+                                <div className="text-gray-500 text-center py-12 text-sm">
+                                    Solutions will be available after the contest ends
+                                </div>
+                            )}
+                            {leftTab === 'submissions' && (
+                                <div className="text-gray-500 text-center py-12 text-sm">
+                                    No submissions yet
+                                </div>
+                            )}
                         </div>
                     </div>
-                    <div className="flex-1 overflow-hidden text-left tracking-normal" style={{ letterSpacing: 'normal' }}>
-                        <Editor
-                            key={`${task.id}-${language}`}
-                            height="100%"
-                            defaultLanguage={language}
-                            language={language}
-                            value={code}
-                            onChange={handleEditorChange}
-                            theme="vs-dark"
-                            options={{
-                                minimap: { enabled: false },
-                                fontSize: 14,
-                                lineNumbers: 'on',
-                                scrollBeyondLastLine: false,
-                                automaticLayout: true,
-                                tabSize: 2,
-                                wordWrap: 'on',
-                                padding: { top: 16, bottom: 16 },
-                                fontFamily: "'Consolas', 'Monaco', 'Courier New', monospace",
-                                fontLigatures: false,
-                                renderWhitespace: 'selection',
-                                fixedOverflowWidgets: true,
-                            }}
-                        />
+
+                    {/* RIGHT PANEL */}
+                    <div className="flex flex-col bg-[#1e1e1e] h-full">
+                        {/* Editor Header */}
+                        <div className="h-11 bg-[#262626] border-b border-[#3a3a3a] flex items-center justify-between px-4">
+                            <div className="flex items-center gap-3">
+                                <span className="text-gray-400 text-xs">Language:</span>
+                                <select
+                                    value={language}
+                                    onChange={(e) => handleLanguageChange(e.target.value)}
+                                    className="bg-[#3a3a3a] border border-[#4a4a4a] text-white text-xs px-2 py-1 rounded focus:outline-none focus:border-blue-500"
+                                >
+                                    {task?.allowedLanguages && task.allowedLanguages.length > 0 ? (
+                                        task.allowedLanguages.map(lang => (
+                                            <option key={lang} value={lang}>
+                                                {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                                            </option>
+                                        ))
+                                    ) : (
+                                        <>
+                                            <option value="javascript">JavaScript</option>
+                                            <option value="typescript">TypeScript</option>
+                                            <option value="python">Python</option>
+                                        </>
+                                    )}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Editor */}
+                        <div className={consoleOpen ? 'h-[60%]' : 'flex-1'}>
+                            <Editor
+                                height="100%"
+                                language={language}
+                                value={code}
+                                onChange={handleEditorChange}
+                                theme="vs-dark"
+                                options={{
+                                    minimap: { enabled: false },
+                                    fontSize: 13,
+                                    lineNumbers: 'on',
+                                    scrollBeyondLastLine: false,
+                                    automaticLayout: true,
+                                    tabSize: 4,
+                                    wordWrap: 'off',
+                                    fontFamily: "'Consolas', 'Courier New', monospace",
+                                    renderWhitespace: 'selection',
+                                }}
+                            />
+                        </div>
+
+                        {/* Console Panel */}
+                        {consoleOpen ? (
+                            <div className="h-[40%] flex flex-col border-t border-[#3a3a3a] bg-[#1e1e1e]">
+                                {/* Console Tabs */}
+                                <div className="h-10 bg-[#262626] border-b border-[#3a3a3a] flex items-center justify-between px-4">
+                                    <div className="flex items-center gap-6">
+                                        <button
+                                            onClick={() => setConsoleTab('testcase')}
+                                            className={`relative h-10 text-xs font-medium ${
+                                                consoleTab === 'testcase' ? 'text-green-500' : 'text-gray-400'
+                                            }`}
+                                        >
+                                            Testcase
+                                            {consoleTab === 'testcase' && (
+                                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-500"></div>
+                                            )}
+                                        </button>
+                                        <button
+                                            onClick={() => setConsoleTab('result')}
+                                            className={`relative h-10 text-xs font-medium ${
+                                                consoleTab === 'result' ? 'text-green-500' : 'text-gray-400'
+                                            }`}
+                                        >
+                                            Test Result
+                                            {consoleTab === 'result' && (
+                                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-500"></div>
+                                            )}
+                                        </button>
+                                    </div>
+                                    <button onClick={() => setConsoleOpen(false)} className="text-gray-400 hover:text-white">
+                                        <ChevronDown size={16} />
+                                    </button>
+                                </div>
+
+                                {/* Console Content */}
+                                <div className="flex-1 overflow-y-auto p-4 bg-[#1e1e1e]">
+                                    {consoleTab === 'testcase' && (
+                                        <div className="space-y-3">
+                                            <div>
+                                                <div className="text-gray-400 text-xs mb-2">Input:</div>
+                                                <div className="bg-[#2a2a2a] rounded p-3 font-mono text-xs text-gray-300">
+                                                    nums = [2, 7, 11, 15], target = 9
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="text-gray-400 text-xs mb-2">Expected Output:</div>
+                                                <div className="bg-[#2a2a2a] rounded p-3 font-mono text-xs text-gray-300">
+                                                    [0, 1]
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {consoleTab === 'result' && (
+                                        <div className="space-y-4">
+                                            {isRunning ? (
+                                                <div className="text-center py-12 text-gray-500 text-sm">
+                                                    Running tests...
+                                                </div>
+                                            ) : testResults.length > 0 ? (
+                                                <>
+                                                    <div className={`text-base font-semibold mb-4 ${
+                                                        passedTests === totalTests ? 'text-green-500' : 'text-red-500'
+                                                    }`}>
+                                                        {passedTests === totalTests ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <CheckCircle2 size={20} />
+                                                                Accepted
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-2">
+                                                                <XOctagon size={20} />
+                                                                Wrong Answer
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {testResults.map((result, idx) => (
+                                                        <div
+                                                            key={idx}
+                                                            className={`rounded border p-4 ${
+                                                                result.passed
+                                                                    ? 'border-green-500/30 bg-green-500/5'
+                                                                    : 'border-red-500/30 bg-red-500/5'
+                                                            }`}
+                                                        >
+                                                            <div className="flex items-center justify-between mb-3">
+                                                                <div className="flex items-center gap-2">
+                                                                    {result.passed ? (
+                                                                        <CheckCircle2 size={16} className="text-green-500" />
+                                                                    ) : (
+                                                                        <XOctagon size={16} className="text-red-500" />
+                                                                    )}
+                                                                    <span className={`text-sm font-medium ${
+                                                                        result.passed ? 'text-green-500' : 'text-red-500'
+                                                                    }`}>
+                                                                        Test Case {result.testCase}
+                                                                    </span>
+                                                                </div>
+                                                                {result.executionTime && (
+                                                                    <span className="text-gray-500 text-xs">
+                                                                        Runtime: {result.executionTime}ms | Memory: {result.memory}MB
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            <div className="space-y-2 text-xs">
+                                                                <div>
+                                                                    <div className="text-gray-400 mb-1">Input:</div>
+                                                                    <div className="bg-[#2a2a2a] rounded p-2 font-mono text-gray-300">
+                                                                        {result.input}
+                                                                    </div>
+                                                                </div>
+                                                                <div>
+                                                                    <div className="text-gray-400 mb-1">Expected:</div>
+                                                                    <div className="bg-[#2a2a2a] rounded p-2 font-mono text-gray-300">
+                                                                        {result.expectedOutput}
+                                                                    </div>
+                                                                </div>
+                                                                <div>
+                                                                    <div className="text-gray-400 mb-1">Output:</div>
+                                                                    <div className={`rounded p-2 font-mono ${
+                                                                        result.passed
+                                                                            ? 'bg-[#2a2a2a] text-gray-300'
+                                                                            : 'bg-red-500/10 text-red-400'
+                                                                    }`}>
+                                                                        {result.actualOutput}
+                                                                    </div>
+                                                                </div>
+                                                                {result.error && (
+                                                                    <div>
+                                                                        <div className="text-red-400 mb-1 flex items-center gap-1">
+                                                                            <AlertCircle size={12} />
+                                                                            Error:
+                                                                        </div>
+                                                                        <div className="bg-red-500/10 rounded p-2 font-mono text-red-400">
+                                                                            {result.error}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </>
+                                            ) : (
+                                                <div className="text-center py-12 text-gray-500 text-sm">
+                                                    You must run your code first
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setConsoleOpen(true)}
+                                className="h-8 bg-[#262626] border-t border-[#3a3a3a] text-gray-400 hover:text-white text-xs flex items-center justify-center"
+                            >
+                                <ChevronUp size={16} />
+                                Console
+                            </button>
+                        )}
+
+                        {/* Bottom Buttons */}
+                        <div className="h-12 bg-[#262626] border-t border-[#3a3a3a] flex items-center justify-end gap-3 px-4">
+                            <button
+                                onClick={handleRunTests}
+                                disabled={isRunning}
+                                className="px-4 py-1.5 bg-[#3a3a3a] hover:bg-[#4a4a4a] text-white rounded text-sm font-medium disabled:opacity-50"
+                            >
+                                ▶ Run
+                            </button>
+                            <button
+                                onClick={handleSubmit}
+                                disabled={isRunning}
+                                className="px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium disabled:opacity-50"
+                            >
+                                Submit
+                            </button>
+                        </div>
                     </div>
-                    <div className="p-4 border-t border-white/[0.08] flex justify-end gap-3">
-                        <button
-                            className="flex items-center gap-2 py-2.5 px-5 rounded-full font-inherit text-[0.9rem] cursor-pointer bg-white/5 border border-white/15 text-white transition-all duration-200 hover:bg-white/10"
-                            onClick={handleRunTests}
-                        >
-                            <Play size={16} /> Run Tests
-                        </button>
-                        <button
-                            className="flex items-center gap-2 py-2.5 px-5 rounded-full font-inherit text-[0.9rem] cursor-pointer bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 transition-all duration-200 hover:bg-emerald-500/25"
-                            onClick={handleSubmit}
-                        >
-                            <Send size={16} /> Submit
-                        </button>
-                    </div>
-                </div>
+                </Split>
             </div>
         </div>
     );

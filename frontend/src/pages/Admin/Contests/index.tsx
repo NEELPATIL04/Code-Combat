@@ -33,6 +33,15 @@ const SUPPORTED_LANGUAGES = [
     { id: 'csharp', name: 'C#' },
     { id: 'go', name: 'Go' },
     { id: 'rust', name: 'Rust' },
+    { id: 'ruby', name: 'Ruby' },
+    { id: 'php', name: 'PHP' },
+    { id: 'swift', name: 'Swift' },
+    { id: 'kotlin', name: 'Kotlin' },
+    { id: 'sql', name: 'SQL' },
+    { id: 'html', name: 'HTML' },
+    { id: 'css', name: 'CSS' },
+    { id: 'react-js', name: 'React (JS)' },
+    { id: 'react-ts', name: 'React (TS)' },
 ];
 
 interface User {
