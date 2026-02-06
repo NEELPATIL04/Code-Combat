@@ -1,8 +1,9 @@
 import React, { useState, useEffect, ChangeEvent } from 'react';
-import { Plus, Edit2, Trash2, X, Play, Users } from 'lucide-react';
-import Editor from '@monaco-editor/react';
+import { Plus, Edit2, Trash2, X, Play, Users, ChevronRight, ChevronLeft, FileEdit } from 'lucide-react';
 
 import { contestAPI, userAPI } from '../../../utils/api';
+import RichTextModal from '../../../components/RichTextModal';
+import type { YooptaContentValue } from '../../../components/RichTextEditor';
 
 interface Contest {
     id: number;
@@ -20,7 +21,8 @@ interface Contest {
 interface Task {
     title: string;
     description: string;
-    descriptionType: 'text' | 'html';
+    descriptionType: 'text' | 'richtext';
+    richContent?: YooptaContentValue;
     difficulty: string;
     maxPoints: number;
     allowedLanguages: string[];
@@ -90,12 +92,21 @@ const Contests: React.FC = () => {
         title: '',
         description: '',
         descriptionType: 'text',
+        richContent: undefined,
         difficulty: 'Medium',
         maxPoints: 100,
         allowedLanguages: ['javascript', 'typescript', 'python', 'java', 'cpp'],
     });
 
+    // Rich text editor modal state
+    const [showRichTextModal, setShowRichTextModal] = useState<boolean>(false);
+
     const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+
+    // Step navigation for 2-step wizard
+    const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+
+
 
     useEffect(() => {
         loadContests();
@@ -173,6 +184,7 @@ const Contests: React.FC = () => {
                 startPassword: '',
                 tasks: [],
             });
+            setCurrentStep(1);
             setShowModal(true);
             setError('');
         }
@@ -198,7 +210,42 @@ const Contests: React.FC = () => {
             maxPoints: 100,
             allowedLanguages: ['javascript', 'typescript', 'python', 'java', 'cpp'],
         });
+        setCurrentStep(1);
         setError('');
+    };
+
+    // Step navigation validation
+    const validateStep1 = (): boolean => {
+        if (!formData.title.trim()) {
+            setError('Contest title is required');
+            return false;
+        }
+        if (formData.duration < 1) {
+            setError('Duration must be at least 1 minute');
+            return false;
+        }
+        return true;
+    };
+
+    const goToStep2 = () => {
+        if (validateStep1()) {
+            setError('');
+            setCurrentStep(2);
+        }
+    };
+
+    const goToStep1 = () => {
+        setCurrentStep(1);
+        setError('');
+    };
+
+    // Handle rich text content save
+    const handleRichTextSave = (value: YooptaContentValue) => {
+        setTaskInput(prev => ({
+            ...prev,
+            richContent: value,
+            description: JSON.stringify(value), // Store as JSON string for backend
+        }));
     };
 
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -743,6 +790,72 @@ const Contests: React.FC = () => {
                         </button>
                     </div>
 
+                    {/* Step Indicator */}
+                    <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        gap: '16px',
+                        padding: '20px 28px',
+                        background: 'rgba(255, 255, 255, 0.02)'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{
+                                width: '32px',
+                                height: '32px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '50%',
+                                background: currentStep === 1 ? 'rgba(253, 230, 138, 0.2)' : currentStep === 2 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                                border: currentStep === 1 ? '2px solid #FDE68A' : currentStep === 2 ? '2px solid #10b981' : '2px solid rgba(255, 255, 255, 0.2)',
+                                color: currentStep === 1 ? '#FDE68A' : currentStep === 2 ? '#10b981' : 'rgba(255, 255, 255, 0.4)',
+                                fontWeight: 600,
+                                fontSize: '0.9rem'
+                            }}>
+                                {currentStep === 2 ? '✓' : '1'}
+                            </div>
+                            <span style={{ 
+                                color: currentStep >= 1 ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
+                                fontWeight: currentStep === 1 ? 600 : 400,
+                                fontSize: '0.9rem'
+                            }}>
+                                Contest Info
+                            </span>
+                        </div>
+                        
+                        <div style={{ 
+                            width: '60px', 
+                            height: '2px', 
+                            background: currentStep === 2 ? 'rgba(16, 185, 129, 0.5)' : 'rgba(255, 255, 255, 0.1)',
+                            borderRadius: '1px'
+                        }}></div>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{
+                                width: '32px',
+                                height: '32px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '50%',
+                                background: currentStep === 2 ? 'rgba(253, 230, 138, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                                border: currentStep === 2 ? '2px solid #FDE68A' : '2px solid rgba(255, 255, 255, 0.2)',
+                                color: currentStep === 2 ? '#FDE68A' : 'rgba(255, 255, 255, 0.4)',
+                                fontWeight: 600,
+                                fontSize: '0.9rem'
+                            }}>
+                                2
+                            </div>
+                            <span style={{ 
+                                color: currentStep === 2 ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
+                                fontWeight: currentStep === 2 ? 600 : 400,
+                                fontSize: '0.9rem'
+                            }}>
+                                Tasks
+                            </span>
+                        </div>
+                    </div>
                     {fetchingDetails ? (
                         <div style={{ padding: '48px', textAlign: 'center' }}>
                             <div style={{
@@ -772,6 +885,9 @@ const Contests: React.FC = () => {
                                 </div>
                             )}
 
+                            {/* Step 1: Contest Information */}
+                            {currentStep === 1 && (
+                            <>
                             {/* Title */}
                             <div style={{ marginBottom: '24px' }}>
                                 <label style={{ display: 'block', marginBottom: '10px', color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.9rem', fontWeight: 600 }}>
@@ -897,9 +1013,14 @@ const Contests: React.FC = () => {
                                     }}
                                 />
                             </div>
+                            </>
+                            )}
 
+                            {/* Step 2: Tasks */}
+                            {currentStep === 2 && (
+                            <>
                             {/* Tasks Section */}
-                            <div style={{ marginTop: '32px', paddingTop: '28px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                            <div style={{ marginTop: '0', paddingTop: '0' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
                                     <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600, color: '#ffffff' }}>Tasks</h3>
                                     {formData.tasks.length > 0 && (
@@ -979,7 +1100,7 @@ const Contests: React.FC = () => {
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    onClick={() => setTaskInput(prev => ({ ...prev, descriptionType: 'html' }))}
+                                                    onClick={() => setTaskInput(prev => ({ ...prev, descriptionType: 'richtext' }))}
                                                     style={{
                                                         padding: '6px 14px',
                                                         borderRadius: '6px',
@@ -987,48 +1108,62 @@ const Contests: React.FC = () => {
                                                         fontWeight: 600,
                                                         cursor: 'pointer',
                                                         border: 'none',
-                                                        background: taskInput.descriptionType === 'html' 
+                                                        background: taskInput.descriptionType === 'richtext' 
                                                             ? 'rgba(59, 130, 246, 0.2)' 
                                                             : 'transparent',
-                                                        color: taskInput.descriptionType === 'html' 
+                                                        color: taskInput.descriptionType === 'richtext' 
                                                             ? '#3b82f6' 
                                                             : 'rgba(255, 255, 255, 0.5)',
                                                         transition: 'all 0.2s ease'
                                                     }}
                                                 >
-                                                    HTML
+                                                    Rich Text
                                                 </button>
                                             </div>
                                         </div>
-                                        {taskInput.descriptionType === 'html' ? (
-                                            <div style={{
-                                                border: '1.5px solid rgba(59, 130, 246, 0.3)',
-                                                borderRadius: '10px',
-                                                overflow: 'hidden'
-                                            }}>
-                                                <Editor
-                                                    height="280px"
-                                                    defaultLanguage="html"
-                                                    value={taskInput.description}
-                                                    onChange={(value) => setTaskInput(prev => ({ ...prev, description: value || '' }))}
-                                                    theme="vs-dark"
-                                                    options={{
-                                                        minimap: { enabled: false },
-                                                        fontSize: 14,
-                                                        lineNumbers: 'on',
-                                                        scrollBeyondLastLine: false,
-                                                        wordWrap: 'on',
-                                                        automaticLayout: true,
-                                                        tabSize: 2,
-                                                        formatOnPaste: true,
-                                                        formatOnType: true,
-                                                        autoClosingBrackets: 'always',
-                                                        autoClosingQuotes: 'always',
-                                                        suggestOnTriggerCharacters: true,
-                                                        quickSuggestions: true,
-                                                        padding: { top: 12, bottom: 12 }
+                                        {taskInput.descriptionType === 'richtext' ? (
+                                            <div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowRichTextModal(true)}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '20px',
+                                                        background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)',
+                                                        border: '1.5px dashed rgba(59, 130, 246, 0.4)',
+                                                        borderRadius: '10px',
+                                                        color: '#60a5fa',
+                                                        fontSize: '0.95rem',
+                                                        fontWeight: 600,
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '10px',
+                                                        transition: 'all 0.2s ease'
                                                     }}
-                                                />
+                                                >
+                                                    <FileEdit size={18} />
+                                                    {taskInput.richContent && Object.keys(taskInput.richContent).length > 0 
+                                                        ? 'Edit Rich Text Content' 
+                                                        : 'Open Rich Text Editor'}
+                                                </button>
+                                                {taskInput.richContent && Object.keys(taskInput.richContent).length > 0 && (
+                                                    <p style={{ 
+                                                        margin: '8px 0 0', 
+                                                        fontSize: '0.75rem', 
+                                                        color: 'rgba(34, 197, 94, 0.8)' 
+                                                    }}>
+                                                        ✓ Rich content saved ({Object.keys(taskInput.richContent).length} blocks)
+                                                    </p>
+                                                )}
+                                                <p style={{ 
+                                                    margin: '8px 0 0', 
+                                                    fontSize: '0.7rem', 
+                                                    color: 'rgba(59, 130, 246, 0.7)' 
+                                                }}>
+                                                    💡 Use slash commands (/) to add headings, lists, images, code blocks, and more.
+                                                </p>
                                             </div>
                                         ) : (
                                             <textarea
@@ -1052,15 +1187,7 @@ const Contests: React.FC = () => {
                                                 }}
                                             />
                                         )}
-                                        {taskInput.descriptionType === 'html' && (
-                                            <p style={{ 
-                                                margin: '8px 0 0', 
-                                                fontSize: '0.7rem', 
-                                                color: 'rgba(59, 130, 246, 0.7)' 
-                                            }}>
-                                                💡 Monaco Editor with HTML autocompletion. Type tags like &lt;div&gt; for auto-closing.
-                                            </p>
-                                        )}
+
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: '14px', marginBottom: '16px' }}>
                                         <select
@@ -1259,50 +1386,103 @@ const Contests: React.FC = () => {
                                     </div>
                                 )}
                             </div>
+                            </>
+                            )}
                         </div>
                     )}
 
                     {/* Modal Footer */}
                     <div style={{
                         display: 'flex',
-                        justifyContent: 'flex-end',
+                        justifyContent: 'space-between',
                         gap: '14px',
                         padding: '24px 28px',
                         borderTop: '1px solid rgba(255, 255, 255, 0.08)',
                         background: 'rgba(255, 255, 255, 0.02)'
                     }}>
-                        <button
-                            onClick={closeModal}
-                            style={{
-                                padding: '12px 24px',
-                                background: 'transparent',
-                                border: '1.5px solid rgba(255, 255, 255, 0.15)',
-                                borderRadius: '10px',
-                                color: 'rgba(255, 255, 255, 0.7)',
-                                fontSize: '0.95rem',
-                                fontWeight: 500,
-                                cursor: 'pointer'
-                            }}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            disabled={loading || fetchingDetails}
-                            style={{
-                                padding: '12px 28px',
-                                background: 'rgba(253, 230, 138, 0.15)',
-                                border: '1.5px solid rgba(253, 230, 138, 0.5)',
-                                borderRadius: '10px',
-                                color: '#FDE68A',
-                                fontSize: '0.95rem',
-                                fontWeight: 600,
-                                cursor: loading || fetchingDetails ? 'not-allowed' : 'pointer',
-                                opacity: loading || fetchingDetails ? 0.5 : 1
-                            }}
-                        >
-                            {loading ? 'Saving...' : editingContest ? 'Update Contest' : 'Create Contest'}
-                        </button>
+                        {/* Left side - Back button on Step 2 */}
+                        <div>
+                            {currentStep === 2 && (
+                                <button
+                                    onClick={goToStep1}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        padding: '12px 24px',
+                                        background: 'transparent',
+                                        border: '1.5px solid rgba(255, 255, 255, 0.15)',
+                                        borderRadius: '10px',
+                                        color: 'rgba(255, 255, 255, 0.7)',
+                                        fontSize: '0.95rem',
+                                        fontWeight: 500,
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    <ChevronLeft size={18} />
+                                    Back
+                                </button>
+                            )}
+                        </div>
+                        
+                        {/* Right side - Cancel + Next/Create */}
+                        <div style={{ display: 'flex', gap: '14px' }}>
+                            <button
+                                onClick={closeModal}
+                                style={{
+                                    padding: '12px 24px',
+                                    background: 'transparent',
+                                    border: '1.5px solid rgba(255, 255, 255, 0.15)',
+                                    borderRadius: '10px',
+                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    fontSize: '0.95rem',
+                                    fontWeight: 500,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            
+                            {currentStep === 1 ? (
+                                <button
+                                    onClick={goToStep2}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        padding: '12px 28px',
+                                        background: 'rgba(253, 230, 138, 0.15)',
+                                        border: '1.5px solid rgba(253, 230, 138, 0.5)',
+                                        borderRadius: '10px',
+                                        color: '#FDE68A',
+                                        fontSize: '0.95rem',
+                                        fontWeight: 600,
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Next
+                                    <ChevronRight size={18} />
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleSave}
+                                    disabled={loading || fetchingDetails}
+                                    style={{
+                                        padding: '12px 28px',
+                                        background: 'rgba(253, 230, 138, 0.15)',
+                                        border: '1.5px solid rgba(253, 230, 138, 0.5)',
+                                        borderRadius: '10px',
+                                        color: '#FDE68A',
+                                        fontSize: '0.95rem',
+                                        fontWeight: 600,
+                                        cursor: loading || fetchingDetails ? 'not-allowed' : 'pointer',
+                                        opacity: loading || fetchingDetails ? 0.5 : 1
+                                    }}
+                                >
+                                    {loading ? 'Saving...' : editingContest ? 'Update Contest' : 'Create Contest'}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1477,6 +1657,15 @@ const Contests: React.FC = () => {
                 </div>
             </div>
         )}
+
+        {/* Rich Text Editor Modal */}
+        <RichTextModal
+            isOpen={showRichTextModal}
+            onClose={() => setShowRichTextModal(false)}
+            onSave={handleRichTextSave}
+            initialValue={taskInput.richContent}
+            title="Edit Question Content"
+        />
 
     </div>);
 };
