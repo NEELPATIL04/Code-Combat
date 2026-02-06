@@ -236,3 +236,27 @@ textarea:focus {
 input[type="checkbox"] {
   accent-color: #FDE68A;
 }
+
+/* React Resizable Panels - Separator Styles */
+[data-separator] {
+  background: rgba(255, 255, 255, 0.05);
+  transition: background 0.15s ease;
+}
+
+[data-separator]:hover {
+  background: rgba(253, 230, 138, 0.2);
+}
+
+[data-separator][data-resize-handle-active] {
+  background: rgba(253, 230, 138, 0.4);
+}
+
+/* Panel group container */
+[data-group] {
+  display: flex;
+  flex: 1;
+}
+
+[data-panel] {
+  overflow: hidden;
+}

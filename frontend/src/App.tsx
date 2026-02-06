@@ -69,7 +69,7 @@ const App: React.FC = () => {
                     <Route path="/player" element={<ParticipantDashboard />} />
                 </Route>
 
-                {/* Contest/Task Routes - Without Sidebar Layout */}
+                {/* Task Page - Standalone without ParticipantLayout navbar */}
                 <Route path="/contest/:id" element={
                     <PrivateRoute allowedRoles={['player']}>
                         <TaskPage />
