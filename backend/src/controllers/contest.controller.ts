@@ -15,7 +15,13 @@ import { hashPassword } from '../utils/password.util';
  */
 export const createContest = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    console.log('📝 Received create contest request');
+    console.log('Query:', req.query);
+    console.log('Body keys:', Object.keys(req.body));
+    
     const { title, description, difficulty, duration, startPassword, contestTasks, participantIds } = req.body;
+    
+    console.log(`Title: ${title}, Duration: ${duration}, Tasks: ${contestTasks?.length || 0}`);
     const userId = req.user?.userId;
 
     if (!userId) {
