@@ -95,6 +95,9 @@ export const contests = pgTable('contests', {
   // When the contest was actually started
   startedAt: timestamp('started_at'),
 
+  // Whether full screen mode is enforced for this contest
+  fullScreenMode: boolean('full_screen_mode').notNull().default(true),
+
   // Created by admin ID
   createdBy: integer('created_by').notNull(),
 
@@ -139,6 +142,17 @@ export const tasks = pgTable('tasks', {
 
   // Allowed languages (JSON array of strings)
   allowedLanguages: json('allowed_languages').$type<string[]>().notNull().default([]),
+
+  // Function signature for boilerplate (e.g., "twoSum(nums, target)")
+  functionName: varchar('function_name', { length: 255 }),
+
+  // Boilerplate templates per language (JSON object with language keys)
+  // Example: { "javascript": "function twoSum(nums, target) {\n  // Your code here\n}", "python": "def two_sum(nums, target):\n    # Your code here\n    pass" }
+  boilerplateCode: json('boilerplate_code').$type<Record<string, string>>(),
+
+  // Test runner templates per language (wraps user code)
+  // Example for JS: "const result = {{functionName}}({{params}});\nconsole.log(JSON.stringify(result));"
+  testRunnerTemplate: json('test_runner_template').$type<Record<string, string>>(),
 });
 
 /**

@@ -4,6 +4,7 @@ import userRoutes from './user.routes';
 import contestRoutes from './contest.routes';
 import submissionRoutes from './submission.routes';
 import uploadRoutes from './upload.routes';
+import aiRoutes from './ai.routes';
 
 /**
  * Main Router
@@ -30,6 +31,9 @@ router.use('/submissions', submissionRoutes);
 
 // Upload routes: /api/upload
 router.use('/upload', uploadRoutes);
+
+// AI routes: /api/ai
+router.use('/ai', aiRoutes);
 
 /**
  * Health Check Endpoint

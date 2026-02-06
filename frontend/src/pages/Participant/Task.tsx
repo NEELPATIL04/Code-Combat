@@ -21,6 +21,7 @@ interface Contest {
     title: string;
     duration: number;
     status: string;
+    fullScreenMode?: boolean;
 }
 
 interface TestCase {
@@ -269,9 +270,78 @@ const MemoizedDescription = React.memo<{ task: Task; testCases: TestCase[]; left
                             <span style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.5)' }}>{task.maxPoints} pts</span>
                         </div>
                     </div>
-                    <div style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-                        {task.description}
+                    <div
+                        className="task-description"
+                        style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: 14, lineHeight: 1.7 }}
+                        dangerouslySetInnerHTML={{ __html: task.description }}
+                    >
                     </div>
+                    <style>{`
+                        .task-description h1 { font-size: 1.75rem; font-weight: 700; color: #fff; margin-top: 1.5rem; margin-bottom: 1rem; }
+                        .task-description h2 { font-size: 1.35rem; font-weight: 600; color: #fff; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+                        .task-description h3 { font-size: 1.1rem; font-weight: 600; color: #fff; margin-top: 1rem; margin-bottom: 0.5rem; }
+                        .task-description p { margin-bottom: 0.75rem; }
+                        .task-description ul, .task-description ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+                        .task-description ul { list-style-type: disc; }
+                        .task-description ol { list-style-type: decimal; }
+                        .task-description li { margin-bottom: 0.25rem; }
+                        .task-description blockquote {
+                            border-left: 4px solid #fde047;
+                            padding-left: 1rem;
+                            margin: 1rem 0;
+                            font-style: italic;
+                            color: #ffeebb;
+                            background: rgba(253, 224, 71, 0.1);
+                            padding: 0.75rem 1rem;
+                            border-radius: 0 4px 4px 0;
+                        }
+                        .task-description pre {
+                            background: #0d0d0d;
+                            padding: 1rem;
+                            border-radius: 0.5rem;
+                            color: #f8f8f2;
+                            font-family: 'JetBrains Mono', monospace;
+                            overflow-x: auto;
+                            border: 1px solid rgba(255,255,255,0.1);
+                            margin: 1rem 0;
+                        }
+                        .task-description code {
+                            font-family: 'JetBrains Mono', monospace;
+                            background: rgba(255,255,255,0.1);
+                            padding: 0.2rem 0.4rem;
+                            border-radius: 0.25rem;
+                            font-size: 0.9em;
+                            color: #f472b6;
+                        }
+                        .task-description pre code {
+                            background: transparent;
+                            padding: 0;
+                            color: inherit;
+                        }
+                        .task-description img {
+                            max-width: 100%;
+                            height: auto;
+                            border-radius: 0.5rem;
+                            margin: 1rem 0;
+                            display: block;
+                        }
+                        .task-description hr {
+                            border: none;
+                            border-top: 2px solid rgba(255,255,255,0.1);
+                            margin: 2rem 0;
+                        }
+                        .task-description strong {
+                            font-weight: 600;
+                            color: #fff;
+                        }
+                        .task-description em {
+                            font-style: italic;
+                        }
+                        .task-description a {
+                            color: #60a5fa;
+                            text-decoration: underline;
+                        }
+                    `}</style>
                     <div style={{ marginTop: 20 }}>
                         <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, color: 'rgba(255, 255, 255, 0.9)' }}>Examples</h3>
                         {testCases.slice(0, 2).map((tc, i) => (
@@ -462,6 +532,11 @@ const TaskPage: React.FC = () => {
 
     // Effect for keyboard shortcuts and navigation lockdown
     useEffect(() => {
+        // Only enable fullscreen lockdown if contest requires it
+        if (!contest?.fullScreenMode) {
+            return;
+        }
+
         const handleKeyDown = (e: KeyboardEvent) => {
             // Disable F5, Ctrl+R, Command+R (Reload) and Escape
             if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key === 'r') || e.key === 'Escape') {
@@ -523,7 +598,7 @@ const TaskPage: React.FC = () => {
                 (navigator as any).keyboard.unlock();
             }
         };
-    }, [requestFullscreen]);
+    }, [requestFullscreen, contest]);
 
     // Test execution state
     const [showTestCases, setShowTestCases] = useState<boolean>(false);
@@ -1051,7 +1126,7 @@ const TaskPage: React.FC = () => {
             </div>
 
             {/* Lockout Overlay */}
-            {showLockout && (
+            {contest?.fullScreenMode && showLockout && (
                 <div style={{
                     position: 'fixed',
                     top: 0,
@@ -1097,7 +1172,7 @@ const TaskPage: React.FC = () => {
             )}
 
             {/* Initial Entry Modal */}
-            {!isFullscreen && !showLockout && (
+            {contest?.fullScreenMode && !isFullscreen && !showLockout && (
                 <div style={{
                     position: 'fixed',
                     top: 0,
