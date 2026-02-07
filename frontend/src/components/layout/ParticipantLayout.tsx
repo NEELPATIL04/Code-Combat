@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
-import { User, LogOut, Settings } from 'lucide-react';
+import { User, LogOut, Settings, UserCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 interface NavItem {
@@ -9,8 +9,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-    { label: 'Dashboard', path: '/player' },
-    { label: 'Profile', path: '/profile' },
+    { label: 'My Contests', path: '/player' },
 ];
 
 const ParticipantLayout: React.FC = () => {
@@ -203,6 +202,38 @@ const ParticipantLayout: React.FC = () => {
                                     </div>
 
                                     {/* Menu Items */}
+                                    <button
+                                        onClick={() => {
+                                            setShowUserMenu(false);
+                                            navigate('/profile');
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px',
+                                            padding: '12px 14px',
+                                            background: 'transparent',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            color: 'rgba(255, 255, 255, 0.7)',
+                                            fontSize: '0.9rem',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.15s ease'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                                            e.currentTarget.style.color = '#ffffff';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = 'transparent';
+                                            e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                                        }}
+                                    >
+                                        <UserCircle size={18} />
+                                        My Profile
+                                    </button>
+
                                     <button
                                         onClick={() => {
                                             setShowUserMenu(false);

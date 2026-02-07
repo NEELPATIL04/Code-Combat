@@ -5,10 +5,10 @@ import {
     Trophy,
     Lock,
     ArrowRight,
-    CheckCircle2,
     Timer,
     ChevronRight,
-    Calendar
+    Calendar,
+    Filter
 } from 'lucide-react';
 import { contestAPI } from '../../utils/api';
 
@@ -37,6 +37,7 @@ const ParticipantDashboard: React.FC = () => {
     const [selectedContest, setSelectedContest] = useState<Contest | null>(null);
     const [password, setPassword] = useState<string>('');
     const [currentTime, setCurrentTime] = useState<Date>(new Date());
+    const [activeFilter, setActiveFilter] = useState<'live' | 'completed' | 'expired'>('live');
 
     useEffect(() => {
         loadData();
@@ -59,6 +60,12 @@ const ParticipantDashboard: React.FC = () => {
     // Separate active and completed contests
     const activeContests = contests.filter(c => c.status !== 'completed');
     const completedContests = contests.filter(c => c.status === 'completed');
+
+    // Filter based on active filter
+    const filteredContests =
+        activeFilter === 'live' ? activeContests :
+        activeFilter === 'completed' ? completedContests :
+        completedContests; // 'expired' also shows completed
 
     const getTimeRemaining = (targetDate: string) => {
         const total = Date.parse(targetDate) - currentTime.getTime();
@@ -309,242 +316,156 @@ const ParticipantDashboard: React.FC = () => {
                 </div>
             )}
 
-            {/* Vertical Stacked Layout */}
+            {/* My Contests - Unified List with Filter */}
             <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '20px'
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '16px',
+                padding: '20px 24px'
             }}>
-                {/* Current Contests Card */}
+                {/* Header with Filter Buttons */}
                 <div style={{
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '16px',
-                    padding: '20px 24px'
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '20px',
+                    flexWrap: 'wrap',
+                    gap: '12px'
                 }}>
-                    {/* Header with Count Badge */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Timer size={18} style={{ color: '#FDE68A' }} />
+                        <h3 style={{
+                            margin: 0,
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                            color: '#ffffff'
+                        }}>My Contests</h3>
+                    </div>
+
+                    {/* Filter Buttons */}
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: '16px'
+                        gap: '8px',
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        borderRadius: '8px',
+                        padding: '4px 6px'
                     }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <Timer size={18} style={{ color: '#FDE68A' }} />
-                            <h3 style={{
-                                margin: 0,
-                                fontSize: '1rem',
-                                fontWeight: 600,
-                                color: '#ffffff'
-                            }}>Current Contests</h3>
-                        </div>
-                        {/* Count Badge */}
-                        <div style={{
-                            background: 'rgba(253, 230, 138, 0.12)',
-                            border: '1px solid rgba(253, 230, 138, 0.25)',
-                            borderRadius: '8px',
-                            padding: '6px 12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                        }}>
-                            <span style={{
-                                fontSize: '1rem',
-                                fontWeight: 700,
-                                color: '#FDE68A'
-                            }}>{activeContests.length}</span>
-                            <span style={{
-                                fontSize: '0.7rem',
-                                color: 'rgba(253, 230, 138, 0.8)',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.03em'
-                            }}>Tasks</span>
-                        </div>
-                    </div>
-
-                    {/* Contest List */}
-                    <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '10px'
-                    }}>
-                        {activeContests.length === 0 ? (
-                            <div style={{
-                                textAlign: 'center',
-                                padding: '32px 16px',
-                                color: 'rgba(255, 255, 255, 0.4)'
-                            }}>
-                                <Trophy size={32} style={{ marginBottom: '12px', color: '#FDE68A' }} />
-                                <p style={{ margin: 0, fontSize: '0.85rem' }}>No active contests</p>
-                            </div>
-                        ) : (
-                            activeContests.map(contest => {
-                                const isOpen = isContestOpen(contest);
-                                return (
-                                    <div
-                                        key={contest.id}
-                                        onClick={() => handleStartContest(contest)}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            padding: '12px 16px',
-                                            background: 'rgba(255, 255, 255, 0.02)',
-                                            border: '1px solid rgba(255, 255, 255, 0.06)',
-                                            borderRadius: '10px',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.15s ease',
-                                            opacity: isOpen ? 1 : 0.7
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.borderColor = 'rgba(253, 230, 138, 0.3)';
-                                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
-                                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
-                                        }}
-                                    >
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '10px',
-                                                marginBottom: '6px'
-                                            }}>
-                                                <h4 style={{
-                                                    margin: 0,
-                                                    fontSize: '0.9rem',
-                                                    fontWeight: 600,
-                                                    color: '#ffffff',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap'
-                                                }}>{contest.title}</h4>
-                                                {getStatusBadge(contest)}
-                                            </div>
-                                            <div style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '12px'
-                                            }}>
-                                                <span style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '4px',
-                                                    fontSize: '0.75rem',
-                                                    color: 'rgba(255, 255, 255, 0.5)'
-                                                }}>
-                                                    <Clock size={12} />
-                                                    {contest.duration} min
-                                                </span>
-                                                {contest.scheduledStartTime && (
-                                                    <span style={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '4px',
-                                                        fontSize: '0.75rem',
-                                                        color: 'rgba(255, 255, 255, 0.5)'
-                                                    }}>
-                                                        <Calendar size={12} />
-                                                        {new Date(contest.scheduledStartTime).toLocaleDateString()}
-                                                    </span>
-                                                )}
-                                                <span style={{
-                                                    padding: '2px 8px',
-                                                    borderRadius: '100px',
-                                                    fontSize: '0.65rem',
-                                                    fontWeight: 600,
-                                                    ...getDifficultyStyles(contest.difficulty)
-                                                }}>
-                                                    {contest.difficulty}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div style={{ marginLeft: '12px' }}>
-                                            {!isOpen ? (
-                                                <Lock size={16} style={{ color: 'rgba(148, 163, 184, 0.6)' }} />
-                                            ) : (
-                                                <ChevronRight size={18} style={{ color: '#FDE68A' }} />
-                                            )}
-                                        </div>
-                                    </div>
-                                )
-                            })
-                        )}
+                        <Filter size={14} style={{ color: '#FDE68A', marginLeft: '6px' }} />
+                        <button
+                            onClick={() => setActiveFilter('live')}
+                            style={{
+                                padding: '6px 10px',
+                                background: activeFilter === 'live' ? 'rgba(253, 230, 138, 0.15)' : 'transparent',
+                                border: activeFilter === 'live' ? '1px solid rgba(253, 230, 138, 0.25)' : 'none',
+                                borderRadius: '6px',
+                                color: activeFilter === 'live' ? '#FDE68A' : 'rgba(255, 255, 255, 0.6)',
+                                fontSize: '0.8rem',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                                if (activeFilter !== 'live') {
+                                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (activeFilter !== 'live') {
+                                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)';
+                                }
+                            }}
+                        >
+                            Live ({activeContests.length})
+                        </button>
+                        <div style={{ width: '1px', height: '14px', background: 'rgba(255, 255, 255, 0.1)' }} />
+                        <button
+                            onClick={() => setActiveFilter('completed')}
+                            style={{
+                                padding: '6px 10px',
+                                background: activeFilter === 'completed' ? 'rgba(253, 230, 138, 0.15)' : 'transparent',
+                                border: activeFilter === 'completed' ? '1px solid rgba(253, 230, 138, 0.25)' : 'none',
+                                borderRadius: '6px',
+                                color: activeFilter === 'completed' ? '#FDE68A' : 'rgba(255, 255, 255, 0.6)',
+                                fontSize: '0.8rem',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                                if (activeFilter !== 'completed') {
+                                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (activeFilter !== 'completed') {
+                                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)';
+                                }
+                            }}
+                        >
+                            Completed ({completedContests.length})
+                        </button>
+                        <div style={{ width: '1px', height: '14px', background: 'rgba(255, 255, 255, 0.1)' }} />
+                        <button
+                            onClick={() => setActiveFilter('expired')}
+                            style={{
+                                padding: '6px 10px',
+                                background: activeFilter === 'expired' ? 'rgba(253, 230, 138, 0.15)' : 'transparent',
+                                border: activeFilter === 'expired' ? '1px solid rgba(253, 230, 138, 0.25)' : 'none',
+                                borderRadius: '6px',
+                                color: activeFilter === 'expired' ? '#FDE68A' : 'rgba(255, 255, 255, 0.6)',
+                                fontSize: '0.8rem',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                marginRight: '6px'
+                            }}
+                            onMouseEnter={(e) => {
+                                if (activeFilter !== 'expired') {
+                                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (activeFilter !== 'expired') {
+                                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)';
+                                }
+                            }}
+                        >
+                            Expired ({completedContests.length})
+                        </button>
                     </div>
                 </div>
 
-                {/* Contest History Card */}
+                {/* Contests List */}
                 <div style={{
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '16px',
-                    padding: '20px 24px'
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px'
                 }}>
-                    {/* ... keep history card same ... */}
-                    {/* Header with Count Badge */}
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: '16px'
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <CheckCircle2 size={18} style={{ color: '#34d399' }} />
-                            <h3 style={{
-                                margin: 0,
-                                fontSize: '1rem',
-                                fontWeight: 600,
-                                color: '#ffffff'
-                            }}>Contest History</h3>
-                        </div>
-                        {/* Count Badge */}
+                    {filteredContests.length === 0 ? (
                         <div style={{
-                            background: 'rgba(16, 185, 129, 0.12)',
-                            border: '1px solid rgba(16, 185, 129, 0.25)',
-                            borderRadius: '8px',
-                            padding: '6px 12px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px'
+                            textAlign: 'center',
+                            padding: '40px 20px',
+                            color: 'rgba(255, 255, 255, 0.4)'
                         }}>
-                            <span style={{
-                                fontSize: '1rem',
-                                fontWeight: 700,
-                                color: '#34d399'
-                            }}>{completedContests.length}</span>
-                            <span style={{
-                                fontSize: '0.7rem',
-                                color: 'rgba(16, 185, 129, 0.8)',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.03em'
-                            }}>Done</span>
+                            <Trophy size={40} style={{ marginBottom: '12px', color: '#FDE68A', opacity: 0.5 }} />
+                            <p style={{ margin: '0 0 8px', fontSize: '0.9rem', fontWeight: 500 }}>
+                                No {activeFilter === 'live' ? 'live' : activeFilter === 'completed' ? 'completed' : 'expired'} contests
+                            </p>
+                            <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.7 }}>
+                                {activeFilter === 'live'
+                                    ? 'Check back soon for new contests'
+                                    : 'No contests to display'}
+                            </p>
                         </div>
-                    </div>
-
-                    {/* History List */}
-                    <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '10px'
-                    }}>
-                        {completedContests.length === 0 ? (
-                            <div style={{
-                                textAlign: 'center',
-                                padding: '32px 16px',
-                                color: 'rgba(255, 255, 255, 0.4)'
-                            }}>
-                                <Trophy size={32} style={{ marginBottom: '12px', color: '#34d399' }} />
-                                <p style={{ margin: 0, fontSize: '0.85rem' }}>No completed contests</p>
-                                <p style={{ margin: '4px 0 0', fontSize: '0.75rem', opacity: 0.7 }}>
-                                    Complete contests to see them here
-                                </p>
-                            </div>
-                        ) : (
-                            completedContests.map(contest => (
+                    ) : (
+                        filteredContests.map(contest => {
+                            const isOpen = isContestOpen(contest);
+                            return (
                                 <div
                                     key={contest.id}
+                                    onClick={() => handleStartContest(contest)}
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
@@ -552,25 +473,66 @@ const ParticipantDashboard: React.FC = () => {
                                         padding: '12px 16px',
                                         background: 'rgba(255, 255, 255, 0.02)',
                                         border: '1px solid rgba(255, 255, 255, 0.06)',
-                                        borderRadius: '10px'
+                                        borderRadius: '10px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.15s ease',
+                                        opacity: isOpen ? 1 : 0.7
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.borderColor = 'rgba(253, 230, 138, 0.3)';
+                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
                                     }}
                                 >
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <h4 style={{
-                                            margin: 0,
-                                            fontSize: '0.9rem',
-                                            fontWeight: 600,
-                                            color: '#ffffff',
-                                            marginBottom: '4px',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap'
-                                        }}>{contest.title}</h4>
                                         <div style={{
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '10px'
+                                            gap: '10px',
+                                            marginBottom: '6px'
                                         }}>
+                                            <h4 style={{
+                                                margin: 0,
+                                                fontSize: '0.9rem',
+                                                fontWeight: 600,
+                                                color: '#ffffff',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                whiteSpace: 'nowrap'
+                                            }}>{contest.title}</h4>
+                                            {getStatusBadge(contest)}
+                                        </div>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px',
+                                            flexWrap: 'wrap'
+                                        }}>
+                                            <span style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                                fontSize: '0.75rem',
+                                                color: 'rgba(255, 255, 255, 0.5)'
+                                            }}>
+                                                <Clock size={12} />
+                                                {contest.duration} min
+                                            </span>
+                                            {contest.scheduledStartTime && (
+                                                <span style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                    fontSize: '0.75rem',
+                                                    color: 'rgba(255, 255, 255, 0.5)'
+                                                }}>
+                                                    <Calendar size={12} />
+                                                    {new Date(contest.scheduledStartTime).toLocaleDateString()}
+                                                </span>
+                                            )}
                                             <span style={{
                                                 padding: '2px 8px',
                                                 borderRadius: '100px',
@@ -580,34 +542,19 @@ const ParticipantDashboard: React.FC = () => {
                                             }}>
                                                 {contest.difficulty}
                                             </span>
-                                            <span style={{
-                                                fontSize: '0.7rem',
-                                                color: 'rgba(255, 255, 255, 0.5)'
-                                            }}>
-                                                {contest.duration} min
-                                            </span>
                                         </div>
                                     </div>
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        padding: '6px 12px',
-                                        background: 'rgba(253, 230, 138, 0.12)',
-                                        border: '1px solid rgba(253, 230, 138, 0.25)',
-                                        borderRadius: '8px'
-                                    }}>
-                                        <Trophy size={14} style={{ color: '#FDE68A' }} />
-                                        <span style={{
-                                            fontSize: '0.9rem',
-                                            fontWeight: 700,
-                                            color: '#FDE68A'
-                                        }}>{contest.score || 0}</span>
+                                    <div style={{ marginLeft: '12px' }}>
+                                        {!isOpen ? (
+                                            <Lock size={16} style={{ color: 'rgba(148, 163, 184, 0.6)' }} />
+                                        ) : (
+                                            <ChevronRight size={18} style={{ color: '#FDE68A' }} />
+                                        )}
                                     </div>
                                 </div>
-                            ))
-                        )}
-                    </div>
+                            );
+                        })
+                    )}
                 </div>
             </div>
 
