@@ -21,10 +21,12 @@ import Contests from './pages/Admin/Contests';
 import ContestDetails from './pages/Admin/Contests/Details';
 import ManageUsers from './pages/Admin/ManageUsers';
 import Settings from './pages/Admin/Settings';
+import AiUsagePage from './pages/Admin/AiUsage';
 
 // Participant pages
 import TaskPage from './pages/Participant/Task';
 import ParticipantDashboard from './pages/Participant/Dashboard';
+import ProfilePage from './pages/Participant/Profile';
 
 const App: React.FC = () => {
     return (
@@ -55,6 +57,7 @@ const App: React.FC = () => {
                     <Route path="/admin/contests/:id" element={<ContestDetails />} />
                     <Route path="/admin/manage-users" element={<ManageUsers />} />
                     <Route path="/admin/settings" element={<Settings />} />
+                    <Route path="/admin/ai-usage" element={<AiUsagePage />} />
 
                     {/* Legacy/Redirects */}
                     <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
@@ -69,6 +72,7 @@ const App: React.FC = () => {
                     </PrivateRoute>
                 }>
                     <Route path="/player" element={<ParticipantDashboard />} />
+                    <Route path="/profile" element={<ProfilePage />} />
                 </Route>
 
                 {/* Task Page - Standalone without ParticipantLayout navbar */}

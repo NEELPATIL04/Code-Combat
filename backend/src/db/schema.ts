@@ -95,6 +95,12 @@ export const contests = pgTable('contests', {
   // When the contest was actually started
   startedAt: timestamp('started_at'),
 
+  // Scheduled start time
+  scheduledStartTime: timestamp('scheduled_start_time'),
+
+  // Scheduled end time
+  endTime: timestamp('end_time'),
+
   // Whether full screen mode is enforced for this contest
   fullScreenMode: boolean('full_screen_mode').notNull().default(true),
 
@@ -153,6 +159,19 @@ export const tasks = pgTable('tasks', {
   // Test runner templates per language (wraps user code)
   // Example for JS: "const result = {{functionName}}({{params}});\nconsole.log(JSON.stringify(result));"
   testRunnerTemplate: json('test_runner_template').$type<Record<string, string>>(),
+
+  // AI Assistance Configuration
+  // Stores settings for hints and solutions
+  // Example: { hintsEnabled: true, hintThreshold: 2, solutionThreshold: 5 }
+  aiConfig: json('ai_config').$type<{
+    hintsEnabled: boolean;
+    hintThreshold: number; // Attempts before hint is available
+    solutionThreshold: number; // Attempts before solution is available
+  }>().default({
+    hintsEnabled: true,
+    hintThreshold: 2,
+    solutionThreshold: 5
+  }),
 });
 
 /**
@@ -177,6 +196,12 @@ export const contestParticipants = pgTable('contest_participants', {
 
   // Total score achieved
   score: integer('score').notNull().default(0),
+
+  // Rank in the contest
+  rank: integer('rank'),
+
+  // When participant completed the contest
+  completedAt: timestamp('completed_at'),
 
   // Timestamp when participant was added
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -225,6 +250,39 @@ export const submissionStatusEnum = pgEnum('submission_status', [
   'internal_error'
 ]);
 
+
+/**
+ * User Task Progress Table
+ * Tracks user progress and unlocks for specific tasks
+ */
+export const userTaskProgress = pgTable('user_task_progress', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull(),
+  taskId: integer('task_id').notNull(),
+  hintsUnlocked: integer('hints_unlocked').default(0),
+  solutionUnlocked: boolean('solution_unlocked').default(false),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export type UserTaskProgress = typeof userTaskProgress.$inferSelect;
+export type NewUserTaskProgress = typeof userTaskProgress.$inferInsert;
+
+/**
+ * AI Usage Logs Table
+ * Tracks all AI requests for auditing and quota management
+ */
+export const aiUsageLogs = pgTable('ai_usage_logs', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id'), // Optional, in case of system calls
+  contestId: integer('contest_id'), // Optional
+  taskId: integer('task_id'), // Optional
+  provider: varchar('provider', { length: 50 }).notNull(), // 'groq', 'gemini'
+  model: varchar('model', { length: 50 }),
+  purpose: varchar('purpose', { length: 50 }).notNull(), // 'hint', 'solution', 'generate_task', 'evaluation'
+  tokensUsed: integer('tokens_used'),
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+});
+
 /**
  * Submissions Table
  * Stores code submissions from participants
@@ -271,6 +329,12 @@ export const submissions = pgTable('submissions', {
 
   // Memory used in KB
   memoryUsed: integer('memory_used'),
+
+  // Hints used for this submission
+  hintsUsed: integer('hints_used').default(0),
+
+  // Whether AI solution was used
+  usedSolution: boolean('used_solution').default(false),
 
   // Score achieved
   score: integer('score').default(0),

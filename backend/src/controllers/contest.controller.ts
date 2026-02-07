@@ -19,7 +19,7 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
     console.log('Query:', req.query);
     console.log('Body keys:', Object.keys(req.body));
 
-    const { title, description, difficulty, duration, startPassword, contestTasks, participantIds, fullScreenMode } = req.body;
+    const { title, description, difficulty, duration, startPassword, contestTasks, participantIds, fullScreenMode, scheduledStartTime, endTime } = req.body;
 
     console.log(`Title: ${title}, Duration: ${duration}, Tasks: ${contestTasks?.length || 0}, Full Screen: ${fullScreenMode}`);
     const userId = req.user?.userId;
@@ -49,6 +49,8 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
       createdBy: userId,
       status: 'upcoming',
       fullScreenMode: fullScreenMode !== undefined ? fullScreenMode : true,
+      scheduledStartTime: scheduledStartTime ? new Date(scheduledStartTime) : null,
+      endTime: endTime ? new Date(endTime) : null,
     }).returning();
 
     // Create tasks if provided
@@ -97,14 +99,12 @@ export const getAllContests = async (req: Request, res: Response, next: NextFunc
   try {
     const { status } = req.query;
 
-    let query = db.select().from(contests);
-
     // Filter by status if provided
-    if (status && typeof status === 'string') {
-      query = query.where(eq(contests.status, status as any));
-    }
+    const statusFilter = (status && typeof status === 'string')
+      ? eq(contests.status, status as any)
+      : undefined;
 
-    const allContests = await query;
+    const allContests = await db.select().from(contests).where(statusFilter);
 
     // Get participant counts for each contest
     const contestsWithCounts = await Promise.all(
@@ -204,7 +204,7 @@ export const getContestById = async (req: Request, res: Response, next: NextFunc
 export const updateContest = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const contestId = parseInt(req.params.id);
-    const { title, description, difficulty, duration, status, startPassword, contestTasks, fullScreenMode } = req.body;
+    const { title, description, difficulty, duration, status, startPassword, contestTasks, fullScreenMode, scheduledStartTime, endTime } = req.body;
 
     const [existingContest] = await db
       .select()
@@ -226,6 +226,14 @@ export const updateContest = async (req: Request, res: Response, next: NextFunct
       updateData.startPassword = await hashPassword(startPassword);
     }
     if (fullScreenMode !== undefined) updateData.fullScreenMode = fullScreenMode;
+
+    if (scheduledStartTime !== undefined) {
+      updateData.scheduledStartTime = scheduledStartTime ? new Date(scheduledStartTime) : null;
+    }
+    if (endTime !== undefined) {
+      updateData.endTime = endTime ? new Date(endTime) : null;
+    }
+
     updateData.updatedAt = new Date();
 
     const [updatedContest] = await db

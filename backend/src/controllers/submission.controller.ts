@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../config/database';
-import { submissions, testCases, tasks, contestParticipants } from '../db/schema';
+import { submissions, testCases, tasks, contestParticipants, userTaskProgress } from '../db/schema';
 import { judge0Service } from '../services/judge0.service';
 import { getJudge0LanguageId } from '../utils/judge0.util';
 import { wrapCodeWithTestRunner } from '../utils/codeWrapper.util';
@@ -187,6 +187,16 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
       status = 'runtime_error';
     }
 
+    // Get user progress for AI usage stats
+    const [progress] = await db
+      .select()
+      .from(userTaskProgress)
+      .where(and(eq(userTaskProgress.userId, userId), eq(userTaskProgress.taskId, taskId))) // fixed variable name userTaskProgress
+      .limit(1);
+
+    const hintsUsed = progress?.hintsUnlocked || 0;
+    const usedSolution = progress?.solutionUnlocked || false;
+
     // Save submission
     const [submission] = await db
       .insert(submissions)
@@ -204,6 +214,8 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
         score,
         executionTime: Math.max(...results.map(r => r.executionTime || 0)),
         memoryUsed: Math.max(...results.map(r => r.memory || 0)),
+        hintsUsed,
+        usedSolution,
         processedAt: new Date(),
       })
       .returning();

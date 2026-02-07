@@ -10,6 +10,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
     { label: 'Dashboard', path: '/player' },
+    { label: 'Profile', path: '/player/profile' },
 ];
 
 const ParticipantLayout: React.FC = () => {
@@ -51,17 +52,17 @@ const ParticipantLayout: React.FC = () => {
                 zIndex: 1000
             }}>
                 {/* Left Section - Logo + Navigation */}
-                <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
                     gap: '32px'
                 }}>
                     {/* Logo */}
-                    <div 
+                    <div
                         onClick={() => navigate('/player')}
-                        style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
                             gap: '12px',
                             cursor: 'pointer'
                         }}
@@ -162,7 +163,7 @@ const ParticipantLayout: React.FC = () => {
                         {/* Dropdown Menu */}
                         {showUserMenu && (
                             <>
-                                <div 
+                                <div
                                     style={{
                                         position: 'fixed',
                                         inset: 0,

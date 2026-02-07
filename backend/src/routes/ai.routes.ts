@@ -1,16 +1,12 @@
 import { Router } from 'express';
-import { generateTestCases, validateTestCase } from '../controllers/ai.controller';
+import { getHint, getSolution, evaluateCode, generateCode } from '../controllers/ai.controller';
 import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
 
-// All AI routes require authentication
-router.use(authenticate);
-
-// Generate test cases using AI
-router.post('/generate-test-cases', generateTestCases);
-
-// Validate a test case
-router.post('/validate-test-case', validateTestCase);
+router.post('/hint', authenticate, getHint);
+router.post('/solution', authenticate, getSolution);
+router.post('/evaluate', authenticate, evaluateCode);
+router.post('/generate-code', authenticate, generateCode);
 
 export default router;

@@ -7,7 +7,8 @@ import {
     ArrowRight,
     CheckCircle2,
     Timer,
-    ChevronRight
+    ChevronRight,
+    Calendar
 } from 'lucide-react';
 import { contestAPI } from '../../utils/api';
 
@@ -18,11 +19,13 @@ interface Contest {
     status: string;
     difficulty: string;
     duration: number;
-    isStarted: boolean;
-    hasStarted?: boolean;
+    isStarted: boolean; // This usually means "user has started"
+    hasStarted?: boolean; // This usually means "admin has started" or "schedule reached"
     startedAt?: string;
     score?: number;
     startPassword?: string;
+    scheduledStartTime?: string;
+    endTime?: string;
 }
 
 const ParticipantDashboard: React.FC = () => {
@@ -33,9 +36,12 @@ const ParticipantDashboard: React.FC = () => {
     const [showPasswordModal, setShowPasswordModal] = useState<boolean>(false);
     const [selectedContest, setSelectedContest] = useState<Contest | null>(null);
     const [password, setPassword] = useState<string>('');
+    const [currentTime, setCurrentTime] = useState<Date>(new Date());
 
     useEffect(() => {
         loadData();
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(timer);
     }, []);
 
     const loadData = async () => {
@@ -54,13 +60,73 @@ const ParticipantDashboard: React.FC = () => {
     const activeContests = contests.filter(c => c.status !== 'completed');
     const completedContests = contests.filter(c => c.status === 'completed');
 
-    const handleStartContest = (contest: Contest) => {
-        if (!contest.isStarted) {
-            alert('This contest has not been started yet. Please wait for the admin to start it.');
-            return;
+    const getTimeRemaining = (targetDate: string) => {
+        const total = Date.parse(targetDate) - currentTime.getTime();
+        const seconds = Math.floor((total / 1000) % 60);
+        const minutes = Math.floor((total / 1000 / 60) % 60);
+        const hours = Math.floor((total / (1000 * 60 * 60)) % 24);
+        const days = Math.floor(total / (1000 * 60 * 60 * 24));
+
+        return {
+            total,
+            days,
+            hours,
+            minutes,
+            seconds
+        };
+    };
+
+    const formatCountdown = (targetDate: string) => {
+        const t = getTimeRemaining(targetDate);
+        if (t.total <= 0) return null;
+
+        if (t.days > 0) return `${t.days}d ${t.hours}h`;
+        if (t.hours > 0) return `${t.hours}h ${t.minutes}m`;
+        return `${t.minutes}m ${t.seconds}s`;
+    };
+
+    const isContestOpen = (contest: Contest) => {
+        // If it's already started by user, it's open
+        if (contest.isStarted) return true;
+
+        // If scheduled start time exists
+        if (contest.scheduledStartTime) {
+            const startDate = new Date(contest.scheduledStartTime);
+            if (currentTime < startDate) return false;
         }
 
-        if (contest.startPassword && !contest.hasStarted) {
+        // If scheduled end time exists and we are past it
+        if (contest.endTime) {
+            const endDate = new Date(contest.endTime);
+            if (currentTime > endDate) return false;
+        }
+
+        // Check generic "hasStarted" flag from admin (if manual start used)
+        if (contest.hasStarted === false && !contest.scheduledStartTime) return false;
+
+        return true;
+    };
+
+    const handleStartContest = (contest: Contest) => {
+        if (!isContestOpen(contest)) {
+            // If it's closed because it hasn't started yet
+            if (contest.scheduledStartTime && new Date(contest.scheduledStartTime) > currentTime) {
+                alert(`Contest starts in ${formatCountdown(contest.scheduledStartTime)}`);
+                return;
+            }
+            // If it's closed because it ended
+            if (contest.endTime && new Date(contest.endTime) < currentTime) {
+                alert('This contest has ended.');
+                return;
+            }
+
+            if (!contest.isStarted && contest.hasStarted === false) {
+                alert('This contest has not been started yet. Please wait for the admin to start it.');
+                return;
+            }
+        }
+
+        if (contest.startPassword && !contest.isStarted) {
             setSelectedContest(contest);
             setShowPasswordModal(true);
         } else {
@@ -71,6 +137,9 @@ const ParticipantDashboard: React.FC = () => {
     const handlePasswordSubmit = async () => {
         if (!selectedContest) return;
         try {
+            // Verify password via API or just start if logic is client-side (usually API)
+            // Ideally we call startContest API here if needed, but navigation usually triggers check
+            await contestAPI.startContest(selectedContest.id, password);
             setShowPasswordModal(false);
             navigate(`/contest/${selectedContest.id}`);
         } catch (err) {
@@ -78,6 +147,7 @@ const ParticipantDashboard: React.FC = () => {
         }
     };
 
+    // ... (keep getDifficultyStyles)
     const getDifficultyStyles = (difficulty: string) => {
         switch (difficulty) {
             case 'Easy':
@@ -107,6 +177,7 @@ const ParticipantDashboard: React.FC = () => {
         }
     };
 
+
     const getStatusBadge = (contest: Contest) => {
         const baseStyle: React.CSSProperties = {
             padding: '3px 8px',
@@ -114,21 +185,13 @@ const ParticipantDashboard: React.FC = () => {
             fontSize: '0.6rem',
             fontWeight: 600,
             textTransform: 'uppercase',
-            letterSpacing: '0.04em'
+            letterSpacing: '0.04em',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
         };
 
-        if (!contest.isStarted) {
-            return (
-                <span style={{
-                    ...baseStyle,
-                    background: 'rgba(148, 163, 184, 0.15)',
-                    color: '#94a3b8',
-                    border: '1px solid rgba(148, 163, 184, 0.3)'
-                }}>
-                    Pending
-                </span>
-            );
-        } else if (contest.hasStarted) {
+        if (contest.isStarted) {
             return (
                 <span style={{
                     ...baseStyle,
@@ -139,18 +202,64 @@ const ParticipantDashboard: React.FC = () => {
                     In Progress
                 </span>
             );
-        } else {
+        }
+
+        // Scheduled
+        if (contest.scheduledStartTime) {
+            const startDate = new Date(contest.scheduledStartTime);
+            if (currentTime < startDate) {
+                const countdown = formatCountdown(contest.scheduledStartTime);
+                return (
+                    <span style={{
+                        ...baseStyle,
+                        background: 'rgba(59, 130, 246, 0.15)',
+                        color: '#60a5fa',
+                        border: '1px solid rgba(59, 130, 246, 0.3)'
+                    }}>
+                        <Timer size={10} />
+                        Starts in {countdown}
+                    </span>
+                );
+            }
+        }
+
+        // Ended
+        if (contest.endTime && new Date(contest.endTime) < currentTime) {
             return (
                 <span style={{
                     ...baseStyle,
-                    background: 'rgba(16, 185, 129, 0.15)',
-                    color: '#34d399',
-                    border: '1px solid rgba(16, 185, 129, 0.3)'
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    color: '#f87171',
+                    border: '1px solid rgba(239, 68, 68, 0.3)'
                 }}>
-                    Ready
+                    Ended
                 </span>
             );
         }
+
+        if (!contest.hasStarted && !contest.scheduledStartTime) {
+            return (
+                <span style={{
+                    ...baseStyle,
+                    background: 'rgba(148, 163, 184, 0.15)',
+                    color: '#94a3b8',
+                    border: '1px solid rgba(148, 163, 184, 0.3)'
+                }}>
+                    Pending
+                </span>
+            );
+        }
+
+        return (
+            <span style={{
+                ...baseStyle,
+                background: 'rgba(16, 185, 129, 0.15)',
+                color: '#34d399',
+                border: '1px solid rgba(16, 185, 129, 0.3)'
+            }}>
+                Ready
+            </span>
+        );
     };
 
     if (loading) {
@@ -269,83 +378,99 @@ const ParticipantDashboard: React.FC = () => {
                                 <p style={{ margin: 0, fontSize: '0.85rem' }}>No active contests</p>
                             </div>
                         ) : (
-                            activeContests.map(contest => (
-                                <div
-                                    key={contest.id}
-                                    onClick={() => handleStartContest(contest)}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        padding: '12px 16px',
-                                        background: 'rgba(255, 255, 255, 0.02)',
-                                        border: '1px solid rgba(255, 255, 255, 0.06)',
-                                        borderRadius: '10px',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.15s ease'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.borderColor = 'rgba(253, 230, 138, 0.3)';
-                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
-                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
-                                    }}
-                                >
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{
+                            activeContests.map(contest => {
+                                const isOpen = isContestOpen(contest);
+                                return (
+                                    <div
+                                        key={contest.id}
+                                        onClick={() => handleStartContest(contest)}
+                                        style={{
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '10px',
-                                            marginBottom: '6px'
-                                        }}>
-                                            <h4 style={{
-                                                margin: 0,
-                                                fontSize: '0.9rem',
-                                                fontWeight: 600,
-                                                color: '#ffffff',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                whiteSpace: 'nowrap'
-                                            }}>{contest.title}</h4>
-                                            {getStatusBadge(contest)}
-                                        </div>
-                                        <div style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '12px'
-                                        }}>
-                                            <span style={{
+                                            justifyContent: 'space-between',
+                                            padding: '12px 16px',
+                                            background: 'rgba(255, 255, 255, 0.02)',
+                                            border: '1px solid rgba(255, 255, 255, 0.06)',
+                                            borderRadius: '10px',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.15s ease',
+                                            opacity: isOpen ? 1 : 0.7
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.borderColor = 'rgba(253, 230, 138, 0.3)';
+                                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+                                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                                        }}
+                                    >
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                gap: '4px',
-                                                fontSize: '0.75rem',
-                                                color: 'rgba(255, 255, 255, 0.5)'
+                                                gap: '10px',
+                                                marginBottom: '6px'
                                             }}>
-                                                <Clock size={12} />
-                                                {contest.duration} min
-                                            </span>
-                                            <span style={{
-                                                padding: '2px 8px',
-                                                borderRadius: '100px',
-                                                fontSize: '0.65rem',
-                                                fontWeight: 600,
-                                                ...getDifficultyStyles(contest.difficulty)
+                                                <h4 style={{
+                                                    margin: 0,
+                                                    fontSize: '0.9rem',
+                                                    fontWeight: 600,
+                                                    color: '#ffffff',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap'
+                                                }}>{contest.title}</h4>
+                                                {getStatusBadge(contest)}
+                                            </div>
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '12px'
                                             }}>
-                                                {contest.difficulty}
-                                            </span>
+                                                <span style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                    fontSize: '0.75rem',
+                                                    color: 'rgba(255, 255, 255, 0.5)'
+                                                }}>
+                                                    <Clock size={12} />
+                                                    {contest.duration} min
+                                                </span>
+                                                {contest.scheduledStartTime && (
+                                                    <span style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px',
+                                                        fontSize: '0.75rem',
+                                                        color: 'rgba(255, 255, 255, 0.5)'
+                                                    }}>
+                                                        <Calendar size={12} />
+                                                        {new Date(contest.scheduledStartTime).toLocaleDateString()}
+                                                    </span>
+                                                )}
+                                                <span style={{
+                                                    padding: '2px 8px',
+                                                    borderRadius: '100px',
+                                                    fontSize: '0.65rem',
+                                                    fontWeight: 600,
+                                                    ...getDifficultyStyles(contest.difficulty)
+                                                }}>
+                                                    {contest.difficulty}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div style={{ marginLeft: '12px' }}>
+                                            {!isOpen ? (
+                                                <Lock size={16} style={{ color: 'rgba(148, 163, 184, 0.6)' }} />
+                                            ) : (
+                                                <ChevronRight size={18} style={{ color: '#FDE68A' }} />
+                                            )}
                                         </div>
                                     </div>
-                                    <div style={{ marginLeft: '12px' }}>
-                                        {!contest.isStarted ? (
-                                            <Lock size={16} style={{ color: 'rgba(148, 163, 184, 0.6)' }} />
-                                        ) : (
-                                            <ChevronRight size={18} style={{ color: '#FDE68A' }} />
-                                        )}
-                                    </div>
-                                </div>
-                            ))
+                                )
+                            })
                         )}
                     </div>
                 </div>
@@ -357,6 +482,7 @@ const ParticipantDashboard: React.FC = () => {
                     borderRadius: '16px',
                     padding: '20px 24px'
                 }}>
+                    {/* ... keep history card same ... */}
                     {/* Header with Count Badge */}
                     <div style={{
                         display: 'flex',
@@ -512,6 +638,7 @@ const ParticipantDashboard: React.FC = () => {
                         }}
                         onClick={e => e.stopPropagation()}
                     >
+                        {/* ... keep modal content ... */}
                         <div style={{
                             padding: '14px 18px',
                             borderBottom: '1px solid rgba(255, 255, 255, 0.08)'

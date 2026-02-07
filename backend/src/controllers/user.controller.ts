@@ -1,327 +1,113 @@
 import { Request, Response, NextFunction } from 'express';
-import { eq } from 'drizzle-orm';
 import { db } from '../config/database';
-import { users } from '../db/schema';
-import { hashPassword } from '../utils/password.util';
+import { contestParticipants, contests, submissions, userTaskProgress, tasks } from '../db/schema';
+import { eq, and, desc } from 'drizzle-orm';
 
-/**
- * Get Current User Profile
- * Returns authenticated user's information
- * Requires authentication middleware
- *
- * The user ID comes from req.user (set by authenticate middleware)
- * Password is excluded from the response for security
- */
-export async function getProfile(req: Request, res: Response): Promise<void> {
+export const getUserContestHistory = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Get user ID from JWT (attached by authenticate middleware)
-    const userId = req.user!.userId;
+    const userId = (req as any).user.id;
 
-    // Fetch user from database (excluding password)
-    const [user] = await db
+    const history = await db
       .select({
-        id: users.id,
-        username: users.username,
-        email: users.email,
-        role: users.role,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        companySchool: users.companySchool,
-        status: users.status,
-        createdAt: users.createdAt,
+        contestId: contests.id,
+        title: contests.title,
+        difficulty: contests.difficulty,
+        status: contests.status, // Contest status
+        duration: contests.duration,
+        score: contestParticipants.score,
+        rank: contestParticipants.rank,
+        startedAt: contestParticipants.startedAt,
+        completedAt: contestParticipants.completedAt,
+        scheduledStartTime: contests.scheduledStartTime,
       })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
+      .from(contestParticipants)
+      .innerJoin(contests, eq(contestParticipants.contestId, contests.id))
+      .where(eq(contestParticipants.userId, userId))
+      .orderBy(desc(contestParticipants.startedAt));
 
-    // Check if user exists (should always exist if token is valid)
-    if (!user) {
-      res.status(404).json({
-        message: 'User not found'
-      });
-      return;
-    }
-
-    // Send user data
-    res.status(200).json(user);
+    res.json({ history });
   } catch (error) {
-    console.error('Get profile error:', error);
-    res.status(500).json({
-      message: 'An error occurred while fetching profile'
-    });
+    next(error);
   }
-}
+};
 
-/**
- * Get All Users
- * Returns list of all users in the system
- * Restricted to admins and super_admins only
- *
- * Passwords are excluded from the response
- * Useful for admin dashboards to view all users
- */
-export async function getAllUsers(req: Request, res: Response): Promise<void> {
+export const getUserContestDetails = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Fetch all users from database (excluding passwords)
-    const allUsers = await db
+    const userId = (req as any).user.id;
+    const contestId = parseInt(req.params.contestId);
+
+    // 1. Get Contest Basic Info & Participant Stats
+    const [contestInfo] = await db
       .select({
-        id: users.id,
-        username: users.username,
-        email: users.email,
-        role: users.role,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        companySchool: users.companySchool,
-        status: users.status,
-        createdAt: users.createdAt,
+        title: contests.title,
+        difficulty: contests.difficulty,
+        score: contestParticipants.score,
+        rank: contestParticipants.rank,
+        startedAt: contestParticipants.startedAt,
+        completedAt: contestParticipants.completedAt,
       })
-      .from(users);
+      .from(contestParticipants)
+      .innerJoin(contests, eq(contestParticipants.contestId, contests.id))
+      .where(and(eq(contestParticipants.userId, userId), eq(contestParticipants.contestId, contestId)));
 
-    // Send users list with count
-    res.status(200).json({
-      count: allUsers.length,
-      users: allUsers,
-    });
-  } catch (error) {
-    console.error('Get all users error:', error);
-    res.status(500).json({
-      message: 'An error occurred while fetching users'
-    });
-  }
-}
-
-/**
- * Create New User
- * Admin can create new users with full details
- * Restricted to admins and super_admins only
- */
-export async function createUser(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const { username, email, password, firstName, lastName, companySchool, role } = req.body;
-
-    // Validate required fields
-    if (!username || !email || !password) {
-      res.status(400).json({
-        message: 'Username, email, and password are required'
-      });
-      return;
+    if (!contestInfo) {
+      return res.status(404).json({ message: 'Contest participation not found' });
     }
 
-    // Check if username already exists
-    const [existingUser] = await db
-      .select()
-      .from(users)
-      .where(eq(users.username, username))
-      .limit(1);
+    // 2. Get Submissions & Task Stats
+    // We want to show: Task Name, Status, Score, Time Taken (mock/derived), Hints Used, Solution Used
 
-    if (existingUser) {
-      res.status(409).json({
-        message: 'Username already exists'
-      });
-      return;
-    }
-
-    // Check if email already exists
-    const [existingEmail] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
-
-    if (existingEmail) {
-      res.status(409).json({
-        message: 'Email already exists'
-      });
-      return;
-    }
-
-    // Hash password
-    const hashedPassword = await hashPassword(password);
-
-    // Create user
-    const [newUser] = await db
-      .insert(users)
-      .values({
-        username,
-        email,
-        password: hashedPassword,
-        firstName: firstName || null,
-        lastName: lastName || null,
-        companySchool: companySchool || null,
-        role: role || 'player',
-        status: 'active',
+    const taskStats = await db
+      .select({
+        taskId: tasks.id,
+        taskTitle: tasks.title,
+        maxPoints: tasks.maxPoints,
+        hintsUnlocked: userTaskProgress.hintsUnlocked,
+        solutionUnlocked: userTaskProgress.solutionUnlocked,
+        submissionCount: userTaskProgress.submissionCount, // If we tracked this in progress
       })
-      .returning({
-        id: users.id,
-        username: users.username,
-        email: users.email,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        companySchool: users.companySchool,
-        role: users.role,
-        status: users.status,
-        createdAt: users.createdAt,
-      });
+      .from(tasks)
+      .leftJoin(userTaskProgress, and(eq(userTaskProgress.taskId, tasks.id), eq(userTaskProgress.userId, userId)))
+      .where(eq(tasks.contestId, contestId));
 
-    res.status(201).json({
-      message: 'User created successfully',
-      user: newUser,
-    });
-  } catch (error) {
-    console.error('Create user error:', error);
-    next(error);
-  }
-}
-
-/**
- * Update User
- * Admin can update user details and status
- * Restricted to admins and super_admins only
- */
-export async function updateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const userId = parseInt(req.params.id);
-    const { firstName, lastName, email, companySchool, role, status, password } = req.body;
-
-    // Check if user exists
-    const [existingUser] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-
-    if (!existingUser) {
-      res.status(404).json({
-        message: 'User not found'
-      });
-      return;
-    }
-
-    // Build update object
-    const updateData: any = {
-      updatedAt: new Date(),
-    };
-
-    if (firstName !== undefined) updateData.firstName = firstName;
-    if (lastName !== undefined) updateData.lastName = lastName;
-    if (email !== undefined) updateData.email = email;
-    if (companySchool !== undefined) updateData.companySchool = companySchool;
-    if (role !== undefined) updateData.role = role;
-    if (status !== undefined) updateData.status = status;
-
-    // Hash new password if provided
-    if (password) {
-      updateData.password = await hashPassword(password);
-    }
-
-    // Update user
-    const [updatedUser] = await db
-      .update(users)
-      .set(updateData)
-      .where(eq(users.id, userId))
-      .returning({
-        id: users.id,
-        username: users.username,
-        email: users.email,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        companySchool: users.companySchool,
-        role: users.role,
-        status: users.status,
-        updatedAt: users.updatedAt,
-      });
-
-    res.status(200).json({
-      message: 'User updated successfully',
-      user: updatedUser,
-    });
-  } catch (error) {
-    console.error('Update user error:', error);
-    next(error);
-  }
-}
-
-/**
- * Delete User
- * Admin can delete users
- * Restricted to admins and super_admins only
- */
-export async function deleteUser(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const userId = parseInt(req.params.id);
-
-    // Check if user exists
-    const [existingUser] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-
-    if (!existingUser) {
-      res.status(404).json({
-        message: 'User not found'
-      });
-      return;
-    }
-
-    // Delete user
-    await db.delete(users).where(eq(users.id, userId));
-
-    res.status(200).json({
-      message: 'User deleted successfully'
-    });
-  } catch (error) {
-    console.error('Delete user error:', error);
-    next(error);
-  }
-}
-
-/**
- * Toggle User Status (Ban/Unban)
- * Admin can ban or unban users
- * Restricted to admins and super_admins only
- */
-export async function toggleUserStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const userId = parseInt(req.params.id);
-
-    // Check if user exists
-    const [existingUser] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-
-    if (!existingUser) {
-      res.status(404).json({
-        message: 'User not found'
-      });
-      return;
-    }
-
-    // Toggle status
-    const newStatus = existingUser.status === 'active' ? 'banned' : 'active';
-
-    // Update user status
-    const [updatedUser] = await db
-      .update(users)
-      .set({
-        status: newStatus,
-        updatedAt: new Date(),
+    // Fetch submissions separately to get status/score per task
+    const userSubmissions = await db
+      .select({
+        taskId: submissions.taskId,
+        score: submissions.score,
+        status: submissions.status,
+        passed: submissions.passedTests,
+        total: submissions.totalTests,
+        createdAt: submissions.submittedAt,
       })
-      .where(eq(users.id, userId))
-      .returning({
-        id: users.id,
-        username: users.username,
-        status: users.status,
-      });
+      .from(submissions)
+      .where(and(eq(submissions.userId, userId), eq(submissions.contestId, contestId)))
+      .orderBy(desc(submissions.submittedAt));
 
-    res.status(200).json({
-      message: `User ${newStatus === 'banned' ? 'banned' : 'activated'} successfully`,
-      user: updatedUser,
+    // Merge data
+    const detailedTasks = taskStats.map(task => {
+      // Get best submission for this task
+      const taskSubs = userSubmissions.filter(s => s.taskId === task.taskId);
+      const bestSub = taskSubs.find(s => s.status === 'accepted') || taskSubs[0]; // Simplified "best"
+
+      return {
+        ...task,
+        status: bestSub?.status || 'not_attempted',
+        score: bestSub?.score || 0,
+        passedTests: bestSub?.passed || 0,
+        totalTests: bestSub?.total || 0,
+        lastSubmittedAt: bestSub?.createdAt || null,
+        hintsUsed: task.hintsUnlocked || 0,
+        solutionUsed: task.solutionUnlocked || false,
+      };
     });
+
+    res.json({
+      contest: contestInfo,
+      tasks: detailedTasks
+    });
+
   } catch (error) {
-    console.error('Toggle user status error:', error);
     next(error);
   }
-}
+};
