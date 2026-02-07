@@ -165,7 +165,7 @@ export class AIService {
         return content;
     }
 
-    private async callGemini(prompt: string, jsonMode = false, meta?: { userId?: number; contestId?: number; taskId?: number; purpose: string }): Promise<string> {
+    private async callGemini(prompt: string, _jsonMode = false, meta?: { userId?: number; contestId?: number; taskId?: number; purpose: string }): Promise<string> {
         const modelName = 'gemini-pro';
         const model = this.gemini.getGenerativeModel({ model: modelName });
         const result = await model.generateContent(prompt);

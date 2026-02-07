@@ -1,4 +1,4 @@
-import express, { Application } from 'express';
+import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
 import { env } from './config/env';
@@ -51,12 +51,17 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
  */
 app.use('/api', routes);
 
+// Root route for API status
+app.get('/', (_req: Request, res: Response) => {
+  res.json({ message: 'Code Combat API is running' });
+});
+
 /**
  * Backward Compatibility for Old Login Endpoint
  * Redirects /api/login to /api/auth/login
  * This ensures frontend continues to work without changes
  */
-app.post('/api/login', (req, res, next) => {
+app.post('/api/login', (req, _res, next) => {
   req.url = '/api/auth/login';
   next();
 }, routes);

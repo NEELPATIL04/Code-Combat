@@ -3,7 +3,6 @@ import { db } from '../config/database';
 import { submissions, testCases, tasks, contestParticipants, userTaskProgress } from '../db/schema';
 import { judge0Service } from '../services/judge0.service';
 import { getJudge0LanguageId } from '../utils/judge0.util';
-import { wrapCodeWithTestRunner } from '../utils/codeWrapper.util';
 import { eq, and, desc } from 'drizzle-orm';
 
 /**
@@ -13,7 +12,7 @@ import { eq, and, desc } from 'drizzle-orm';
 export const runCode = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { taskId, code, language } = req.body;
-    const userId = (req as any).user?.userId;
+    // const userId = (req as any).user?.userId; // Unused in runCode
 
     if (!taskId || !code || !language) {
       return res.status(400).json({
@@ -68,7 +67,7 @@ export const runCode = async (req: Request, res: Response, next: NextFunction) =
     const passedCount = results.filter(r => r.passed).length;
     const totalCount = results.length;
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         passed: passedCount,
@@ -87,7 +86,7 @@ export const runCode = async (req: Request, res: Response, next: NextFunction) =
     });
   } catch (error: any) {
     console.error('Run code error:', error);
-    next(error);
+    return next(error);
   }
 };
 
@@ -234,7 +233,7 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
         );
     }
 
-    res.json({
+    return res.json({
       success: true,
       message: allPassed ? 'All test cases passed!' : 'Some test cases failed',
       data: {
@@ -257,7 +256,7 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
     });
   } catch (error: any) {
     console.error('Submit code error:', error);
-    next(error);
+    return next(error);
   }
 };
 
@@ -275,14 +274,14 @@ export const getTaskSubmissions = async (req: Request, res: Response, next: Next
       .from(submissions)
       .where(
         and(
-          eq(submissions.taskId, parseInt(taskId)),
+          eq(submissions.taskId, parseInt(taskId as string)),
           eq(submissions.userId, userId)
         )
       )
       .orderBy(desc(submissions.submittedAt))
       .limit(10);
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         submissions: userSubmissions,
@@ -290,7 +289,7 @@ export const getTaskSubmissions = async (req: Request, res: Response, next: Next
     });
   } catch (error: any) {
     console.error('Get submissions error:', error);
-    next(error);
+    return next(error);
   }
 };
 
@@ -298,16 +297,16 @@ export const getTaskSubmissions = async (req: Request, res: Response, next: Next
  * Health check - verify Judge0 is running
  * GET /api/submissions/health
  */
-export const healthCheck = async (req: Request, res: Response, next: NextFunction) => {
+export const healthCheck = async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const isHealthy = await judge0Service.healthCheck();
 
-    res.json({
+    return res.json({
       success: true,
       judge0: isHealthy ? 'online' : 'offline',
     });
   } catch (error: any) {
     console.error('Health check error:', error);
-    next(error);
+    return next(error);
   }
 };

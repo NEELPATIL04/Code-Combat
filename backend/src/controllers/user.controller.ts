@@ -4,7 +4,7 @@ import { contestParticipants, contests, submissions, userTaskProgress, tasks, us
 import { eq, and, desc } from 'drizzle-orm';
 
 // Get all users (for admin/participant selection)
-export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
+export const getAllUsers = async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const allUsers = await db.select({
       id: users.id,
@@ -14,10 +14,11 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
       lastName: users.lastName,
       role: users.role,
       status: users.status,
+      createdAt: users.createdAt,
     }).from(users);
-    res.json({ users: allUsers });
+    return res.json({ users: allUsers });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -33,14 +34,15 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
       lastName: users.lastName,
       role: users.role,
       status: users.status,
+      createdAt: users.createdAt,
     }).from(users).where(eq(users.id, userId));
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.json({ user });
+    return res.json({ user });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -66,16 +68,16 @@ export const getUserContestHistory = async (req: Request, res: Response, next: N
       .where(eq(contestParticipants.userId, userId))
       .orderBy(desc(contestParticipants.startedAt));
 
-    res.json({ history });
+    return res.json({ history });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
 export const getUserContestDetails = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = (req as any).user.id;
-    const contestId = parseInt(req.params.contestId, 10);
+    const contestId = parseInt(req.params.contestId as string, 10);
 
     if (isNaN(contestId)) {
       return res.status(400).json({ message: 'Invalid contest ID' });
@@ -146,12 +148,12 @@ export const getUserContestDetails = async (req: Request, res: Response, next: N
       };
     });
 
-    res.json({
+    return res.json({
       contest: contestInfo,
       tasks: detailedTasks
     });
 
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
