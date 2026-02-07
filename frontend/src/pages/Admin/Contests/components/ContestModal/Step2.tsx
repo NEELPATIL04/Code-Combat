@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { Edit2, X } from 'lucide-react';
+import { Edit2, X, ChevronLeft, Eye } from 'lucide-react';
 import { FormData, Task, SUPPORTED_LANGUAGES } from '../../types';
 import TaskForm from './TaskForm';
 
 interface Step2Props {
     formData: FormData;
     setFormData: React.Dispatch<React.SetStateAction<FormData>>;
+    readOnly?: boolean;
 }
 
 const Step2: React.FC<Step2Props> = ({ formData, setFormData }) => {
     const [taskInput, setTaskInput] = useState<Task>({ title: '', description: '', descriptionType: 'text', difficulty: 'Medium', maxPoints: 100, allowedLanguages: ['javascript', 'typescript', 'python', 'java', 'cpp'], boilerplateCode: {}, testRunnerTemplate: {}, testCases: [], functionName: 'solution' });
     const [editingTaskIndex, setEditingTaskIndex] = useState<number | null>(null);
+    const [viewingTaskIndex, setViewingTaskIndex] = useState<number | null>(null);
 
     const handleSaveTask = () => {
         if (taskInput.title.trim() && taskInput.description.trim()) {
@@ -27,6 +29,44 @@ const Step2: React.FC<Step2Props> = ({ formData, setFormData }) => {
 
     const handleEditTask = (index: number) => { setTaskInput({ ...formData.tasks[index] }); setEditingTaskIndex(index); };
     const handleRemoveTask = (index: number) => { setFormData(prev => ({ ...prev, tasks: prev.tasks.filter((_, i) => i !== index) })); };
+
+    const handleViewTask = (index: number) => {
+        const taskToView = formData.tasks[index];
+        setTaskInput({ ...taskToView });
+        setViewingTaskIndex(index);
+    };
+
+    if (viewingTaskIndex !== null) {
+        return (
+            <div>
+                <button
+                    onClick={() => setViewingTaskIndex(null)}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'rgba(255, 255, 255, 0.6)',
+                        cursor: 'pointer',
+                        marginBottom: '16px',
+                        fontSize: '0.9rem'
+                    }}
+                >
+                    <ChevronLeft size={16} /> Back to Task List
+                </button>
+                <div style={{ padding: '20px', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                    <TaskForm
+                        taskInput={taskInput}
+                        setTaskInput={setTaskInput}
+                        onSave={() => { }}
+                        isEditing={false}
+                        readOnly={true}
+                    />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <>

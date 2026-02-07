@@ -11,6 +11,7 @@ interface ContestListProps {
     onDelete: (id: number) => void;
     onStart: (id: number) => void;
     onManageParticipants: (id: number) => void;
+    onView: (contest: Contest) => void;
 }
 
 const ContestList: React.FC<ContestListProps> = ({
@@ -20,7 +21,8 @@ const ContestList: React.FC<ContestListProps> = ({
     onEdit,
     onDelete,
     onStart,
-    onManageParticipants
+    onManageParticipants,
+    onView
 }) => {
     const navigate = useNavigate();
     return (

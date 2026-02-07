@@ -24,6 +24,7 @@ interface TestCaseManagerProps {
 
     // AI Props
     functionName?: string;
+    readOnly?: boolean;
 }
 
 const TestCaseManager: React.FC<TestCaseManagerProps> = ({
@@ -34,7 +35,8 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
     wrapperCode,
     onBoilerplateChange,
     onWrapperCodeChange,
-    functionName
+    functionName,
+    readOnly
 }) => {
     const [generating, setGenerating] = useState(false);
 
@@ -97,19 +99,23 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
                     wrapperCode={wrapperCode}
                     onBoilerplateChange={onBoilerplateChange}
                     onWrapperCodeChange={onWrapperCodeChange}
+                    readOnly={readOnly}
                 />
             </div>
 
             {/* 2. AI Generator Section */}
-            <AIGenerator
-                onGenerate={handleGenerateAI}
-                loading={generating}
-            />
+            {!readOnly && (
+                <AIGenerator
+                    onGenerate={handleGenerateAI}
+                    loading={generating}
+                />
+            )}
 
             {/* 3. Test Cases List Section */}
             <TestCaseList
                 testCases={testCases}
                 onChange={onChange}
+                readOnly={readOnly}
             />
         </div>
     );

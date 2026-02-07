@@ -91,6 +91,7 @@ const Contests: React.FC = () => {
             }
         } else {
             setEditingContest(null);
+            setReadOnly(false);
             setFetchingDetails(false);
             setFormData({
                 title: '',
@@ -289,6 +290,32 @@ const Contests: React.FC = () => {
                     onDelete={deleteContest}
                     onStart={startContest}
                     onManageParticipants={openParticipantModal}
+                    onView={(contest) => {
+                        setEditingContest(contest);
+                        setReadOnly(true);
+                        setFetchingDetails(true);
+                        setShowModal(true);
+                        setFormData({
+                            title: contest.title,
+                            description: contest.description || '',
+                            difficulty: contest.difficulty,
+                            duration: contest.duration,
+                            startPassword: '',
+                            tasks: [],
+                            fullScreenMode: contest.fullScreenMode !== undefined ? contest.fullScreenMode : true,
+                        });
+                        contestAPI.getById(contest.id).then(data => {
+                            setFormData(prev => ({
+                                ...prev,
+                                tasks: data.contest.tasks || []
+                            }));
+                        }).catch(err => {
+                            console.error('Failed to load contest tasks:', err);
+                            setError('Failed to load contest tasks.');
+                        }).finally(() => {
+                            setFetchingDetails(false);
+                        });
+                    }}
                 />
             </div>
 

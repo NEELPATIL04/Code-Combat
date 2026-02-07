@@ -5,6 +5,7 @@ interface Step1Props {
     formData: FormData;
     handleChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
     setFormData: React.Dispatch<React.SetStateAction<FormData>>;
+    readOnly?: boolean;
 }
 
 const labelStyle = { display: 'block', marginBottom: '8px', color: '#fafafa', fontSize: '0.875rem', fontWeight: 500 };

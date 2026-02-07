@@ -9,6 +9,7 @@ interface TaskFormProps {
     setTaskInput: React.Dispatch<React.SetStateAction<Task>>;
     onSave: () => void;
     isEditing: boolean;
+    readOnly?: boolean;
 }
 
 const labelStyle = { display: 'block', marginBottom: '8px', color: '#a1a1aa', fontSize: '0.8rem', fontWeight: 500 };

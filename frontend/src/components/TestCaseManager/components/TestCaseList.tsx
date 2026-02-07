@@ -10,9 +10,10 @@ interface TestCase {
 interface TestCaseListProps {
     testCases: TestCase[];
     onChange: (testCases: TestCase[]) => void;
+    readOnly?: boolean;
 }
 
-const TestCaseList: React.FC<TestCaseListProps> = ({ testCases, onChange }) => {
+const TestCaseList: React.FC<TestCaseListProps> = ({ testCases = [], onChange, readOnly }) => {
     const addNewTestCase = () => {
         onChange([...testCases, { input: '', expectedOutput: '', isHidden: false }]);
     };
@@ -81,53 +82,55 @@ const TestCaseList: React.FC<TestCaseListProps> = ({ testCases, onChange }) => {
                             }}>
                                 Test Case #{index + 1}
                             </span>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <button
-                                    type="button"
-                                    onClick={() => toggleVisibility(index)}
-                                    title={tc.isHidden ? 'Click to make visible' : 'Click to hide'}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        padding: '6px 12px',
-                                        background: tc.isHidden
-                                            ? 'rgba(239, 68, 68, 0.15)'
-                                            : 'rgba(34, 197, 94, 0.15)',
-                                        border: `1px solid ${tc.isHidden ? 'rgba(239, 68, 68, 0.4)' : 'rgba(34, 197, 94, 0.4)'}`,
-                                        borderRadius: '6px',
-                                        color: tc.isHidden ? '#EF4444' : '#22C55E',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 600,
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    {tc.isHidden ? <Lock size={14} /> : <Unlock size={14} />}
-                                    {tc.isHidden ? 'Hidden' : 'Visible'}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => removeTestCase(index)}
-                                    title="Delete test case"
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        width: '32px',
-                                        height: '32px',
-                                        padding: '0',
-                                        background: 'rgba(239, 68, 68, 0.1)',
-                                        border: '1px solid rgba(239, 68, 68, 0.3)',
-                                        borderRadius: '6px',
-                                        color: '#EF4444',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-                            </div>
+                            {!readOnly && (
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleVisibility(index)}
+                                        title={tc.isHidden ? 'Click to make visible' : 'Click to hide'}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            padding: '6px 12px',
+                                            background: tc.isHidden
+                                                ? 'rgba(239, 68, 68, 0.15)'
+                                                : 'rgba(34, 197, 94, 0.15)',
+                                            border: `1px solid ${tc.isHidden ? 'rgba(239, 68, 68, 0.4)' : 'rgba(34, 197, 94, 0.4)'}`,
+                                            borderRadius: '6px',
+                                            color: tc.isHidden ? '#EF4444' : '#22C55E',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        {tc.isHidden ? <Lock size={14} /> : <Unlock size={14} />}
+                                        {tc.isHidden ? 'Hidden' : 'Visible'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => removeTestCase(index)}
+                                        title="Delete test case"
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            width: '32px',
+                                            height: '32px',
+                                            padding: '0',
+                                            background: 'rgba(239, 68, 68, 0.1)',
+                                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                                            borderRadius: '6px',
+                                            color: '#EF4444',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* Input Field */}
@@ -146,6 +149,7 @@ const TestCaseList: React.FC<TestCaseListProps> = ({ testCases, onChange }) => {
                                 value={tc.input}
                                 onChange={(e) => updateTestCase(index, 'input', e.target.value)}
                                 placeholder='e.g., nums = [2,7,11,15], target = 9'
+                                readOnly={readOnly}
                                 style={{
                                     width: '100%',
                                     padding: '10px 12px',
@@ -179,6 +183,7 @@ const TestCaseList: React.FC<TestCaseListProps> = ({ testCases, onChange }) => {
                                 value={tc.expectedOutput}
                                 onChange={(e) => updateTestCase(index, 'expectedOutput', e.target.value)}
                                 placeholder='e.g., [0,1]'
+                                readOnly={readOnly}
                                 style={{
                                     width: '100%',
                                     padding: '10px 12px',
@@ -197,35 +202,38 @@ const TestCaseList: React.FC<TestCaseListProps> = ({ testCases, onChange }) => {
                         </div>
                     </div>
                 ))}
+
             </div>
 
-            <button
-                type="button"
-                onClick={addNewTestCase}
-                style={{
-                    width: '100%',
-                    padding: '14px',
-                    marginTop: '12px',
-                    background: 'rgba(253, 230, 138, 0.08)',
-                    border: '1.5px dashed rgba(253, 230, 138, 0.4)',
-                    borderRadius: '10px',
-                    color: '#FDE68A',
-                    fontSize: '0.9rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(253, 230, 138, 0.15)';
-                    e.currentTarget.style.borderColor = 'rgba(253, 230, 138, 0.6)';
-                }}
-                onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(253, 230, 138, 0.08)';
-                    e.currentTarget.style.borderColor = 'rgba(253, 230, 138, 0.4)';
-                }}
-            >
-                + Add Test Case
-            </button>
+            {!readOnly && (
+                <button
+                    type="button"
+                    onClick={addNewTestCase}
+                    style={{
+                        width: '100%',
+                        padding: '14px',
+                        marginTop: '12px',
+                        background: 'rgba(253, 230, 138, 0.08)',
+                        border: '1.5px dashed rgba(253, 230, 138, 0.4)',
+                        borderRadius: '10px',
+                        color: '#FDE68A',
+                        fontSize: '0.9rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(253, 230, 138, 0.15)';
+                        e.currentTarget.style.borderColor = 'rgba(253, 230, 138, 0.6)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(253, 230, 138, 0.08)';
+                        e.currentTarget.style.borderColor = 'rgba(253, 230, 138, 0.4)';
+                    }}
+                >
+                    + Add Test Case
+                </button>
+            )}
 
             {testCases.length === 0 && (
                 <p style={{
