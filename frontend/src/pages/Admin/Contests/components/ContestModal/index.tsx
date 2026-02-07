@@ -15,9 +15,10 @@ interface ContestModalProps {
     loading: boolean;
     fetchingDetails: boolean;
     initialStep?: number;
+    readOnly?: boolean;
 }
 
-const ContestModal: React.FC<ContestModalProps> = ({ isOpen, onClose, isEditing, formData, setFormData, onSave, loading, fetchingDetails, initialStep = 1 }) => {
+const ContestModal: React.FC<ContestModalProps> = ({ isOpen, onClose, isEditing, formData, setFormData, onSave, loading, fetchingDetails, initialStep = 1, readOnly = false }) => {
     const [currentStep, setCurrentStep] = useState(initialStep);
 
     useEffect(() => { if (isOpen) setCurrentStep(initialStep); }, [isOpen, initialStep]);
@@ -75,9 +76,9 @@ const ContestModal: React.FC<ContestModalProps> = ({ isOpen, onClose, isEditing,
                         </div>
                     ) : (
                         <>
-                            {currentStep === 1 && <Step1 formData={formData} handleChange={handleChange} setFormData={setFormData} />}
-                            {currentStep === 2 && <Step2 formData={formData} setFormData={setFormData} />}
-                            {currentStep === 3 && <Step3 formData={formData} setFormData={setFormData} />}
+                            {currentStep === 1 && <Step1 formData={formData} handleChange={handleChange} setFormData={setFormData} readOnly={readOnly} />}
+                            {currentStep === 2 && <Step2 formData={formData} setFormData={setFormData} readOnly={readOnly} />}
+                            {currentStep === 3 && <Step3 formData={formData} setFormData={setFormData} readOnly={readOnly} />}
                         </>
                     )}
                 </div>

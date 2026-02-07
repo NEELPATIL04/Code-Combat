@@ -10,6 +10,8 @@ export interface Contest {
     isStarted: boolean;
     createdAt?: string;
     fullScreenMode?: boolean;
+    scheduledStartTime?: string;
+    endTime?: string;
 }
 
 export interface Task {
@@ -70,4 +72,6 @@ export interface FormData {
     tasks: Task[];
     fullScreenMode: boolean;
     participants: number[];
+    scheduledStartTime?: string;
+    endTime?: string;
 }

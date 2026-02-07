@@ -1,7 +1,48 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../config/database';
-import { contestParticipants, contests, submissions, userTaskProgress, tasks } from '../db/schema';
+import { contestParticipants, contests, submissions, userTaskProgress, tasks, users } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
+
+// Get all users (for admin/participant selection)
+export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const allUsers = await db.select({
+      id: users.id,
+      username: users.username,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      role: users.role,
+      status: users.status,
+    }).from(users);
+    res.json({ users: allUsers });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get current user profile
+export const getUserProfile = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).user.id;
+    const [user] = await db.select({
+      id: users.id,
+      username: users.username,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      role: users.role,
+      status: users.status,
+    }).from(users).where(eq(users.id, userId));
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({ user });
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const getUserContestHistory = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -34,7 +75,11 @@ export const getUserContestHistory = async (req: Request, res: Response, next: N
 export const getUserContestDetails = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = (req as any).user.id;
-    const contestId = parseInt(req.params.contestId);
+    const contestId = parseInt(req.params.contestId, 10);
+
+    if (isNaN(contestId)) {
+      return res.status(400).json({ message: 'Invalid contest ID' });
+    }
 
     // 1. Get Contest Basic Info & Participant Stats
     const [contestInfo] = await db
@@ -64,7 +109,6 @@ export const getUserContestDetails = async (req: Request, res: Response, next: N
         maxPoints: tasks.maxPoints,
         hintsUnlocked: userTaskProgress.hintsUnlocked,
         solutionUnlocked: userTaskProgress.solutionUnlocked,
-        submissionCount: userTaskProgress.submissionCount, // If we tracked this in progress
       })
       .from(tasks)
       .leftJoin(userTaskProgress, and(eq(userTaskProgress.taskId, tasks.id), eq(userTaskProgress.userId, userId)))

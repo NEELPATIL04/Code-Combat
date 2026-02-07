@@ -10,7 +10,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
     { label: 'Dashboard', path: '/player' },
-    { label: 'Profile', path: '/player/profile' },
+    { label: 'Profile', path: '/profile' },
 ];
 
 const ParticipantLayout: React.FC = () => {

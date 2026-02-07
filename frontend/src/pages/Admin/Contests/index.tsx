@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X } from 'lucide-react';
 
-import { contestAPI, userAPI } from '../../../utils/api';
-import { Contest, User, FormData } from './types';
+import { contestAPI } from '../../../utils/api';
+import { Contest, FormData } from './types';
 import ContestList from './components/ContestList';
 import ContestModal from './components/ContestModal';
 
 const Contests: React.FC = () => {
     const [contests, setContests] = useState<Contest[]>([]);
-    const [users, setUsers] = useState<User[]>([]);
     const [filter, setFilter] = useState<string>('all');
     const [showModal, setShowModal] = useState<boolean>(false);
     const [editingContest, setEditingContest] = useState<Contest | null>(null);
+    const [readOnly, setReadOnly] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
     const [fetchingDetails, setFetchingDetails] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
@@ -31,7 +31,6 @@ const Contests: React.FC = () => {
 
     useEffect(() => {
         loadContests();
-        loadUsers();
     }, []);
 
     const loadContests = async () => {
@@ -48,14 +47,7 @@ const Contests: React.FC = () => {
         }
     };
 
-    const loadUsers = async () => {
-        try {
-            const data = await userAPI.getAll();
-            setUsers(data.users.filter((u: User) => u.role === 'player' && u.status === 'active'));
-        } catch (error) {
-            console.error('Failed to load users:', error);
-        }
-    };
+
 
     const openModal = async (contest: Contest | null = null, initialStep: number = 1) => {
         setModalInitialStep(initialStep);
@@ -74,6 +66,8 @@ const Contests: React.FC = () => {
                 tasks: [],
                 fullScreenMode: contest.fullScreenMode !== undefined ? contest.fullScreenMode : true,
                 participants: [],
+                scheduledStartTime: contest.scheduledStartTime,
+                endTime: contest.endTime,
             });
 
             // Fetch tasks and participants for this contest
@@ -103,6 +97,8 @@ const Contests: React.FC = () => {
                 tasks: [],
                 fullScreenMode: true,
                 participants: [],
+                scheduledStartTime: '',
+                endTime: '',
             });
             setShowModal(true);
             setError('');
@@ -121,6 +117,8 @@ const Contests: React.FC = () => {
             tasks: [],
             fullScreenMode: true,
             participants: [],
+            scheduledStartTime: '',
+            endTime: '',
         });
         setModalInitialStep(1);
         setError('');
@@ -304,6 +302,9 @@ const Contests: React.FC = () => {
                             startPassword: '',
                             tasks: [],
                             fullScreenMode: contest.fullScreenMode !== undefined ? contest.fullScreenMode : true,
+                            scheduledStartTime: contest.scheduledStartTime,
+                            endTime: contest.endTime,
+                            participants: [],
                         });
                         contestAPI.getById(contest.id).then(data => {
                             setFormData(prev => ({
@@ -330,6 +331,7 @@ const Contests: React.FC = () => {
                 loading={loading}
                 fetchingDetails={fetchingDetails}
                 initialStep={modalInitialStep}
+                readOnly={readOnly}
             />
         </div>
     );
