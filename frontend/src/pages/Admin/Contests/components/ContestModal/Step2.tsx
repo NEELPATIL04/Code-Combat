@@ -10,7 +10,7 @@ interface Step2Props {
 }
 
 const Step2: React.FC<Step2Props> = ({ formData, setFormData }) => {
-    const [taskInput, setTaskInput] = useState<Task>({ title: '', description: '', descriptionType: 'text', difficulty: 'Medium', maxPoints: 100, allowedLanguages: ['javascript', 'typescript', 'python', 'java', 'cpp'], boilerplateCode: {}, testRunnerTemplate: {}, testCases: [], functionName: 'solution' });
+    const [taskInput, setTaskInput] = useState<Task>({ title: '', description: '', descriptionType: 'text', difficulty: 'Medium', maxPoints: 100, allowedLanguages: ['javascript', 'typescript', 'python', 'java', 'cpp'], boilerplateCode: {}, testRunnerTemplate: {}, testCases: [], functionName: 'solution', aiConfig: { hintsEnabled: true, hintThreshold: 2, solutionThreshold: 5 } });
     const [editingTaskIndex, setEditingTaskIndex] = useState<number | null>(null);
     const [viewingTaskIndex, setViewingTaskIndex] = useState<number | null>(null);
 
@@ -22,7 +22,7 @@ const Step2: React.FC<Step2Props> = ({ formData, setFormData }) => {
                 else newTasks.push({ ...taskInput });
                 return { ...prev, tasks: newTasks };
             });
-            setTaskInput({ title: '', description: '', descriptionType: 'text', difficulty: 'Medium', maxPoints: 100, allowedLanguages: ['javascript', 'typescript', 'python', 'java', 'cpp'], boilerplateCode: {}, testRunnerTemplate: {}, testCases: [], functionName: 'solution' });
+            setTaskInput({ title: '', description: '', descriptionType: 'text', difficulty: 'Medium', maxPoints: 100, allowedLanguages: ['javascript', 'typescript', 'python', 'java', 'cpp'], boilerplateCode: {}, testRunnerTemplate: {}, testCases: [], functionName: 'solution', aiConfig: { hintsEnabled: true, hintThreshold: 2, solutionThreshold: 5 } });
             setEditingTaskIndex(null);
         }
     };

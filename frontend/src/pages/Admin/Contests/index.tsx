@@ -8,6 +8,7 @@ import ContestModal from './components/ContestModal';
 
 const Contests: React.FC = () => {
     const [contests, setContests] = useState<Contest[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [filter, setFilter] = useState<string>('all');
     const [showModal, setShowModal] = useState<boolean>(false);
     const [editingContest, setEditingContest] = useState<Contest | null>(null);
@@ -50,7 +51,7 @@ const Contests: React.FC = () => {
     const loadUsers = async () => {
         try {
             const data = await userAPI.getAll();
-            setAllUsers(data.users.filter((u: User) => u.role === 'player' && u.status === 'active'));
+            setUsers(data.users.filter((u: User) => u.role === 'player' && u.status === 'active'));
         } catch (error) {
             console.error('Failed to load users:', error);
         }

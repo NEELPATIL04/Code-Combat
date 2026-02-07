@@ -24,6 +24,11 @@ export interface Task {
     testRunnerTemplate: Record<string, string>; // Previously wrapperCode
     testCases: { input: string; expectedOutput: string; isHidden: boolean }[];
     functionName: string;
+    aiConfig: {
+        hintsEnabled: boolean;
+        hintThreshold: number;
+        solutionThreshold: number;
+    };
 }
 
 export const SUPPORTED_LANGUAGES = [

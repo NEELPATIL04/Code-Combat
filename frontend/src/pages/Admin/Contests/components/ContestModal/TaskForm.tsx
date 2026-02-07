@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, FileEdit, X } from 'lucide-react';
+import { Plus, Edit2, FileEdit, X, Brain } from 'lucide-react';
 import { Task, SUPPORTED_LANGUAGES } from '../../types';
 import TestCaseManager from '../../../../../components/TestCaseManager';
 import HTMLEditor from '../../../../../components/HTMLEditor';
@@ -76,9 +76,74 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, is
                 </div>
             </div>
 
-            <button type="button" onClick={onSave} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 16px', background: '#fafafa', border: 'none', borderRadius: '6px', color: '#09090b', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer' }}>
-                {isEditing ? <><Edit2 size={14} /> Update Task</> : <><Plus size={14} /> Add Task</>}
-            </button>
+            {/* AI Configuration */}
+            <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(234, 179, 8, 0.05)', borderRadius: '8px', border: '1px solid rgba(234, 179, 8, 0.2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                    <Brain size={16} color="#fbbf24" />
+                    <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#fbbf24', margin: 0 }}>AI Assistance</h3>
+                </div>
+
+                <div style={{ marginBottom: '12px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        <input
+                            type="checkbox"
+                            checked={taskInput.aiConfig?.hintsEnabled ?? true}
+                            onChange={(e) => setTaskInput(prev => ({
+                                ...prev,
+                                aiConfig: {
+                                    hintsEnabled: e.target.checked,
+                                    hintThreshold: prev.aiConfig?.hintThreshold ?? 2,
+                                    solutionThreshold: prev.aiConfig?.solutionThreshold ?? 5
+                                }
+                            }))}
+                            style={{ accentColor: '#fbbf24' }}
+                        />
+                        <span style={{ fontSize: '0.875rem', color: '#fafafa' }}>Enable Hints & AI Solutions</span>
+                    </label>
+                    <p style={{ margin: '4px 0 0 24px', fontSize: '0.75rem', color: '#a1a1aa' }}>Allow students to request hints, view solutions and get AI feedback.</p>
+                </div>
+
+                {(taskInput.aiConfig?.hintsEnabled ?? true) && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', paddingLeft: '24px' }}>
+                        <div>
+                            <label style={labelStyle}>Hint Threshold</label>
+                            <input
+                                type="number"
+                                value={taskInput.aiConfig?.hintThreshold ?? 2}
+                                onChange={(e) => setTaskInput(prev => ({
+                                    ...prev,
+                                    aiConfig: {
+                                        ...prev.aiConfig!,
+                                        hintThreshold: parseInt(e.target.value) || 0
+                                    }
+                                }))}
+                                min="0"
+                                style={inputStyle}
+                            />
+                            <p style={{ margin: '4px 0 0', fontSize: '0.7rem', color: '#71717a' }}>Attempts before hint unlock</p>
+                        </div>
+                        <div>
+                            <label style={labelStyle}>Solution Threshold</label>
+                            <input
+                                type="number"
+                                value={taskInput.aiConfig?.solutionThreshold ?? 5}
+                                onChange={(e) => setTaskInput(prev => ({
+                                    ...prev,
+                                    aiConfig: {
+                                        ...prev.aiConfig!,
+                                        solutionThreshold: parseInt(e.target.value) || 0
+                                    }
+                                }))}
+                                min="0"
+                                style={inputStyle}
+                            />
+                            <p style={{ margin: '4px 0 0', fontSize: '0.7rem', color: '#71717a' }}>Attempts before solution unlock</p>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+
 
             <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#fafafa', marginTop: '24px', marginBottom: '12px', paddingTop: '24px', borderTop: '1px solid #27272a' }}>Code & Test Cases</h3>
 
@@ -88,7 +153,13 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, is
                 <p style={{ margin: '4px 0 0', fontSize: '0.7rem', color: '#71717a' }}>The name of the function users need to implement.</p>
             </div>
 
-            <TestCaseManager testCases={taskInput.testCases} onChange={(newTestCases: any[]) => setTaskInput(prev => ({ ...prev, testCases: newTestCases }))} allowedLanguages={taskInput.allowedLanguages} boilerplateCode={taskInput.boilerplateCode} wrapperCode={taskInput.testRunnerTemplate} onBoilerplateChange={(lang: string, code: string) => setTaskInput(prev => ({ ...prev, boilerplateCode: { ...prev.boilerplateCode, [lang]: code } }))} onWrapperCodeChange={(lang: string, code: string) => setTaskInput(prev => ({ ...prev, testRunnerTemplate: { ...prev.testRunnerTemplate, [lang]: code } }))} functionName={taskInput.functionName} />
+            <TestCaseManager description={taskInput.description} testCases={taskInput.testCases} onChange={(newTestCases: any[]) => setTaskInput(prev => ({ ...prev, testCases: newTestCases }))} allowedLanguages={taskInput.allowedLanguages} boilerplateCode={taskInput.boilerplateCode} wrapperCode={taskInput.testRunnerTemplate} onBoilerplateChange={(lang: string, code: string) => setTaskInput(prev => ({ ...prev, boilerplateCode: { ...prev.boilerplateCode, [lang]: code } }))} onWrapperCodeChange={(lang: string, code: string) => setTaskInput(prev => ({ ...prev, testRunnerTemplate: { ...prev.testRunnerTemplate, [lang]: code } }))} functionName={taskInput.functionName} />
+
+            <div style={{ marginTop: '24px' }}>
+                <button type="button" onClick={onSave} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 16px', background: '#fafafa', border: 'none', borderRadius: '6px', color: '#09090b', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer' }}>
+                    {isEditing ? <><Edit2 size={14} /> Update Task</> : <><Plus size={14} /> Add Task</>}
+                </button>
+            </div>
 
             {showHTMLModal && (
                 <div style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>

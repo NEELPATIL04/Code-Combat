@@ -169,6 +169,87 @@ Respond with JSON: { "isValid": true/false, "suggestions": "improvement suggesti
       return { isValid: true }; // Default to valid if validation fails
     }
   }
+
+  /**
+   * Generate boilerplate and wrapper code for a task
+   */
+  async generateTaskCode(params: {
+    description: string;
+    functionName: string;
+    languages: string[];
+    inputFormat?: string;
+    outputFormat?: string;
+  }): Promise<Record<string, { boilerplate: string; driver: string }>> {
+    try {
+      const prompt = `
+        You are an expert coding interview platform architect.
+        Generate "boilerplate" code (method signature) and "driver" code (input/output handling) for the following problem.
+        
+        Problem Description:
+        ${params.description}
+        
+        Function Name: ${params.functionName}
+        ${params.inputFormat ? `Input Format: ${params.inputFormat}` : ''}
+        ${params.outputFormat ? `Output Format: ${params.outputFormat}` : ''}
+        
+        Target Languages: ${params.languages.join(', ')}
+        
+        For EACH language, you MUST generate:
+        1. "boilerplate": The starter code for the user. It should contain the class (if applicable for the language) and function definition.
+        2. "driver": The hidden driver code that:
+           - Imports necessary libraries.
+           - Reads input from STDIN (standard input).
+           - Parses the input lines.
+           - Calls the user's function (assuming it's available/imported).
+           - Prints the result to STDOUT (standard output).
+           
+        IMPORTANT: Use Judge0 compatible code.
+        - Javascript/Typescript: Use 'fs.readFileSync(0, "utf-8")' or 'readline'.
+        - Python: Use 'sys.stdin.read()'.
+        - Java: Use 'Scanner' or 'BufferedReader'.
+        - C++: Use 'cin' and 'cout'.
+        
+        Response Format:
+        Return ONLY a JSON object where keys are language names (lowercase) and values are objects containing "boilerplate" and "driver" strings.
+        Example:
+        {
+          "javascript": {
+            "boilerplate": "function solve(a, b) {\\n  return a + b;\\n}",
+            "driver": "const fs = require('fs');\\nconst input = fs.readFileSync(0, 'utf-8').trim().split('\\n');..."
+          }
+        }
+      `;
+
+      console.log('🤖 Generating task code with Groq AI...');
+
+      const chatCompletion = await this.groq.chat.completions.create({
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert code generator. Always respond with valid JSON only. No markdown formatting, no explanation.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.2, // Lower temperature for more deterministic code
+        max_tokens: 4096,
+        response_format: { type: 'json_object' },
+      });
+
+      const responseContent = chatCompletion.choices[0]?.message?.content;
+      if (!responseContent) {
+        throw new Error('Received empty response from Groq');
+      }
+
+      return JSON.parse(responseContent);
+    } catch (error) {
+      console.error('Error generating task code:', error);
+      throw error;
+    }
+  }
 }
 
 export const groqService = new GroqService();

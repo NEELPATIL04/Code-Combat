@@ -23,7 +23,8 @@ interface TestCaseManagerProps {
     onWrapperCodeChange: (language: string, code: string) => void;
 
     // AI Props
-    functionName?: string;
+    functionName: string;
+    description: string;
     readOnly?: boolean;
 }
 
@@ -36,6 +37,7 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
     onBoilerplateChange,
     onWrapperCodeChange,
     functionName,
+    description,
     readOnly
 }) => {
     const [generating, setGenerating] = useState(false);
@@ -99,6 +101,8 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
                     wrapperCode={wrapperCode}
                     onBoilerplateChange={onBoilerplateChange}
                     onWrapperCodeChange={onWrapperCodeChange}
+                    description={description}
+                    functionName={functionName}
                     readOnly={readOnly}
                 />
             </div>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Play, Send, XCircle, Clock, ChevronRight, Check, X, GripHorizontal, Minimize2 } from 'lucide-react';
+import { Play, Send, XCircle, Clock, ChevronRight, Check, X, GripHorizontal, Minimize2, Lightbulb, Brain, Unlock, MessageSquare } from 'lucide-react';
 import Editor from '@monaco-editor/react';
-import { submissionAPI } from '../../utils/api';
+import { submissionAPI, aiAPI } from '../../utils/api';
+// import { Lightbulb } from 'lucide-react'; // Will replace this in next step with actual icon import
 
 
 interface Task {
@@ -14,6 +15,11 @@ interface Task {
     maxPoints: number;
     orderIndex: number;
     allowedLanguages: string[];
+    aiConfig?: {
+        hintsEnabled: boolean;
+        hintThreshold: number;
+        solutionThreshold: number;
+    };
 }
 
 interface Contest {
@@ -75,6 +81,17 @@ interface MemoizedCodeEditorProps {
     isRunning: boolean;
     onRun: () => void;
     onSubmit: () => void;
+    onGetHint: () => void;
+    isGeneratingHint: boolean;
+    onGetSolution: () => void;
+    isGeneratingSolution: boolean;
+    onAnalyze: () => void;
+    isAnalyzing: boolean;
+    aiConfig?: {
+        hintsEnabled: boolean;
+        hintThreshold: number;
+        solutionThreshold: number;
+    };
 }
 
 // Memoized Code Editor component to prevent re-renders
@@ -88,6 +105,13 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
     isRunning,
     onRun,
     onSubmit,
+    onGetHint,
+    isGeneratingHint,
+    onGetSolution,
+    isGeneratingSolution,
+    onAnalyze,
+    isAnalyzing,
+    aiConfig,
 }) => {
     const editorOptions = useMemo(() => ({
         minimap: { enabled: false },
@@ -142,6 +166,36 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
 
             {/* Action Buttons */}
             <div style={{ padding: '8px 12px', borderTop: '1px solid rgba(255, 255, 255, 0.06)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                {aiConfig?.hintsEnabled && (
+                    <button
+                        onClick={onGetHint}
+                        disabled={isGeneratingHint || isRunning}
+                        style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'rgba(234, 179, 8, 0.15)', border: '1px solid rgba(234, 179, 8, 0.3)', borderRadius: 6, color: '#fbbf24', fontSize: 13, cursor: (isGeneratingHint || isRunning) ? 'not-allowed' : 'pointer', opacity: (isGeneratingHint || isRunning) ? 0.6 : 1 }}
+                    >
+                        <Lightbulb size={14} />
+                        {isGeneratingHint ? 'Thinking...' : 'Get Hint'}
+                    </button>
+                )}
+                {aiConfig?.hintsEnabled && (
+                    <button
+                        onClick={onGetSolution}
+                        disabled={isGeneratingSolution || isRunning}
+                        style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 6, color: '#f87171', fontSize: 13, cursor: (isGeneratingSolution || isRunning) ? 'not-allowed' : 'pointer', opacity: (isGeneratingSolution || isRunning) ? 0.6 : 1 }}
+                    >
+                        <Unlock size={14} />
+                        {isGeneratingSolution ? 'Unlocking...' : 'Get Solution'}
+                    </button>
+                )}
+                {aiConfig?.hintsEnabled && (
+                    <button
+                        onClick={onAnalyze}
+                        disabled={isAnalyzing || isRunning}
+                        style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: 6, color: '#60a5fa', fontSize: 13, cursor: (isAnalyzing || isRunning) ? 'not-allowed' : 'pointer', opacity: (isAnalyzing || isRunning) ? 0.6 : 1 }}
+                    >
+                        <MessageSquare size={14} />
+                        {isAnalyzing ? 'Analyzing...' : 'AI Feedback'}
+                    </button>
+                )}
                 <button
                     onClick={onRun}
                     disabled={isRunning}
@@ -169,7 +223,12 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
         prevProps.taskId === nextProps.taskId &&
         prevProps.language === nextProps.language &&
         prevProps.isRunning === nextProps.isRunning &&
-        JSON.stringify(prevProps.allowedLanguages) === JSON.stringify(nextProps.allowedLanguages)
+        prevProps.isGeneratingHint === nextProps.isGeneratingHint &&
+        prevProps.isGeneratingHint === nextProps.isGeneratingHint &&
+        prevProps.isGeneratingSolution === nextProps.isGeneratingSolution &&
+        prevProps.isAnalyzing === nextProps.isAnalyzing &&
+        JSON.stringify(prevProps.allowedLanguages) === JSON.stringify(nextProps.allowedLanguages) &&
+        JSON.stringify(prevProps.aiConfig) === JSON.stringify(nextProps.aiConfig)
     );
 });
 
@@ -513,13 +572,87 @@ const TaskPage: React.FC = () => {
     const [showLockout, setShowLockout] = useState<boolean>(false);
     const hasExited = useRef<boolean>(false);
 
+    // Hint state
+    const [hint, setHint] = useState<string | null>(null);
+    const [isGeneratingHint, setIsGeneratingHint] = useState<boolean>(false);
+    const [showHintModal, setShowHintModal] = useState<boolean>(false);
+
+    // Solution state
+    const [solution, setSolution] = useState<string | null>(null);
+    const [isGeneratingSolution, setIsGeneratingSolution] = useState<boolean>(false);
+    const [showSolutionModal, setShowSolutionModal] = useState<boolean>(false);
+
+    // Evaluation state
+    const [evaluation, setEvaluation] = useState<string | null>(null);
+    const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+    const [showEvaluationModal, setShowEvaluationModal] = useState<boolean>(false);
+
+    const handleGetHint = useCallback(async () => {
+        if (!task) return;
+        setIsGeneratingHint(true);
+        try {
+            // Pass empty string for errorLogs for now, or capture from state if available
+            const result = await aiAPI.getHint(task.id, code, language, '');
+            if (result.hint) {
+                setHint(result.hint);
+                setShowHintModal(true);
+            }
+        } catch (err: any) {
+            console.error('Failed to get hint:', err);
+            alert(err.message || 'Failed to get hint. Please try again.');
+        } finally {
+            setIsGeneratingHint(false);
+        }
+    }, [task, code, language]);
+
+    const handleGetSolution = useCallback(async () => {
+        if (!task) return;
+        if (!window.confirm('Are you sure? Viewing the solution will forfeit points for this task.')) return;
+
+        setIsGeneratingSolution(true);
+        try {
+            const result = await aiAPI.getSolution(task.id);
+            if (result.solution) {
+                setSolution(result.solution);
+                setShowSolutionModal(true);
+            }
+        } catch (err: any) {
+            console.error('Failed to get solution:', err);
+            alert(err.message || 'Failed to get solution.');
+        } finally {
+            setIsGeneratingSolution(false);
+        }
+    }, [task]);
+
+    const handleAnalyze = useCallback(async () => {
+        if (!task) return;
+        setIsAnalyzing(true);
+        try {
+            const result = await aiAPI.evaluate(task.id, code, language, testCases);
+            if (result.feedback) {
+                setEvaluation(result.feedback);
+                setShowEvaluationModal(true);
+            }
+        } catch (err) {
+            console.error('Failed to evaluate code:', err);
+        } finally {
+            setIsAnalyzing(false);
+        }
+    }, [task, code, language]);
+
     // Function to request fullscreen
     const requestFullscreen = useCallback(() => {
         const element = document.documentElement;
         if (element.requestFullscreen) {
-            element.requestFullscreen().catch(err => {
-                console.error(`Error attempting to enable full-screen mode: ${err.message}`);
-            });
+            element.requestFullscreen()
+                .then(() => {
+                    setIsFullscreen(true);
+                    setShowLockout(false);
+                })
+                .catch(err => {
+                    console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+                    alert(`Could not enter full-screen mode: ${err.message}. Please check your browser permissions.`);
+                });
 
             // Try to lock the keyboard (Experimental API, mainly Chrome)
             if ('keyboard' in navigator && (navigator as any).keyboard.lock) {
@@ -527,6 +660,9 @@ const TaskPage: React.FC = () => {
                     console.log('Keyboard lock failed or not supported');
                 });
             }
+        } else {
+            // Fallback for older browsers or if API is missing
+            alert('Full-screen API is not supported in this browser.');
         }
     }, []);
 
@@ -1011,6 +1147,13 @@ const TaskPage: React.FC = () => {
                         isRunning={isRunning}
                         onRun={handleRun}
                         onSubmit={handleSubmit}
+                        onGetHint={handleGetHint}
+                        isGeneratingHint={isGeneratingHint}
+                        onGetSolution={handleGetSolution}
+                        isGeneratingSolution={isGeneratingSolution}
+                        onAnalyze={handleAnalyze}
+                        isAnalyzing={isAnalyzing}
+                        aiConfig={task?.aiConfig}
                     />
                 )}
 
@@ -1167,6 +1310,341 @@ const TaskPage: React.FC = () => {
                         >
                             Re-enter Full Screen
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Hint Modal */}
+            {showHintModal && hint && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.7)',
+                    backdropFilter: 'blur(4px)',
+                    zIndex: 10000,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 20,
+                }}>
+                    <div style={{
+                        background: '#111113',
+                        border: '1px solid rgba(253, 230, 138, 0.3)',
+                        borderRadius: 12,
+                        width: '100%',
+                        maxWidth: 600,
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        maxHeight: '80vh',
+                    }}>
+                        {/* Header */}
+                        <div style={{
+                            padding: '16px 20px',
+                            borderBottom: '1px solid rgba(253, 230, 138, 0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            background: 'rgba(253, 230, 138, 0.05)',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 6,
+                                    background: 'rgba(234, 179, 8, 0.2)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    border: '1px solid rgba(234, 179, 8, 0.3)',
+                                }}>
+                                    <Brain size={18} color="#fbbf24" />
+                                </div>
+                                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#fff' }}>AI Hint</h3>
+                            </div>
+                            <button
+                                onClick={() => setShowHintModal(false)}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    color: 'rgba(255, 255, 255, 0.5)',
+                                    padding: 4,
+                                    display: 'flex',
+                                    borderRadius: 4,
+                                }}
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div style={{ padding: 24, overflowY: 'auto', color: 'rgba(255, 255, 255, 0.8)', lineHeight: 1.6, fontSize: 15 }}>
+                            <div dangerouslySetInnerHTML={{ __html: hint.replace(/\n/g, '<br/>') }} />
+                        </div>
+
+                        {/* Footer */}
+                        <div style={{
+                            padding: '16px 20px',
+                            borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+                            background: 'rgba(255, 255, 255, 0.02)',
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                        }}>
+                            <button
+                                onClick={() => setShowHintModal(false)}
+                                style={{
+                                    padding: '8px 16px',
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    color: '#fff',
+                                    borderRadius: 6,
+                                    fontSize: 14,
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Solution Modal */}
+            {showSolutionModal && solution && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.8)',
+                    backdropFilter: 'blur(4px)',
+                    zIndex: 10000,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 20,
+                }}>
+                    <div style={{
+                        background: '#111113',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        borderRadius: 12,
+                        width: '100%',
+                        maxWidth: 800,
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        height: '80vh',
+                    }}>
+                        {/* Header */}
+                        <div style={{
+                            padding: '16px 20px',
+                            borderBottom: '1px solid rgba(239, 68, 68, 0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            background: 'rgba(239, 68, 68, 0.05)',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 6,
+                                    background: 'rgba(239, 68, 68, 0.2)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                                }}>
+                                    <Unlock size={18} color="#f87171" />
+                                </div>
+                                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#fff' }}>Full Solution</h3>
+                            </div>
+                            <button
+                                onClick={() => setShowSolutionModal(false)}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    color: 'rgba(255, 255, 255, 0.5)',
+                                    padding: 4,
+                                    display: 'flex',
+                                    borderRadius: 4,
+                                }}
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div style={{ flex: 1, overflow: 'hidden', padding: 0 }}>
+                            <Editor
+                                height="100%"
+                                language={language}
+                                value={solution}
+                                options={{
+                                    readOnly: true,
+                                    minimap: { enabled: false },
+                                    fontSize: 14,
+                                    lineNumbers: 'on',
+                                    scrollBeyondLastLine: false,
+                                    automaticLayout: true,
+                                    theme: 'vs-dark',
+                                    fontFamily: "'JetBrains Mono', monospace",
+                                }}
+                            />
+                        </div>
+
+                        {/* Footer */}
+                        <div style={{
+                            padding: '16px 20px',
+                            borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+                            background: 'rgba(255, 255, 255, 0.02)',
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                            gap: 12,
+                        }}>
+                            <button
+                                onClick={() => {
+                                    setCode(solution); // Overwrite user code
+                                    setShowSolutionModal(false);
+                                }}
+                                style={{
+                                    padding: '8px 16px',
+                                    background: 'rgba(16, 185, 129, 0.15)',
+                                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                                    color: '#34d399',
+                                    borderRadius: 6,
+                                    fontSize: 14,
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Use this Solution
+                            </button>
+                            <button
+                                onClick={() => setShowSolutionModal(false)}
+                                style={{
+                                    padding: '8px 16px',
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    color: '#fff',
+                                    borderRadius: 6,
+                                    fontSize: 14,
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Evaluation Modal */}
+            {showEvaluationModal && evaluation && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.7)',
+                    backdropFilter: 'blur(4px)',
+                    zIndex: 10000,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 20,
+                }}>
+                    <div style={{
+                        background: '#111113',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        borderRadius: 12,
+                        width: '100%',
+                        maxWidth: 700,
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        maxHeight: '80vh',
+                    }}>
+                        {/* Header */}
+                        <div style={{
+                            padding: '16px 20px',
+                            borderBottom: '1px solid rgba(59, 130, 246, 0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            background: 'rgba(59, 130, 246, 0.05)',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 6,
+                                    background: 'rgba(59, 130, 246, 0.2)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                                }}>
+                                    <MessageSquare size={18} color="#60a5fa" />
+                                </div>
+                                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#fff' }}>AI Analysis</h3>
+                            </div>
+                            <button
+                                onClick={() => setShowEvaluationModal(false)}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    color: 'rgba(255, 255, 255, 0.5)',
+                                    padding: 4,
+                                    display: 'flex',
+                                    borderRadius: 4,
+                                }}
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div style={{ padding: 24, overflowY: 'auto', color: 'rgba(255, 255, 255, 0.8)', lineHeight: 1.6, fontSize: 15 }}>
+                            <div dangerouslySetInnerHTML={{ __html: evaluation.replace(/\n/g, '<br/>') }} />
+                        </div>
+
+                        {/* Footer */}
+                        <div style={{
+                            padding: '16px 20px',
+                            borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+                            background: 'rgba(255, 255, 255, 0.02)',
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                        }}>
+                            <button
+                                onClick={() => setShowEvaluationModal(false)}
+                                style={{
+                                    padding: '8px 16px',
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    color: '#fff',
+                                    borderRadius: 6,
+                                    fontSize: 14,
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Close
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

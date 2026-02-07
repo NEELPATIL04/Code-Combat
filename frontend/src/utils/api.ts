@@ -111,10 +111,14 @@ export const contestAPI = {
   },
 
   // Start contest
-  start: async (id: number) => {
+  start: async (id: number, password?: string) => {
     const response = await fetch(`${API_BASE_URL}/contests/${id}/start`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: {
+        ...getAuthHeaders() as Record<string, string>,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ password }),
     });
     return handleResponse(response);
   },
@@ -185,6 +189,20 @@ export const userAPI = {
     });
     return handleResponse(response);
   },
+
+  getContestHistory: async () => {
+    const response = await fetch(`${API_BASE_URL}/profile/contests`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  getContestDetails: async (contestId: number) => {
+    const response = await fetch(`${API_BASE_URL}/profile/contests/${contestId}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  }
 };
 
 /**
@@ -267,4 +285,87 @@ export const uploadAPI = {
     });
     return handleResponse(response);
   },
+};
+
+/**
+ * AI Assistance API
+ */
+export const aiAPI = {
+  // Get a hint
+  getHint: async (taskId: number, userCode: string, language: string, errorLogs?: string) => {
+    const response = await fetch(`${API_BASE_URL}/ai/hint`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ taskId, userCode, language, errorLogs }),
+    });
+    return handleResponse(response);
+  },
+
+  // Get full solution
+  getSolution: async (taskId: number) => {
+    const response = await fetch(`${API_BASE_URL}/ai/solution`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ taskId }),
+    });
+    return handleResponse(response);
+  },
+
+  // Evaluate code
+  evaluate: async (taskId: number, userCode: string, language: string, testResults: any[]) => {
+    const response = await fetch(`${API_BASE_URL}/ai/evaluate`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ taskId, userCode, language, testResults }),
+    });
+    return handleResponse(response);
+  },
+
+  // Generate boilerplate and wrapper code
+  generateCode: async (params: { description: string, functionName: string, languages: string[], inputFormat?: string, outputFormat?: string }) => {
+    const response = await fetch(`${API_BASE_URL}/ai/generate-code`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(params),
+    });
+    return handleResponse(response);
+  },
+};
+
+
+
+
+export const adminAPI = {
+  getParticipantSubmissions: async (userId: number, contestId: number) => {
+    const response = await fetch(`${API_BASE_URL}/admin/participants/${userId}/contest/${contestId}/submissions`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  updateSubmissionScore: async (submissionId: number, score: number) => {
+    const response = await fetch(`${API_BASE_URL}/admin/submissions/${submissionId}/score`, {
+      method: 'PATCH',
+      headers: {
+        ...getAuthHeaders() as Record<string, string>,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ score }),
+    });
+    return handleResponse(response);
+  },
+
+  getAiUsageStats: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/ai/stats`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  getAiUsageLogs: async (page = 1, limit = 50) => {
+    const response = await fetch(`${API_BASE_URL}/admin/ai/logs?page=${page}&limit=${limit}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  }
 };
