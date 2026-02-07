@@ -131,28 +131,28 @@ const ManageUsers: React.FC = () => {
 
     // Get avatar color based on username
     const getAvatarColor = (username: string) => {
-        const colors = ['#FBBF24', '#F59E0B', '#EAB308', '#FDE68A', '#FCD34D'];
+        const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#eab308', '#22c55e'];
         const index = username.charCodeAt(0) % colors.length;
         return colors[index];
     };
 
     const inputStyle: React.CSSProperties = {
         width: '100%',
-        padding: '14px 16px',
-        background: 'rgba(255, 255, 255, 0.04)',
-        border: '1.5px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '10px',
-        color: '#ffffff',
-        fontSize: '0.95rem',
+        padding: '10px 14px',
+        background: '#09090b',
+        border: '1px solid #27272a',
+        borderRadius: '6px',
+        color: '#fafafa',
+        fontSize: '0.875rem',
         outline: 'none'
     };
 
     const labelStyle: React.CSSProperties = {
         display: 'block',
-        marginBottom: '10px',
-        color: 'rgba(255, 255, 255, 0.85)',
+        marginBottom: '8px',
+        color: '#a1a1aa',
         fontSize: '0.875rem',
-        fontWeight: 600
+        fontWeight: 500
     };
 
     return (
@@ -167,15 +167,16 @@ const ManageUsers: React.FC = () => {
                 }}>
                     <div>
                         <h1 style={{
-                            fontSize: '2rem',
+                            fontSize: '1.875rem',
                             fontWeight: 600,
                             margin: 0,
-                            marginBottom: '8px',
-                            color: '#ffffff'
+                            marginBottom: '4px',
+                            color: '#fafafa',
+                            letterSpacing: '-0.025em'
                         }}>
                             Manage Users
                         </h1>
-                        <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.5)' }}>
+                        <p style={{ margin: 0, fontSize: '0.875rem', color: '#a1a1aa' }}>
                             Add, edit, or remove users
                         </p>
                     </div>
@@ -185,17 +186,20 @@ const ManageUsers: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
-                            padding: '12px 24px',
-                            background: 'rgba(253, 230, 138, 0.15)',
-                            border: '1px solid rgba(253, 230, 138, 0.4)',
-                            borderRadius: '100px',
-                            color: '#FDE68A',
-                            fontSize: '0.9rem',
+                            padding: '10px 20px',
+                            background: '#fafafa',
+                            border: 'none',
+                            borderRadius: '6px',
+                            color: '#09090b',
+                            fontSize: '0.875rem',
                             fontWeight: 500,
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            transition: 'opacity 0.2s ease'
                         }}
+                        onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+                        onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
                     >
-                        <Plus size={18} /> Create User
+                        <Plus size={16} /> Create User
                     </button>
                 </header>
 
@@ -203,14 +207,15 @@ const ManageUsers: React.FC = () => {
                 {error && (
                     <div style={{
                         background: 'rgba(239, 68, 68, 0.1)',
-                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        border: '1px solid rgba(239, 68, 68, 0.2)',
                         color: '#ef4444',
-                        padding: '16px',
-                        borderRadius: '12px',
+                        padding: '12px 16px',
+                        borderRadius: '8px',
                         marginBottom: '24px',
                         display: 'flex',
                         justifyContent: 'space-between',
-                        alignItems: 'center'
+                        alignItems: 'center',
+                        fontSize: '0.875rem'
                     }}>
                         {error}
                         <button
@@ -219,7 +224,8 @@ const ManageUsers: React.FC = () => {
                                 background: 'transparent',
                                 border: 'none',
                                 color: '#ef4444',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                padding: '4px'
                             }}
                         >
                             <X size={16} />
@@ -229,47 +235,50 @@ const ManageUsers: React.FC = () => {
 
                 {/* Loading State */}
                 {loading && users.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255, 255, 255, 0.5)' }}>
+                    <div style={{ textAlign: 'center', padding: '60px 0', color: '#71717a' }}>
                         <div style={{
                             width: '32px',
                             height: '32px',
-                            border: '2px solid rgba(253, 230, 138, 0.2)',
-                            borderTopColor: '#FDE68A',
+                            border: '2px solid #27272a',
+                            borderTopColor: '#fafafa',
                             borderRadius: '50%',
                             margin: '0 auto 16px',
                             animation: 'spin 1s linear infinite'
                         }}></div>
-                        <p>Loading users...</p>
+                        <p style={{ fontSize: '0.875rem' }}>Loading users...</p>
                     </div>
                 ) : (
                     /* Users List */
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {users.map(user => (
                             <div
                                 key={user.id}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '20px',
-                                    padding: '20px 24px',
-                                    background: 'rgba(20, 20, 22, 0.6)',
-                                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                                    borderRadius: '16px',
-                                    opacity: user.status === 'banned' ? 0.6 : 1
+                                    gap: '16px',
+                                    padding: '16px 20px',
+                                    background: '#09090b',
+                                    border: '1px solid #27272a',
+                                    borderRadius: '12px',
+                                    opacity: user.status === 'banned' ? 0.6 : 1,
+                                    transition: 'background 0.2s ease'
                                 }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = '#09090b'}
                             >
                                 {/* Avatar */}
                                 <div style={{
-                                    width: '48px',
-                                    height: '48px',
+                                    width: '40px',
+                                    height: '40px',
                                     borderRadius: '50%',
                                     background: getAvatarColor(user.username),
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     fontWeight: 600,
-                                    fontSize: '1.25rem',
-                                    color: '#000000',
+                                    fontSize: '0.875rem',
+                                    color: '#ffffff',
                                     flexShrink: 0
                                 }}>
                                     {user.firstName
@@ -279,50 +288,70 @@ const ManageUsers: React.FC = () => {
                                 </div>
 
                                 {/* User Info */}
-                                <div style={{ flex: 1 }}>
-                                    <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 500, color: '#ffffff' }}>
-                                        {user.username}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 500, color: '#fafafa' }}>
+                                        {user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.username}
                                     </h3>
                                     {user.firstName && user.lastName && (
-                                        <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.5)' }}>
-                                            {user.firstName} {user.lastName}
+                                        <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#71717a' }}>
+                                            {user.username}
                                         </p>
                                     )}
-                                    <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.5)' }}>
+                                    <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#71717a' }}>
                                         {user.email}
                                     </p>
                                 </div>
 
                                 {/* Role Badge */}
                                 <span style={{
-                                    padding: '6px 14px',
-                                    borderRadius: '100px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '6px',
+                                    padding: '4px 10px',
+                                    borderRadius: '9999px',
                                     fontSize: '0.75rem',
                                     fontWeight: 500,
                                     textTransform: 'capitalize',
+                                    width: '110px',
                                     background: user.role === 'admin' ? 'rgba(139, 92, 246, 0.15)'
                                         : user.role === 'super_admin' ? 'rgba(239, 68, 68, 0.15)'
-                                            : 'rgba(16, 185, 129, 0.15)',
+                                            : 'rgba(34, 197, 94, 0.15)',
                                     color: user.role === 'admin' ? '#8b5cf6'
                                         : user.role === 'super_admin' ? '#ef4444'
-                                            : '#10b981',
-                                    border: user.role === 'admin' ? '1px solid rgba(139, 92, 246, 0.3)'
-                                        : user.role === 'super_admin' ? '1px solid rgba(239, 68, 68, 0.3)'
-                                            : '1px solid rgba(16, 185, 129, 0.3)'
+                                            : '#22c55e'
                                 }}>
+                                    <span style={{
+                                        width: '6px',
+                                        height: '6px',
+                                        borderRadius: '50%',
+                                        background: user.role === 'admin' ? '#8b5cf6'
+                                            : user.role === 'super_admin' ? '#ef4444'
+                                                : '#22c55e'
+                                    }}></span>
                                     {user.role === 'super_admin' ? 'Super Admin' : user.role}
                                 </span>
 
                                 {/* Status Badge */}
                                 <span style={{
-                                    padding: '6px 14px',
-                                    borderRadius: '100px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '6px',
+                                    padding: '4px 10px',
+                                    borderRadius: '9999px',
                                     fontSize: '0.75rem',
                                     fontWeight: 500,
-                                    background: user.status === 'active' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                                    color: user.status === 'active' ? '#10b981' : '#ef4444',
-                                    border: user.status === 'active' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)'
+                                    width: '85px',
+                                    background: user.status === 'active' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                    color: user.status === 'active' ? '#22c55e' : '#ef4444'
                                 }}>
+                                    <span style={{
+                                        width: '6px',
+                                        height: '6px',
+                                        borderRadius: '50%',
+                                        background: user.status === 'active' ? '#22c55e' : '#ef4444'
+                                    }}></span>
                                     {user.status === 'active' ? 'Active' : 'Banned'}
                                 </span>
 
@@ -333,11 +362,11 @@ const ManageUsers: React.FC = () => {
                                         onChange={(e: ChangeEvent<HTMLSelectElement>) => changeRole(user.id, e.target.value)}
                                         style={{
                                             padding: '8px 12px',
-                                            background: 'rgba(255, 255, 255, 0.05)',
-                                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                                            borderRadius: '8px',
-                                            color: '#ffffff',
-                                            fontSize: '0.85rem',
+                                            background: '#09090b',
+                                            border: '1px solid #27272a',
+                                            borderRadius: '6px',
+                                            color: '#fafafa',
+                                            fontSize: '0.75rem',
                                             outline: 'none',
                                             cursor: 'pointer'
                                         }}
@@ -350,17 +379,20 @@ const ManageUsers: React.FC = () => {
                                         onClick={() => toggleStatus(user.id)}
                                         title={user.status === 'active' ? 'Ban User' : 'Activate User'}
                                         style={{
-                                            width: '40px',
-                                            height: '40px',
+                                            width: '36px',
+                                            height: '36px',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            background: user.status === 'active' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(251, 191, 36, 0.1)',
-                                            border: user.status === 'active' ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(251, 191, 36, 0.3)',
-                                            borderRadius: '10px',
-                                            color: user.status === 'active' ? '#10b981' : '#FBBF24',
-                                            cursor: 'pointer'
+                                            background: 'transparent',
+                                            border: '1px solid #27272a',
+                                            borderRadius: '6px',
+                                            color: user.status === 'active' ? '#22c55e' : '#eab308',
+                                            cursor: 'pointer',
+                                            transition: 'background 0.15s ease'
                                         }}
+                                        onMouseOver={(e) => e.currentTarget.style.background = '#18181b'}
+                                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                                     >
                                         {user.status === 'active' ? <Ban size={16} /> : <Shield size={16} />}
                                     </button>
@@ -368,17 +400,20 @@ const ManageUsers: React.FC = () => {
                                         onClick={() => deleteUser(user.id)}
                                         title="Delete User"
                                         style={{
-                                            width: '40px',
-                                            height: '40px',
+                                            width: '36px',
+                                            height: '36px',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            background: 'rgba(239, 68, 68, 0.15)',
-                                            border: '1px solid rgba(239, 68, 68, 0.3)',
-                                            borderRadius: '10px',
+                                            background: 'transparent',
+                                            border: '1px solid #27272a',
+                                            borderRadius: '6px',
                                             color: '#ef4444',
-                                            cursor: 'pointer'
+                                            cursor: 'pointer',
+                                            transition: 'background 0.15s ease'
                                         }}
+                                        onMouseOver={(e) => e.currentTarget.style.background = '#18181b'}
+                                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
                                     >
                                         <Trash2 size={16} />
                                     </button>
@@ -407,11 +442,11 @@ const ManageUsers: React.FC = () => {
                     <div
                         onClick={e => e.stopPropagation()}
                         style={{
-                            background: '#1a1f2e',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                            borderRadius: '16px',
+                            background: '#09090b',
+                            border: '1px solid #27272a',
+                            borderRadius: '12px',
                             width: '90%',
-                            maxWidth: '550px',
+                            maxWidth: '500px',
                             maxHeight: '85vh',
                             overflowY: 'auto'
                         }}
@@ -421,10 +456,10 @@ const ManageUsers: React.FC = () => {
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
-                            padding: '24px 28px',
-                            borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+                            padding: '20px 24px',
+                            borderBottom: '1px solid #27272a'
                         }}>
-                            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#ffffff' }}>
+                            <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#fafafa' }}>
                                 Create New User
                             </h2>
                             <button
@@ -435,21 +470,21 @@ const ManageUsers: React.FC = () => {
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    background: 'rgba(255, 255, 255, 0.05)',
+                                    background: 'transparent',
                                     border: 'none',
-                                    borderRadius: '8px',
-                                    color: 'rgba(255, 255, 255, 0.6)',
+                                    borderRadius: '6px',
+                                    color: '#71717a',
                                     cursor: 'pointer'
                                 }}
                             >
-                                <X size={20} />
+                                <X size={18} />
                             </button>
                         </div>
 
                         {/* Modal Body */}
-                        <div style={{ padding: '28px' }}>
+                        <div style={{ padding: '24px' }}>
                             {/* Username */}
-                            <div style={{ marginBottom: '24px' }}>
+                            <div style={{ marginBottom: '20px' }}>
                                 <label style={labelStyle}>Username *</label>
                                 <input
                                     name="username"
@@ -462,7 +497,7 @@ const ManageUsers: React.FC = () => {
                             </div>
 
                             {/* First & Last Name */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
                                 <div>
                                     <label style={labelStyle}>First Name</label>
                                     <input
@@ -486,7 +521,7 @@ const ManageUsers: React.FC = () => {
                             </div>
 
                             {/* Email */}
-                            <div style={{ marginBottom: '24px' }}>
+                            <div style={{ marginBottom: '20px' }}>
                                 <label style={labelStyle}>Email *</label>
                                 <input
                                     name="email"
@@ -500,7 +535,7 @@ const ManageUsers: React.FC = () => {
                             </div>
 
                             {/* Password */}
-                            <div style={{ marginBottom: '24px' }}>
+                            <div style={{ marginBottom: '20px' }}>
                                 <label style={labelStyle}>Password *</label>
                                 <input
                                     name="password"
@@ -514,7 +549,7 @@ const ManageUsers: React.FC = () => {
                             </div>
 
                             {/* Company/School */}
-                            <div style={{ marginBottom: '24px' }}>
+                            <div style={{ marginBottom: '20px' }}>
                                 <label style={labelStyle}>Company / School Name</label>
                                 <input
                                     name="companySchool"
@@ -526,7 +561,7 @@ const ManageUsers: React.FC = () => {
                             </div>
 
                             {/* Role */}
-                            <div style={{ marginBottom: '24px' }}>
+                            <div style={{ marginBottom: '20px' }}>
                                 <label style={labelStyle}>Role</label>
                                 <select
                                     name="role"
@@ -545,22 +580,30 @@ const ManageUsers: React.FC = () => {
                         <div style={{
                             display: 'flex',
                             justifyContent: 'flex-end',
-                            gap: '14px',
-                            padding: '24px 28px',
-                            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-                            background: 'rgba(255, 255, 255, 0.02)'
+                            gap: '12px',
+                            padding: '20px 24px',
+                            borderTop: '1px solid #27272a'
                         }}>
                             <button
                                 onClick={closeModal}
                                 style={{
-                                    padding: '12px 24px',
+                                    padding: '10px 20px',
                                     background: 'transparent',
-                                    border: '1.5px solid rgba(255, 255, 255, 0.15)',
-                                    borderRadius: '10px',
-                                    color: 'rgba(255, 255, 255, 0.7)',
-                                    fontSize: '0.95rem',
+                                    border: '1px solid #27272a',
+                                    borderRadius: '6px',
+                                    color: '#a1a1aa',
+                                    fontSize: '0.875rem',
                                     fontWeight: 500,
-                                    cursor: 'pointer'
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.background = '#18181b';
+                                    e.currentTarget.style.color = '#fafafa';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.background = 'transparent';
+                                    e.currentTarget.style.color = '#a1a1aa';
                                 }}
                             >
                                 Cancel
@@ -569,15 +612,16 @@ const ManageUsers: React.FC = () => {
                                 onClick={handleCreateUser}
                                 disabled={loading}
                                 style={{
-                                    padding: '12px 28px',
-                                    background: 'rgba(253, 230, 138, 0.15)',
-                                    border: '1.5px solid rgba(253, 230, 138, 0.5)',
-                                    borderRadius: '10px',
-                                    color: '#FDE68A',
-                                    fontSize: '0.95rem',
-                                    fontWeight: 600,
+                                    padding: '10px 24px',
+                                    background: '#fafafa',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    color: '#09090b',
+                                    fontSize: '0.875rem',
+                                    fontWeight: 500,
                                     cursor: loading ? 'not-allowed' : 'pointer',
-                                    opacity: loading ? 0.5 : 1
+                                    opacity: loading ? 0.5 : 1,
+                                    transition: 'opacity 0.15s ease'
                                 }}
                             >
                                 {loading ? 'Creating...' : 'Create User'}
@@ -597,3 +641,4 @@ const ManageUsers: React.FC = () => {
 };
 
 export default ManageUsers;
+

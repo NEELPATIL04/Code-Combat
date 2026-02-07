@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-    Clock, 
-    Trophy, 
-    Lock, 
-    ArrowRight, 
+import {
+    Clock,
+    Trophy,
+    Lock,
+    ArrowRight,
     CheckCircle2,
     Timer,
     ChevronRight

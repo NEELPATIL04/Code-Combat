@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mail, Calendar, Trophy, FileText, TrendingUp } from 'lucide-react';
 
-
 interface Contest {
     id: number;
     title: string;
@@ -50,249 +49,139 @@ const ParticipantProfile: React.FC = () => {
     }, [id]);
 
     const handleContestClick = (contestId: number) => {
-        navigate(`/admin/participants/${id}/contest/${contestId}`);
+        navigate(`/admin/participants/${id}/contest/${contestId}`, { state: { from: 'profile' } });
     };
 
     if (!participant) return (
-        <div style={{ padding: '48px', textAlign: 'center', color: 'rgba(255, 255, 255, 0.5)' }}>
-            <div style={{
-                width: '32px',
-                height: '32px',
-                border: '2px solid rgba(253, 230, 138, 0.2)',
-                borderTopColor: '#FDE68A',
-                borderRadius: '50%',
-                margin: '0 auto 16px',
-                animation: 'spin 1s linear infinite'
-            }}></div>
-            Loading...
+        <div style={{ padding: '48px', textAlign: 'center', color: '#71717a' }}>
+            <div style={{ width: '32px', height: '32px', border: '2px solid #27272a', borderTopColor: '#fafafa', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }}></div>
+            <span style={{ fontSize: '0.875rem' }}>Loading...</span>
         </div>
     );
 
     return (
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-            {/* Back Button */}
-            <button
-                onClick={() => navigate('/admin/participants')}
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '10px 18px',
-                    background: 'transparent',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '100px',
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    fontSize: '0.9rem',
-                    cursor: 'pointer',
-                    marginBottom: '24px'
-                }}
+            <button onClick={() => navigate('/admin/participants')} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', background: 'transparent', border: '1px solid #27272a', borderRadius: '6px', color: '#a1a1aa', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '24px', transition: 'all 0.15s ease' }}
+                onMouseOver={(e) => { e.currentTarget.style.background = '#18181b'; e.currentTarget.style.color = '#fafafa'; }}
+                onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#a1a1aa'; }}
             >
-                <ArrowLeft size={18} /> Back to Participants
+                <ArrowLeft size={16} /> Back to Participants
             </button>
 
-            {/* Profile Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginBottom: '32px' }}>
-                <div style={{
-                    width: '80px',
-                    height: '80px',
-                    borderRadius: '50%',
-                    background: '#FBBF24',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 600,
-                    fontSize: '2rem',
-                    color: '#000000'
-                }}>
+                <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: '1.75rem', color: '#ffffff' }}>
                     {participant.username.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                    <h1 style={{
-                        fontSize: '1.75rem',
-                        fontWeight: 600,
-                        margin: 0,
-                        marginBottom: '12px',
-                        color: '#ffffff'
-                    }}>
-                        {participant.username}
-                    </h1>
-                    <div style={{ display: 'flex', gap: '24px', color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.9rem' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Mail size={14} /> {participant.email}
-                        </span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Calendar size={14} /> Joined {participant.joinedAt}
-                        </span>
+                    <h1 style={{ fontSize: '1.875rem', fontWeight: 600, margin: 0, marginBottom: '8px', color: '#fafafa', letterSpacing: '-0.025em' }}>{participant.username}</h1>
+                    <div style={{ display: 'flex', gap: '20px', color: '#71717a', fontSize: '0.875rem' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={14} /> {participant.email}</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Calendar size={14} /> Joined {participant.joinedAt}</span>
                     </div>
                 </div>
             </div>
 
-            {/* Stats Row */}
-            <div style={{ display: 'flex', gap: '20px', marginBottom: '32px' }}>
-                <div style={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '16px',
-                    padding: '20px 24px',
-                    background: 'rgba(20, 20, 22, 0.6)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '16px'
-                }}>
-                    <Trophy size={20} style={{ color: '#FDE68A' }} />
-                    <div>
-                        <span style={{ display: 'block', fontSize: '1.5rem', fontWeight: 600, color: '#ffffff' }}>
-                            {participant.totalContests}
-                        </span>
-                        <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase' }}>
-                            Contests
-                        </span>
-                    </div>
-                </div>
-                <div style={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '16px',
-                    padding: '20px 24px',
-                    background: 'rgba(20, 20, 22, 0.6)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '16px'
-                }}>
-                    <FileText size={20} style={{ color: '#FDE68A' }} />
-                    <div>
-                        <span style={{ display: 'block', fontSize: '1.5rem', fontWeight: 600, color: '#ffffff' }}>
-                            {participant.totalSubmissions}
-                        </span>
-                        <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase' }}>
-                            Submissions
-                        </span>
-                    </div>
-                </div>
-                <div style={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '16px',
-                    padding: '20px 24px',
-                    background: 'rgba(20, 20, 22, 0.6)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '16px'
-                }}>
-                    <TrendingUp size={20} style={{ color: '#FDE68A' }} />
-                    <div>
-                        <span style={{ display: 'block', fontSize: '1.5rem', fontWeight: 600, color: '#FBBF24' }}>
-                            {participant.successRate}%
-                        </span>
-                        <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase' }}>
-                            Success Rate
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Assigned Contests Section */}
-            <div style={{
-                background: 'rgba(20, 20, 22, 0.6)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: '16px',
-                overflow: 'hidden'
-            }}>
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '20px 24px',
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
-                }}>
-                    <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 500, color: '#ffffff' }}>
-                        Assigned Contests
-                    </h2>
-                    <span style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.5)' }}>
-                        {participant.contests.length} contests
-                    </span>
-                </div>
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 1fr)',
-                    gap: '16px',
-                    padding: '20px'
-                }}>
-                    {participant.contests.map(contest => (
-                        <div
-                            key={contest.id}
-                            onClick={() => handleContestClick(contest.id)}
-                            onMouseEnter={() => setHoveredCard(contest.id)}
-                            onMouseLeave={() => setHoveredCard(null)}
-                            style={{
-                                background: hoveredCard === contest.id ? 'rgba(253, 230, 138, 0.03)' : 'rgba(255, 255, 255, 0.03)',
-                                border: hoveredCard === contest.id ? '1px solid rgba(253, 230, 138, 0.3)' : '1px solid rgba(255, 255, 255, 0.08)',
-                                borderRadius: '12px',
-                                padding: '20px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease'
-                            }}
-                        >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 500, color: '#ffffff' }}>
-                                    {contest.title}
-                                </h3>
-                                <span style={{
-                                    padding: '4px 10px',
-                                    borderRadius: '100px',
-                                    fontSize: '0.7rem',
-                                    fontWeight: 500,
-                                    textTransform: 'capitalize',
-                                    background: contest.status === 'completed' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-                                    color: contest.status === 'completed' ? '#10b981' : '#3b82f6'
-                                }}>
-                                    {contest.status}
-                                </span>
-                            </div>
-                            <div style={{ display: 'flex', gap: '24px', marginBottom: '16px' }}>
-                                <div>
-                                    <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: 600, color: '#ffffff' }}>
-                                        {contest.submissionsCount}
-                                    </span>
-                                    <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase' }}>
-                                        Submissions
-                                    </span>
-                                </div>
-                                <div>
-                                    <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: 600, color: '#ffffff' }}>
-                                        {contest.score > 0 ? contest.score : '-'}
-                                    </span>
-                                    <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase' }}>
-                                        Score
-                                    </span>
-                                </div>
-                                <div>
-                                    <span style={{ display: 'block', fontSize: '1.1rem', fontWeight: 600, color: '#ffffff' }}>
-                                        {contest.date}
-                                    </span>
-                                    <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase' }}>
-                                        Date
-                                    </span>
-                                </div>
-                            </div>
-                            <div style={{
-                                fontSize: '0.85rem',
-                                color: '#FDE68A',
-                                opacity: hoveredCard === contest.id ? 1 : 0,
-                                transition: 'opacity 0.2s ease'
-                            }}>
-                                View Submissions →
-                            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '32px' }}>
+                {[
+                    { icon: Trophy, label: 'Contests', value: participant.totalContests, color: '#fafafa' },
+                    { icon: FileText, label: 'Submissions', value: participant.totalSubmissions, color: '#fafafa' },
+                    { icon: TrendingUp, label: 'Success Rate', value: `${participant.successRate}%`, color: '#22c55e' }
+                ].map((stat, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '20px 24px', background: '#09090b', border: '1px solid #27272a', borderRadius: '12px' }}>
+                        <stat.icon size={20} style={{ color: '#71717a' }} />
+                        <div>
+                            <span style={{ display: 'block', fontSize: '1.5rem', fontWeight: 600, color: stat.color, letterSpacing: '-0.025em' }}>{stat.value}</span>
+                            <span style={{ fontSize: '0.75rem', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</span>
                         </div>
-                    ))}
-                </div>
+                    </div>
+                ))}
             </div>
 
-            <style>{`
-                @keyframes spin {
-                    to { transform: rotate(360deg); }
-                }
-            `}</style>
+            <div style={{ background: '#09090b', border: '1px solid #27272a', borderRadius: '12px', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid #27272a' }}>
+                    <h2 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: '#fafafa' }}>Assigned Contests</h2>
+                    <span style={{ fontSize: '0.75rem', color: '#71717a' }}>{participant.contests.length} contests</span>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <thead>
+                            <tr style={{ borderBottom: '1px solid #27272a', background: 'rgba(255,255,255,0.01)' }}>
+                                <th style={{ padding: '14px 24px', fontSize: '0.75rem', fontWeight: 500, color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Contest Name</th>
+                                <th style={{ padding: '14px 24px', fontSize: '0.75rem', fontWeight: 500, color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
+                                <th style={{ padding: '14px 24px', fontSize: '0.75rem', fontWeight: 500, color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Submissions</th>
+                                <th style={{ padding: '14px 24px', fontSize: '0.75rem', fontWeight: 500, color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Score</th>
+                                <th style={{ padding: '14px 24px', fontSize: '0.75rem', fontWeight: 500, color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</th>
+                                <th style={{ padding: '14px 24px', fontSize: '0.75rem', fontWeight: 500, color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {participant.contests.map((contest, index) => (
+                                <tr
+                                    key={contest.id}
+                                    onMouseEnter={() => setHoveredCard(contest.id)}
+                                    onMouseLeave={() => setHoveredCard(null)}
+                                    style={{
+                                        borderBottom: index === participant.contests.length - 1 ? 'none' : '1px solid #18181b',
+                                        background: hoveredCard === contest.id ? 'rgba(255,255,255,0.02)' : 'transparent',
+                                        transition: 'background 0.2s ease'
+                                    }}
+                                >
+                                    <td style={{ padding: '16px 24px' }}>
+                                        <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#fafafa' }}>{contest.title}</div>
+                                    </td>
+                                    <td style={{ padding: '16px 24px' }}>
+                                        <span style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            padding: '4px 10px',
+                                            borderRadius: '9999px',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 500,
+                                            background: contest.status === 'completed' ? 'rgba(34,197,94,0.1)' : 'rgba(59,130,246,0.1)',
+                                            color: contest.status === 'completed' ? '#22c55e' : '#3b82f6',
+                                            border: `1px solid ${contest.status === 'completed' ? 'rgba(34,197,94,0.2)' : 'rgba(59,130,246,0.2)'}`
+                                        }}>
+                                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: contest.status === 'completed' ? '#22c55e' : '#3b82f6' }}></span>
+                                            {contest.status}
+                                        </span>
+                                    </td>
+                                    <td style={{ padding: '16px 24px' }}>
+                                        <div style={{ fontSize: '0.875rem', color: '#a1a1aa' }}>{contest.submissionsCount}</div>
+                                    </td>
+                                    <td style={{ padding: '16px 24px' }}>
+                                        <div style={{ fontSize: '0.875rem', fontWeight: 600, color: contest.score > 0 ? '#fafafa' : '#71717a' }}>{contest.score > 0 ? `${contest.score} pts` : '-'}</div>
+                                    </td>
+                                    <td style={{ padding: '16px 24px' }}>
+                                        <div style={{ fontSize: '0.875rem', color: '#71717a' }}>{contest.date}</div>
+                                    </td>
+                                    <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                                        <button
+                                            onClick={() => handleContestClick(contest.id)}
+                                            style={{
+                                                fontSize: '0.75rem',
+                                                fontWeight: 500,
+                                                color: '#3b82f6',
+                                                background: 'transparent',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                padding: '4px 8px',
+                                                borderRadius: '4px',
+                                                transition: 'all 0.2s'
+                                            }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                        >
+                                            View Submissions →
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
     );
 };
