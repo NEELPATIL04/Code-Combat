@@ -105,7 +105,7 @@ const ProfilePage: React.FC = () => {
                 <div style={{
                     width: '80px',
                     height: '80px',
-                    borderRadius: '12px',
+                    borderRadius: '50%',
                     background: 'linear-gradient(135deg, #FDE68A 0%, #F59E0B 100%)',
                     display: 'flex',
                     alignItems: 'center',
@@ -215,15 +215,25 @@ const ProfilePage: React.FC = () => {
                         e.currentTarget.style.transform = 'translateY(0)';
                     }}
                 >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                        <h3 style={{
-                            fontSize: '0.85rem',
-                            fontWeight: 600,
-                            textTransform: 'uppercase',
-                            color: 'rgba(255, 255, 255, 0.6)',
-                            letterSpacing: '0.05em',
-                            margin: 0
-                        }}>Contests Participated</h3>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
+                        <div>
+                            <h3 style={{
+                                fontSize: '0.85rem',
+                                fontWeight: 600,
+                                textTransform: 'uppercase',
+                                color: 'rgba(255, 255, 255, 0.6)',
+                                letterSpacing: '0.05em',
+                                margin: '0 0 4px'
+                            }}>Contests</h3>
+                            <h3 style={{
+                                fontSize: '0.85rem',
+                                fontWeight: 600,
+                                textTransform: 'uppercase',
+                                color: 'rgba(255, 255, 255, 0.6)',
+                                letterSpacing: '0.05em',
+                                margin: 0
+                            }}>Participated</h3>
+                        </div>
                         <div style={{
                             width: '36px',
                             height: '36px',
@@ -375,11 +385,15 @@ const ProfilePage: React.FC = () => {
                 <div>
                     {history.length === 0 ? (
                         <div style={{
-                            padding: '60px 24px',
+                            padding: '80px 24px',
                             textAlign: 'center',
-                            color: 'rgba(255, 255, 255, 0.4)'
+                            color: 'rgba(255, 255, 255, 0.4)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center'
                         }}>
-                            <Trophy size={48} style={{ marginBottom: '16px', color: '#FDE68A', opacity: 0.3 }} />
+                            <Trophy size={48} style={{ marginBottom: '24px', color: '#FDE68A', opacity: 0.3 }} />
                             <p style={{ fontSize: '0.95rem', margin: '0 0 8px', fontWeight: 500 }}>
                                 No contests participated yet
                             </p>

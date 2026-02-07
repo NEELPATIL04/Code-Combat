@@ -7,8 +7,7 @@ import {
     ArrowRight,
     Timer,
     ChevronRight,
-    Calendar,
-    Filter
+    Calendar
 } from 'lucide-react';
 import { contestAPI } from '../../utils/api';
 
@@ -352,7 +351,6 @@ const ParticipantDashboard: React.FC = () => {
                         borderRadius: '8px',
                         padding: '4px 6px'
                     }}>
-                        <Filter size={14} style={{ color: '#FDE68A', marginLeft: '6px' }} />
                         <button
                             onClick={() => setActiveFilter('live')}
                             style={{
@@ -446,10 +444,14 @@ const ParticipantDashboard: React.FC = () => {
                     {filteredContests.length === 0 ? (
                         <div style={{
                             textAlign: 'center',
-                            padding: '40px 20px',
-                            color: 'rgba(255, 255, 255, 0.4)'
+                            padding: '60px 20px',
+                            color: 'rgba(255, 255, 255, 0.4)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center'
                         }}>
-                            <Trophy size={40} style={{ marginBottom: '12px', color: '#FDE68A', opacity: 0.5 }} />
+                            <Trophy size={40} style={{ marginBottom: '24px', color: '#FDE68A', opacity: 0.5 }} />
                             <p style={{ margin: '0 0 8px', fontSize: '0.9rem', fontWeight: 500 }}>
                                 No {activeFilter === 'live' ? 'live' : activeFilter === 'completed' ? 'completed' : 'expired'} contests
                             </p>
