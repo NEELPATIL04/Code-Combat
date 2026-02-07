@@ -367,5 +367,19 @@ export const adminAPI = {
       headers: getAuthHeaders(),
     });
     return handleResponse(response);
+  },
+
+  getDashboardStats: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/dashboard`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  getParticipantProfile: async (id: number) => {
+    const response = await fetch(`${API_BASE_URL}/admin/participants/${id}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
   }
 };
