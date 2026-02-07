@@ -446,9 +446,11 @@ const ManageUsers: React.FC = () => {
                             border: '1px solid #27272a',
                             borderRadius: '12px',
                             width: '90%',
-                            maxWidth: '500px',
+                            maxWidth: '600px',
                             maxHeight: '85vh',
-                            overflowY: 'auto'
+                            display: 'flex',
+                            flexDirection: 'column',
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
                         }}
                     >
                         {/* Modal Header */}
@@ -459,120 +461,126 @@ const ManageUsers: React.FC = () => {
                             padding: '20px 24px',
                             borderBottom: '1px solid #27272a'
                         }}>
-                            <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#fafafa' }}>
+                            <h2 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600, color: '#fafafa' }}>
                                 Create New User
                             </h2>
                             <button
                                 onClick={closeModal}
-                                style={{
-                                    width: '32px',
-                                    height: '32px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    background: 'transparent',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    color: '#71717a',
-                                    cursor: 'pointer'
-                                }}
+                                className="icon-btn"
                             >
-                                <X size={18} />
+                                <X size={20} />
                             </button>
                         </div>
 
                         {/* Modal Body */}
-                        <div style={{ padding: '24px' }}>
-                            {/* Username */}
-                            <div style={{ marginBottom: '20px' }}>
-                                <label style={labelStyle}>Username *</label>
-                                <input
-                                    name="username"
-                                    value={formData.username}
-                                    onChange={handleChange}
-                                    placeholder="Enter username..."
-                                    required
-                                    style={inputStyle}
-                                />
-                            </div>
-
-                            {/* First & Last Name */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-                                <div>
-                                    <label style={labelStyle}>First Name</label>
+                        <div style={{ padding: '24px', overflowY: 'auto' }}>
+                            <div className="form-grid">
+                                {/* First Name */}
+                                <div className="form-group">
+                                    <label className="form-label">First Name</label>
                                     <input
                                         name="firstName"
                                         value={formData.firstName}
                                         onChange={handleChange}
-                                        placeholder="First name..."
-                                        style={inputStyle}
+                                        placeholder="First name"
+                                        className="form-input"
                                     />
                                 </div>
-                                <div>
-                                    <label style={labelStyle}>Last Name</label>
+
+                                {/* Last Name */}
+                                <div className="form-group">
+                                    <label className="form-label">Last Name</label>
                                     <input
                                         name="lastName"
                                         value={formData.lastName}
                                         onChange={handleChange}
-                                        placeholder="Last name..."
-                                        style={inputStyle}
+                                        placeholder="Last name"
+                                        className="form-input"
                                     />
                                 </div>
-                            </div>
 
-                            {/* Email */}
-                            <div style={{ marginBottom: '20px' }}>
-                                <label style={labelStyle}>Email *</label>
-                                <input
-                                    name="email"
-                                    type="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    placeholder="Enter email..."
-                                    required
-                                    style={inputStyle}
-                                />
-                            </div>
+                                {/* Username */}
+                                <div className="form-group">
+                                    <label className="form-label">Username *</label>
+                                    <input
+                                        name="username"
+                                        value={formData.username}
+                                        onChange={handleChange}
+                                        placeholder="Username"
+                                        required
+                                        className="form-input"
+                                    />
+                                </div>
 
-                            {/* Password */}
-                            <div style={{ marginBottom: '20px' }}>
-                                <label style={labelStyle}>Password *</label>
-                                <input
-                                    name="password"
-                                    type="password"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    placeholder="Enter password..."
-                                    required
-                                    style={inputStyle}
-                                />
-                            </div>
+                                {/* Role */}
+                                <div className="form-group">
+                                    <label className="form-label">Role</label>
+                                    <div style={{ position: 'relative' }}>
+                                        <select
+                                            name="role"
+                                            value={formData.role}
+                                            onChange={handleChange}
+                                            className="form-input"
+                                            style={{ appearance: 'none', cursor: 'pointer' }}
+                                        >
+                                            <option value="player">Player</option>
+                                            <option value="admin">Admin</option>
+                                            <option value="super_admin">Super Admin</option>
+                                        </select>
+                                        <div style={{
+                                            position: 'absolute',
+                                            right: '12px',
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            pointerEvents: 'none',
+                                            color: '#71717a'
+                                        }}>
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="m6 9 6 6 6-6" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
 
-                            {/* Company/School */}
-                            <div style={{ marginBottom: '20px' }}>
-                                <label style={labelStyle}>Company / School Name</label>
-                                <input
-                                    name="companySchool"
-                                    value={formData.companySchool}
-                                    onChange={handleChange}
-                                    placeholder="Company or school name..."
-                                    style={inputStyle}
-                                />
-                            </div>
+                                {/* Email */}
+                                <div className="form-group full-width">
+                                    <label className="form-label">Email *</label>
+                                    <input
+                                        name="email"
+                                        type="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        placeholder="user@example.com"
+                                        required
+                                        className="form-input"
+                                    />
+                                </div>
 
-                            {/* Role */}
-                            <div style={{ marginBottom: '20px' }}>
-                                <label style={labelStyle}>Role</label>
-                                <select
-                                    name="role"
-                                    value={formData.role}
-                                    onChange={handleChange}
-                                    style={inputStyle}
-                                >
-                                    <option value="player">Player</option>
-                                    <option value="admin">Admin</option>
-                                    <option value="super_admin">Super Admin</option>
-                                </select>
+                                {/* Password */}
+                                <div className="form-group full-width">
+                                    <label className="form-label">Password *</label>
+                                    <input
+                                        name="password"
+                                        type="password"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        placeholder="••••••••"
+                                        required
+                                        className="form-input font-mono"
+                                    />
+                                </div>
+
+                                {/* Company/School */}
+                                <div className="form-group full-width">
+                                    <label className="form-label">Company / School Name</label>
+                                    <input
+                                        name="companySchool"
+                                        value={formData.companySchool}
+                                        onChange={handleChange}
+                                        placeholder="e.g. Acme Corp"
+                                        className="form-input"
+                                    />
+                                </div>
                             </div>
                         </div>
 
@@ -582,47 +590,20 @@ const ManageUsers: React.FC = () => {
                             justifyContent: 'flex-end',
                             gap: '12px',
                             padding: '20px 24px',
-                            borderTop: '1px solid #27272a'
+                            borderTop: '1px solid #27272a',
+                            background: '#09090b',
+                            borderRadius: '0 0 12px 12px'
                         }}>
                             <button
                                 onClick={closeModal}
-                                style={{
-                                    padding: '10px 20px',
-                                    background: 'transparent',
-                                    border: '1px solid #27272a',
-                                    borderRadius: '6px',
-                                    color: '#a1a1aa',
-                                    fontSize: '0.875rem',
-                                    fontWeight: 500,
-                                    cursor: 'pointer',
-                                    transition: 'all 0.15s ease'
-                                }}
-                                onMouseOver={(e) => {
-                                    e.currentTarget.style.background = '#18181b';
-                                    e.currentTarget.style.color = '#fafafa';
-                                }}
-                                onMouseOut={(e) => {
-                                    e.currentTarget.style.background = 'transparent';
-                                    e.currentTarget.style.color = '#a1a1aa';
-                                }}
+                                className="btn btn-secondary"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleCreateUser}
                                 disabled={loading}
-                                style={{
-                                    padding: '10px 24px',
-                                    background: '#fafafa',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    color: '#09090b',
-                                    fontSize: '0.875rem',
-                                    fontWeight: 500,
-                                    cursor: loading ? 'not-allowed' : 'pointer',
-                                    opacity: loading ? 0.5 : 1,
-                                    transition: 'opacity 0.15s ease'
-                                }}
+                                className="btn btn-primary"
                             >
                                 {loading ? 'Creating...' : 'Create User'}
                             </button>
@@ -630,6 +611,114 @@ const ManageUsers: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            <style>{`
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+
+                .form-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 20px;
+                }
+
+                .form-group {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                }
+
+                .full-width {
+                    grid-column: span 2;
+                }
+
+                .form-label {
+                    color: #a1a1aa;
+                    font-size: 0.875rem;
+                    font-weight: 500;
+                }
+
+                .form-input {
+                    width: 100%;
+                    padding: 10px 14px;
+                    background: #09090b;
+                    border: 1px solid #27272a;
+                    border-radius: 8px;
+                    color: #fafafa;
+                    font-size: 0.875rem;
+                    outline: none;
+                    transition: all 0.2s ease;
+                }
+
+                .form-input:focus {
+                    border-color: #3b82f6;
+                    box-shadow: 0 0 0 1px #3b82f6;
+                }
+
+                .form-input::placeholder {
+                    color: #52525b;
+                }
+
+                .form-input.font-mono {
+                    font-family: monospace;
+                }
+
+                .btn {
+                    padding: 10px 20px;
+                    border-radius: 6px;
+                    font-size: 0.875rem;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+
+                .btn:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                }
+
+                .btn-secondary {
+                    background: transparent;
+                    border: 1px solid #27272a;
+                    color: #a1a1aa;
+                }
+
+                .btn-secondary:hover {
+                    background: #18181b;
+                    color: #fafafa;
+                }
+
+                .btn-primary {
+                    background: #fafafa;
+                    border: none;
+                    color: #09090b;
+                }
+
+                .btn-primary:hover:not(:disabled) {
+                    background: #ffffff;
+                    opacity: 0.9;
+                }
+
+                .icon-btn {
+                    width: 32px;
+                    height: 32px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: transparent;
+                    border: none;
+                    border-radius: 6px;
+                    color: #71717a;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+
+                .icon-btn:hover {
+                    background: rgba(255, 255, 255, 0.05);
+                    color: #fafafa;
+                }
+            `}</style>
 
             <style>{`
                 @keyframes spin {

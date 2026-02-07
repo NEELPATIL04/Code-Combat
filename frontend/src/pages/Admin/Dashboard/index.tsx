@@ -202,7 +202,9 @@ const Dashboard: React.FC = () => {
                     border: '1px solid #27272a',
                     borderRadius: '12px',
                     overflow: 'hidden',
-                    height: 'fit-content'
+                    height: 'fit-content',
+                    display: 'flex',
+                    flexDirection: 'column'
                 }}>
                     {/* Section Header */}
                     <div style={{
@@ -210,7 +212,8 @@ const Dashboard: React.FC = () => {
                         borderBottom: '1px solid #27272a',
                         display: 'flex',
                         justifyContent: 'space-between',
-                        alignItems: 'center'
+                        alignItems: 'center',
+                        minHeight: '78px'
                     }}>
                         <h2 style={{
                             margin: 0,
@@ -241,83 +244,96 @@ const Dashboard: React.FC = () => {
                         </button>
                     </div>
 
-                    {/* Table Header */}
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: '2fr 1fr 1fr',
-                        gap: '16px',
-                        padding: '12px 24px',
-                        background: '#0a0a0b',
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                        color: '#71717a',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em'
-                    }}>
-                        <span>Contest</span>
-                        <span>Status</span>
-                        <span>Participants</span>
-                    </div>
-
-                    {/* Table Rows */}
-                    {recentContests.map((contest, index) => (
-                        <div
-                            key={contest.id}
-                            style={{
+                    {recentContests.length > 0 ? (
+                        <>
+                            {/* Table Header */}
+                            <div style={{
                                 display: 'grid',
                                 gridTemplateColumns: '2fr 1fr 1fr',
                                 gap: '16px',
-                                padding: '16px 24px',
-                                borderTop: index === 0 ? 'none' : '1px solid #27272a',
-                                alignItems: 'center',
-                                transition: 'background 0.2s ease'
-                            }}
-                            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'}
-                            onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
-                        >
-                            <span style={{
+                                padding: '12px 24px',
+                                background: '#0a0a0b',
+                                fontSize: '0.75rem',
                                 fontWeight: 500,
-                                fontSize: '0.875rem',
-                                color: '#fafafa'
+                                color: '#71717a',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em'
                             }}>
-                                {contest.title}
-                            </span>
-                            <span>
-                                <span style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '6px',
-                                    fontSize: '0.75rem',
-                                    padding: '4px 10px',
-                                    borderRadius: '9999px',
-                                    textTransform: 'capitalize',
-                                    fontWeight: 500,
-                                    width: '85px',
-                                    background: contest.status === 'active'
-                                        ? 'rgba(34, 197, 94, 0.15)'
-                                        : 'rgba(250, 204, 21, 0.15)',
-                                    color: contest.status === 'active'
-                                        ? '#22c55e'
-                                        : '#facc15'
-                                }}>
+                                <span>Contest</span>
+                                <span>Status</span>
+                                <span>Participants</span>
+                            </div>
+
+                            {/* Table Rows */}
+                            {recentContests.map((contest, index) => (
+                                <div
+                                    key={contest.id}
+                                    style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '2fr 1fr 1fr',
+                                        gap: '16px',
+                                        padding: '16px 24px',
+                                        borderTop: index === 0 ? 'none' : '1px solid #27272a',
+                                        alignItems: 'center',
+                                        transition: 'background 0.2s ease'
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'}
+                                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                                >
                                     <span style={{
-                                        width: '6px',
-                                        height: '6px',
-                                        borderRadius: '50%',
-                                        background: contest.status === 'active' ? '#22c55e' : '#facc15'
-                                    }}></span>
-                                    {contest.status === 'active' ? 'Active' : 'Upcoming'}
-                                </span>
-                            </span>
-                            <span style={{
-                                color: '#a1a1aa',
-                                fontSize: '0.875rem'
-                            }}>
-                                {contest.participants}
-                            </span>
+                                        fontWeight: 500,
+                                        fontSize: '0.875rem',
+                                        color: '#fafafa'
+                                    }}>
+                                        {contest.title}
+                                    </span>
+                                    <span>
+                                        <span style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '6px',
+                                            fontSize: '0.75rem',
+                                            padding: '4px 10px',
+                                            borderRadius: '9999px',
+                                            textTransform: 'capitalize',
+                                            fontWeight: 500,
+                                            width: '85px',
+                                            background: contest.status === 'active'
+                                                ? 'rgba(34, 197, 94, 0.15)'
+                                                : 'rgba(250, 204, 21, 0.15)',
+                                            color: contest.status === 'active'
+                                                ? '#22c55e'
+                                                : '#facc15'
+                                        }}>
+                                            <span style={{
+                                                width: '6px',
+                                                height: '6px',
+                                                borderRadius: '50%',
+                                                background: contest.status === 'active' ? '#22c55e' : '#facc15'
+                                            }}></span>
+                                            {contest.status === 'active' ? 'Active' : 'Upcoming'}
+                                        </span>
+                                    </span>
+                                    <span style={{
+                                        color: '#a1a1aa',
+                                        fontSize: '0.875rem'
+                                    }}>
+                                        {contest.participants}
+                                    </span>
+                                </div>
+                            ))}
+                        </>
+                    ) : (
+                        <div style={{
+                            padding: '40px 24px',
+                            textAlign: 'center',
+                            color: '#71717a',
+                            fontSize: '0.875rem'
+                        }}>
+                            No recent contests available
                         </div>
-                    ))}
+                    )}
                 </div>
 
                 {/* Recent Users Section */}
@@ -326,14 +342,17 @@ const Dashboard: React.FC = () => {
                     border: '1px solid #27272a',
                     borderRadius: '12px',
                     overflow: 'hidden',
-                    height: 'fit-content'
+                    height: 'fit-content',
+                    display: 'flex',
+                    flexDirection: 'column'
                 }}>
                     <div style={{
                         padding: '20px 24px',
                         borderBottom: '1px solid #27272a',
                         display: 'flex',
                         justifyContent: 'space-between',
-                        alignItems: 'center'
+                        alignItems: 'center',
+                        minHeight: '78px'
                     }}>
                         <h2 style={{
                             margin: 0,
@@ -350,64 +369,75 @@ const Dashboard: React.FC = () => {
                         display: 'flex',
                         flexDirection: 'column'
                     }}>
-                        {recentUsers.map((user, index) => (
-                            <div
-                                key={user.id}
-                                style={{
-                                    padding: '16px 24px',
-                                    borderTop: index === 0 ? 'none' : '1px solid #27272a',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '12px',
-                                    transition: 'background 0.2s ease'
-                                }}
-                                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'}
-                                onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
-                            >
-                                <div style={{
-                                    width: '32px',
-                                    height: '32px',
-                                    borderRadius: '50%',
-                                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: '#fff',
-                                    fontSize: '0.875rem',
-                                    fontWeight: 600
-                                }}>
-                                    {user.username.charAt(0).toUpperCase()}
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                    <span style={{
-                                        color: '#fafafa',
+                        {recentUsers.length > 0 ? (
+                            recentUsers.map((user, index) => (
+                                <div
+                                    key={user.id}
+                                    style={{
+                                        padding: '16px 24px',
+                                        borderTop: index === 0 ? 'none' : '1px solid #27272a',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                        transition: 'background 0.2s ease'
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'}
+                                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                                >
+                                    <div style={{
+                                        width: '32px',
+                                        height: '32px',
+                                        borderRadius: '50%',
+                                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#fff',
                                         fontSize: '0.875rem',
-                                        fontWeight: 500
-                                    }}>
-                                        {user.username}
-                                    </span>
-                                    <span style={{
-                                        color: '#71717a',
-                                        fontSize: '0.75rem'
-                                    }}>
-                                        {user.email}
-                                    </span>
-                                </div>
-                                <div style={{ marginLeft: 'auto' }}>
-                                    <span style={{
-                                        fontSize: '0.7rem',
-                                        color: '#52525b',
-                                        background: '#27272a',
-                                        padding: '2px 8px',
-                                        borderRadius: '4px',
-                                        textTransform: 'uppercase',
                                         fontWeight: 600
                                     }}>
-                                        {user.role}
-                                    </span>
+                                        {user.username.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                        <span style={{
+                                            color: '#fafafa',
+                                            fontSize: '0.875rem',
+                                            fontWeight: 500
+                                        }}>
+                                            {user.username}
+                                        </span>
+                                        <span style={{
+                                            color: '#71717a',
+                                            fontSize: '0.75rem'
+                                        }}>
+                                            {user.email}
+                                        </span>
+                                    </div>
+                                    <div style={{ marginLeft: 'auto' }}>
+                                        <span style={{
+                                            fontSize: '0.7rem',
+                                            color: '#52525b',
+                                            background: '#27272a',
+                                            padding: '2px 8px',
+                                            borderRadius: '4px',
+                                            textTransform: 'uppercase',
+                                            fontWeight: 600
+                                        }}>
+                                            {user.role}
+                                        </span>
+                                    </div>
                                 </div>
+                            ))
+                        ) : (
+                            <div style={{
+                                padding: '40px 24px',
+                                textAlign: 'center',
+                                color: '#71717a',
+                                fontSize: '0.875rem'
+                            }}>
+                                No recent users active
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
             </div>

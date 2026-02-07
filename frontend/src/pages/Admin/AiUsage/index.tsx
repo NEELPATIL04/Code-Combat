@@ -42,40 +42,95 @@ const AiUsagePage: React.FC = () => {
     }
 
     return (
-        <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                <Bot className="text-purple-400" />
-                AI Usage Tracking
-            </h1>
+        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+            {/* Page Header */}
+            <header style={{ marginBottom: '32px' }}>
+                <h1 style={{
+                    fontSize: '1.875rem',
+                    fontWeight: 600,
+                    margin: 0,
+                    color: '#fafafa',
+                    letterSpacing: '-0.025em',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px'
+                }}>
+                    <Bot color="#a1a1aa" size={32} />
+                    AI Usage Tracking
+                </h1>
+                <p style={{
+                    margin: '4px 0 0 0',
+                    fontSize: '0.875rem',
+                    color: '#a1a1aa'
+                }}>
+                    Monitor AI token usage and activity
+                </p>
+            </header>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-[#1e1e24] border border-white/5 p-4 rounded-xl">
-                    <div className="flex justify-between items-start mb-2">
-                        <div className="p-2 bg-blue-500/10 rounded-lg">
-                            <Activity size={20} className="text-blue-400" />
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: '16px',
+                marginBottom: '32px'
+            }}>
+                {/* Total Requests */}
+                <div style={{
+                    background: '#09090b',
+                    border: '1px solid #27272a',
+                    borderRadius: '12px',
+                    padding: '20px 24px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#a1a1aa' }}>Total Requests</span>
+                        <div style={{ padding: '8px', background: '#27272a', borderRadius: '8px' }}>
+                            <Activity size={16} color="#a1a1aa" />
                         </div>
-                        <span className="text-xs font-mono text-gray-500">TOTAL REQUESTS</span>
                     </div>
-                    <div className="text-2xl font-bold text-white">{stats?.totalRequests || 0}</div>
+                    <div style={{ fontSize: '2rem', fontWeight: 700, color: '#fafafa', lineHeight: 1, letterSpacing: '-0.025em' }}>
+                        {stats?.totalRequests || 0}
+                    </div>
                 </div>
 
-                <div className="bg-[#1e1e24] border border-white/5 p-4 rounded-xl">
-                    <div className="flex justify-between items-start mb-2">
-                        <div className="p-2 bg-purple-500/10 rounded-lg">
-                            <Zap size={20} className="text-purple-400" />
+                {/* Tokens Used */}
+                <div style={{
+                    background: '#09090b',
+                    border: '1px solid #27272a',
+                    borderRadius: '12px',
+                    padding: '20px 24px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#a1a1aa' }}>Tokens Used</span>
+                        <div style={{ padding: '8px', background: '#27272a', borderRadius: '8px' }}>
+                            <Zap size={16} color="#a1a1aa" />
                         </div>
-                        <span className="text-xs font-mono text-gray-500">TOKENS USED</span>
                     </div>
-                    <div className="text-2xl font-bold text-white">{(stats?.totalTokens || 0).toLocaleString()}</div>
+                    <div style={{ fontSize: '2rem', fontWeight: 700, color: '#fafafa', lineHeight: 1, letterSpacing: '-0.025em' }}>
+                        {(stats?.totalTokens || 0).toLocaleString()}
+                    </div>
                 </div>
 
-                <div className="bg-[#1e1e24] border border-white/5 p-4 rounded-xl">
-                    <div className="flex justify-between items-start mb-2">
-                        <div className="p-2 bg-green-500/10 rounded-lg">
-                            <Server size={20} className="text-green-400" />
+                {/* By Provider */}
+                <div style={{
+                    background: '#09090b',
+                    border: '1px solid #27272a',
+                    borderRadius: '12px',
+                    padding: '20px 24px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#a1a1aa' }}>By Provider</span>
+                        <div style={{ padding: '8px', background: '#27272a', borderRadius: '8px' }}>
+                            <Server size={16} color="#a1a1aa" />
                         </div>
-                        <span className="text-xs font-mono text-gray-500">BY PROVIDER</span>
                     </div>
                     <div className="flex flex-col gap-1">
                         <div className="flex justify-between text-sm">
@@ -89,12 +144,21 @@ const AiUsagePage: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="bg-[#1e1e24] border border-white/5 p-4 rounded-xl">
-                    <div className="flex justify-between items-start mb-2">
-                        <div className="p-2 bg-orange-500/10 rounded-lg">
-                            <Filter size={20} className="text-orange-400" />
+                {/* By Purpose */}
+                <div style={{
+                    background: '#09090b',
+                    border: '1px solid #27272a',
+                    borderRadius: '12px',
+                    padding: '20px 24px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#a1a1aa' }}>By Purpose</span>
+                        <div style={{ padding: '8px', background: '#27272a', borderRadius: '8px' }}>
+                            <Filter size={16} color="#a1a1aa" />
                         </div>
-                        <span className="text-xs font-mono text-gray-500">BY PURPOSE</span>
                     </div>
                     <div className="flex flex-col gap-1">
                         <div className="flex justify-between text-sm">
@@ -110,21 +174,39 @@ const AiUsagePage: React.FC = () => {
             </div>
 
             {/* Usage Logs Table */}
-            <div className="bg-[#1e1e24] border border-white/5 rounded-xl overflow-hidden">
-                <div className="p-4 border-b border-white/5 flex justify-between items-center">
-                    <h3 className="font-semibold text-white">Recent Activity</h3>
+            <div style={{
+                background: '#09090b',
+                border: '1px solid #27272a',
+                borderRadius: '12px',
+                overflow: 'hidden'
+            }}>
+                <div style={{
+                    padding: '20px 24px',
+                    borderBottom: '1px solid #27272a',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }}>
+                    <h3 style={{
+                        margin: 0,
+                        fontSize: '1.125rem',
+                        fontWeight: 600,
+                        color: '#fafafa',
+                        letterSpacing: '-0.025em'
+                    }}>Recent Activity</h3>
                     <div className="flex gap-2">
                         <button
                             disabled={page === 1}
                             onClick={() => setPage(p => p - 1)}
-                            className="px-3 py-1 bg-white/5 hover:bg-white/10 rounded text-sm disabled:opacity-50"
+                            className="px-3 py-1 bg-white/5 hover:bg-white/10 rounded text-sm disabled:opacity-50 text-white transition-colors"
                         >
                             Prev
                         </button>
                         <span className="text-gray-400 text-sm py-1">Page {page}</span>
                         <button
+                            disabled={page >= totalPages}
                             onClick={() => setPage(p => p + 1)}
-                            className="px-3 py-1 bg-white/5 hover:bg-white/10 rounded text-sm"
+                            className="px-3 py-1 bg-white/5 hover:bg-white/10 rounded text-sm disabled:opacity-50 text-white transition-colors"
                         >
                             Next
                         </button>
@@ -132,54 +214,74 @@ const AiUsagePage: React.FC = () => {
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full text-nowrap">
-                        <thead className="bg-white/5 text-gray-400 text-xs font-mono uppercase">
-                            <tr>
-                                <th className="px-6 py-3 text-left">Timestamp</th>
-                                <th className="px-6 py-3 text-left">User</th>
-                                <th className="px-6 py-3 text-left">Provider</th>
-                                <th className="px-6 py-3 text-left">Model</th>
-                                <th className="px-6 py-3 text-left">Purpose</th>
-                                <th className="px-6 py-3 text-right">Tokens</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {logs.map((log: any) => (
-                                <tr key={log.id} className="hover:bg-white/[0.02]">
-                                    <td className="px-6 py-3 text-sm text-gray-400">
-                                        {new Date(log.timestamp).toLocaleString()}
-                                    </td>
-                                    <td className="px-6 py-3 text-sm text-white">
-                                        {log.username || 'Unknown'}
-                                    </td>
-                                    <td className="px-6 py-3 text-sm">
-                                        <span className={`px-2 py-0.5 rounded text-xs font-medium border ${log.provider === 'groq'
-                                            ? 'bg-orange-500/10 text-orange-400 border-orange-500/20'
-                                            : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                                            }`}>
-                                            {log.provider}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-3 text-sm text-gray-300 font-mono text-xs">
-                                        {log.model}
-                                    </td>
-                                    <td className="px-6 py-3 text-sm text-gray-300">
-                                        {log.purpose}
-                                    </td>
-                                    <td className="px-6 py-3 text-sm text-white font-mono text-right">
-                                        {log.tokensUsed}
-                                    </td>
-                                </tr>
-                            ))}
-                            {logs.length === 0 && (
-                                <tr>
-                                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                                        No recent activity
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                    {/* Grid Header */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'minmax(180px, 1fr) minmax(150px, 1fr) minmax(120px, 1fr) minmax(200px, 2fr) minmax(150px, 1fr) minmax(100px, 1fr)',
+                        gap: '16px',
+                        padding: '12px 24px',
+                        background: '#0a0a0b',
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        color: '#71717a',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                    }}>
+                        <span>Timestamp</span>
+                        <span>User</span>
+                        <span>Provider</span>
+                        <span>Model</span>
+                        <span>Purpose</span>
+                        <span style={{ textAlign: 'right' }}>Tokens</span>
+                    </div>
+
+                    {/* Grid Body */}
+                    <div className="divide-y divide-white/5">
+                        {logs.map((log: any) => (
+                            <div
+                                key={log.id}
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'minmax(180px, 1fr) minmax(150px, 1fr) minmax(120px, 1fr) minmax(200px, 2fr) minmax(150px, 1fr) minmax(100px, 1fr)',
+                                    gap: '16px',
+                                    padding: '16px 24px',
+                                    alignItems: 'center',
+                                    borderTop: '1px solid #27272a',
+                                    fontSize: '0.875rem'
+                                }}
+                                className="hover:bg-white/[0.02] transition-colors"
+                            >
+                                <span className="text-gray-400">
+                                    {new Date(log.timestamp).toLocaleString()}
+                                </span>
+                                <span className="text-white font-medium">
+                                    {log.username || 'Unknown'}
+                                </span>
+                                <span>
+                                    <span className={`px-2 py-0.5 rounded text-xs font-medium border ${log.provider === 'groq'
+                                        ? 'bg-orange-500/10 text-orange-400 border-orange-500/20'
+                                        : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                        }`}>
+                                        {log.provider}
+                                    </span>
+                                </span>
+                                <span className="text-gray-300 font-mono text-xs">
+                                    {log.model}
+                                </span>
+                                <span className="text-gray-300">
+                                    {log.purpose}
+                                </span>
+                                <span className="text-white font-mono text-right">
+                                    {log.tokensUsed}
+                                </span>
+                            </div>
+                        ))}
+                        {logs.length === 0 && (
+                            <div className="px-6 py-8 text-center text-gray-500 border-t border-white/5">
+                                No recent activity
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

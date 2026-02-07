@@ -12,8 +12,8 @@ interface TaskFormProps {
     readOnly?: boolean;
 }
 
-const labelStyle = { display: 'block', marginBottom: '8px', color: '#a1a1aa', fontSize: '0.8rem', fontWeight: 500 };
-const inputStyle = { width: '100%', padding: '10px 12px', background: '#09090b', border: '1px solid #27272a', borderRadius: '6px', color: '#fafafa', fontSize: '0.875rem', outline: 'none' };
+const labelStyle = { display: 'block', marginBottom: '8px', color: '#fafafa', fontSize: '1.05rem', fontWeight: 500 };
+const inputStyle = { width: '100%', padding: '14px 16px', background: '#09090b', border: '1px solid #27272a', borderRadius: '6px', color: '#fafafa', fontSize: '1.05rem', outline: 'none' };
 
 const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, isEditing }) => {
     const [showHTMLModal, setShowHTMLModal] = useState(false);
@@ -69,9 +69,9 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, is
 
             <div style={{ marginBottom: '16px' }}>
                 <label style={labelStyle}>Allowed Languages</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                     {SUPPORTED_LANGUAGES.map(lang => (
-                        <button key={lang.id} type="button" onClick={() => toggleLanguage(lang.id)} style={{ padding: '5px 10px', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 500, cursor: 'pointer', border: taskInput.allowedLanguages.includes(lang.id) ? '1px solid #fafafa' : '1px solid #27272a', background: taskInput.allowedLanguages.includes(lang.id) ? 'rgba(250,250,250,0.1)' : 'transparent', color: taskInput.allowedLanguages.includes(lang.id) ? '#fafafa' : '#71717a' }}>{lang.name}</button>
+                        <button key={lang.id} type="button" onClick={() => toggleLanguage(lang.id)} style={{ padding: '8px 16px', borderRadius: '9999px', fontSize: '0.9rem', fontWeight: 500, cursor: 'pointer', border: taskInput.allowedLanguages.includes(lang.id) ? '1px solid #fafafa' : '1px solid #27272a', background: taskInput.allowedLanguages.includes(lang.id) ? 'rgba(250,250,250,0.1)' : 'transparent', color: taskInput.allowedLanguages.includes(lang.id) ? '#fafafa' : '#71717a' }}>{lang.name}</button>
                     ))}
                 </div>
             </div>

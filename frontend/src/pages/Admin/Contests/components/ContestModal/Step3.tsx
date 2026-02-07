@@ -58,20 +58,20 @@ const Step3: React.FC<Step3Props> = ({ formData, setFormData, readOnly = false }
     );
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#fafafa', margin: 0 }}>Select Participants</h3>
-                    <p style={{ margin: '4px 0 0', color: '#71717a', fontSize: '0.75rem' }}>Choose who should be enrolled in this contest</p>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fafafa', margin: 0 }}>Select Participants</h3>
+                    <p style={{ margin: '4px 0 0', color: '#71717a', fontSize: '0.9rem' }}>Choose who should be enrolled in this contest</p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '6px', color: '#3b82f6', fontSize: '0.75rem', fontWeight: 600 }}>
-                    <Users size={14} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '6px', color: '#3b82f6', fontSize: '0.875rem', fontWeight: 600 }}>
+                    <Users size={16} />
                     {formData.participants.length} Selected
                 </div>
             </div>
 
             <div style={{ position: 'relative' }}>
-                <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#71717a' }} />
+                <Search size={20} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#71717a' }} />
                 <input
                     type="text"
                     placeholder="Search by name, email, or username..."
@@ -79,38 +79,38 @@ const Step3: React.FC<Step3Props> = ({ formData, setFormData, readOnly = false }
                     onChange={(e) => setSearchQuery(e.target.value)}
                     style={{
                         width: '100%',
-                        padding: '10px 14px 10px 38px',
+                        padding: '14px 16px 14px 44px',
                         background: '#09090b',
                         border: '1px solid #27272a',
-                        borderRadius: '6px',
+                        borderRadius: '8px',
                         color: '#fafafa',
-                        fontSize: '0.875rem',
+                        fontSize: '1.05rem',
                         outline: 'none'
                     }}
                 />
             </div>
 
             <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid #27272a', borderRadius: '8px', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #27272a', background: 'rgba(255,255,255,0.01)' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#71717a', textTransform: 'uppercase' }}>Available Players ({filteredUsers.length})</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #27272a', background: 'rgba(255,255,255,0.01)' }}>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#71717a', textTransform: 'uppercase' }}>Available Players ({filteredUsers.length})</span>
                     {!readOnly && (
                         <button
                             onClick={toggleAll}
-                            style={{ background: 'transparent', border: 'none', color: '#3b82f6', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                            style={{ background: 'transparent', border: 'none', color: '#3b82f6', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}
                         >
                             {formData.participants.length === filteredUsers.length ? 'Deselect All' : 'Select All'}
                         </button>
                     )}
                 </div>
-                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                     {loading ? (
-                        <div style={{ padding: '40px', textAlign: 'center' }}>
-                            <div style={{ width: '24px', height: '24px', border: '2px solid #27272a', borderTopColor: '#fafafa', borderRadius: '50%', margin: '0 auto', animation: 'spin 1s linear infinite' }}></div>
+                        <div style={{ padding: '60px', textAlign: 'center' }}>
+                            <div style={{ width: '32px', height: '32px', border: '2px solid #27272a', borderTopColor: '#fafafa', borderRadius: '50%', margin: '0 auto', animation: 'spin 1s linear infinite' }}></div>
                         </div>
                     ) : filteredUsers.length === 0 ? (
-                        <div style={{ padding: '40px', textAlign: 'center', color: '#71717a' }}>
-                            <UserPlus size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
-                            <p style={{ margin: 0, fontSize: '0.875rem' }}>No players found</p>
+                        <div style={{ padding: '60px', textAlign: 'center', color: '#71717a' }}>
+                            <UserPlus size={40} style={{ marginBottom: '16px', opacity: 0.5 }} />
+                            <p style={{ margin: 0, fontSize: '1rem' }}>No players found</p>
                         </div>
                     ) : (
                         filteredUsers.map(user => {
@@ -122,8 +122,8 @@ const Step3: React.FC<Step3Props> = ({ formData, setFormData, readOnly = false }
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
-                                        gap: '12px',
-                                        padding: '12px 16px',
+                                        gap: '16px',
+                                        padding: '16px 20px',
                                         borderBottom: '1px solid #18181b',
                                         cursor: 'pointer',
                                         background: isSelected ? 'rgba(59,130,246,0.05)' : 'transparent',
@@ -131,17 +131,17 @@ const Step3: React.FC<Step3Props> = ({ formData, setFormData, readOnly = false }
                                     }}
                                 >
                                     {isSelected ? (
-                                        <CheckCircle size={18} style={{ color: '#3b82f6' }} />
+                                        <CheckCircle size={20} style={{ color: '#3b82f6' }} />
                                     ) : (
-                                        <Circle size={18} style={{ color: '#27272a' }} />
+                                        <Circle size={20} style={{ color: '#27272a' }} />
                                     )}
                                     <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#fafafa' }}>
+                                        <div style={{ fontSize: '1.05rem', fontWeight: 500, color: '#fafafa', marginBottom: '4px' }}>
                                             {user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.username}
                                         </div>
-                                        <div style={{ fontSize: '0.75rem', color: '#71717a' }}>{user.email}</div>
+                                        <div style={{ fontSize: '0.875rem', color: '#71717a' }}>{user.email}</div>
                                     </div>
-                                    {isSelected && <span style={{ fontSize: '0.7rem', color: '#3b82f6', fontWeight: 600 }}>Selected</span>}
+                                    {isSelected && <span style={{ fontSize: '0.8rem', color: '#3b82f6', fontWeight: 600 }}>Selected</span>}
                                 </div>
                             );
                         })
