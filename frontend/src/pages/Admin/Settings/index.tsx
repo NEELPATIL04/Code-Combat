@@ -26,12 +26,12 @@ const Settings: React.FC = () => {
     };
 
     const inputStyle: React.CSSProperties = {
-        padding: '12px 16px',
-        background: 'rgba(255, 255, 255, 0.05)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '10px',
-        color: '#ffffff',
-        fontSize: '0.95rem',
+        padding: '10px 14px',
+        background: '#09090b',
+        border: '1px solid #27272a',
+        borderRadius: '6px',
+        color: '#fafafa',
+        fontSize: '0.875rem',
         minWidth: '200px',
         outline: 'none'
     };
@@ -41,35 +41,36 @@ const Settings: React.FC = () => {
             {/* Page Header */}
             <header style={{ marginBottom: '32px' }}>
                 <h1 style={{
-                    fontSize: '2rem',
+                    fontSize: '1.875rem',
                     fontWeight: 600,
                     margin: 0,
-                    marginBottom: '8px',
-                    color: '#ffffff'
+                    marginBottom: '4px',
+                    color: '#fafafa',
+                    letterSpacing: '-0.025em'
                 }}>
                     Settings
                 </h1>
-                <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.5)' }}>
+                <p style={{ margin: 0, fontSize: '0.875rem', color: '#a1a1aa' }}>
                     Configure platform settings
                 </p>
             </header>
 
             {/* General Settings Section */}
             <div style={{
-                background: 'rgba(20, 20, 22, 0.6)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: '16px',
-                padding: '24px',
-                marginBottom: '24px'
+                background: '#09090b',
+                border: '1px solid #27272a',
+                borderRadius: '12px',
+                padding: '20px 24px',
+                marginBottom: '16px'
             }}>
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '10px',
-                    marginBottom: '20px'
+                    marginBottom: '16px'
                 }}>
-                    <Shield size={20} style={{ color: '#FDE68A' }} />
-                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 500, color: 'rgba(255, 255, 255, 0.8)' }}>
+                    <Shield size={18} style={{ color: '#a1a1aa' }} />
+                    <h2 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: '#fafafa' }}>
                         General
                     </h2>
                 </div>
@@ -79,10 +80,10 @@ const Settings: React.FC = () => {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    padding: '16px 0',
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
+                    padding: '14px 0',
+                    borderBottom: '1px solid #27272a'
                 }}>
-                    <label style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.95rem' }}>
+                    <label style={{ color: '#a1a1aa', fontSize: '0.875rem' }}>
                         Site Name
                     </label>
                     <input
@@ -98,12 +99,12 @@ const Settings: React.FC = () => {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    padding: '16px 0',
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
+                    padding: '14px 0',
+                    borderBottom: '1px solid #27272a'
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Clock size={16} style={{ color: 'rgba(255, 255, 255, 0.4)' }} />
-                        <label style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.95rem' }}>
+                        <Clock size={16} style={{ color: '#71717a' }} />
+                        <label style={{ color: '#a1a1aa', fontSize: '0.875rem' }}>
                             Max Contest Duration (minutes)
                         </label>
                     </div>
@@ -120,9 +121,9 @@ const Settings: React.FC = () => {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    padding: '16px 0'
+                    padding: '14px 0'
                 }}>
-                    <label style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.95rem' }}>
+                    <label style={{ color: '#a1a1aa', fontSize: '0.875rem' }}>
                         Default Difficulty
                     </label>
                     <select
@@ -139,20 +140,20 @@ const Settings: React.FC = () => {
 
             {/* Preferences Section */}
             <div style={{
-                background: 'rgba(20, 20, 22, 0.6)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: '16px',
-                padding: '24px',
+                background: '#09090b',
+                border: '1px solid #27272a',
+                borderRadius: '12px',
+                padding: '20px 24px',
                 marginBottom: '24px'
             }}>
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '10px',
-                    marginBottom: '20px'
+                    marginBottom: '16px'
                 }}>
-                    <Bell size={20} style={{ color: '#FDE68A' }} />
-                    <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 500, color: 'rgba(255, 255, 255, 0.8)' }}>
+                    <Bell size={18} style={{ color: '#a1a1aa' }} />
+                    <h2 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: '#fafafa' }}>
                         Preferences
                     </h2>
                 </div>
@@ -162,35 +163,35 @@ const Settings: React.FC = () => {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    padding: '16px 0',
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
+                    padding: '14px 0',
+                    borderBottom: '1px solid #27272a'
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Bell size={16} style={{ color: 'rgba(255, 255, 255, 0.4)' }} />
-                        <label style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.95rem' }}>
+                        <Bell size={16} style={{ color: '#71717a' }} />
+                        <label style={{ color: '#a1a1aa', fontSize: '0.875rem' }}>
                             Email Notifications
                         </label>
                     </div>
                     <button
                         onClick={() => setSettings({ ...settings, emailNotifications: !settings.emailNotifications })}
                         style={{
-                            width: '48px',
-                            height: '28px',
+                            width: '44px',
+                            height: '24px',
                             border: 'none',
-                            borderRadius: '100px',
+                            borderRadius: '9999px',
                             position: 'relative',
                             cursor: 'pointer',
-                            background: settings.emailNotifications ? 'rgba(16, 185, 129, 0.5)' : 'rgba(255, 255, 255, 0.1)',
+                            background: settings.emailNotifications ? '#22c55e' : '#27272a',
                             transition: 'background 0.2s ease'
                         }}
                     >
                         <span style={{
                             position: 'absolute',
-                            left: '4px',
-                            top: '4px',
+                            left: '2px',
+                            top: '2px',
                             width: '20px',
                             height: '20px',
-                            background: '#ffffff',
+                            background: '#fafafa',
                             borderRadius: '50%',
                             transition: 'transform 0.2s ease',
                             transform: settings.emailNotifications ? 'translateX(20px)' : 'translateX(0)'
@@ -203,34 +204,34 @@ const Settings: React.FC = () => {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    padding: '16px 0'
+                    padding: '14px 0'
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Moon size={16} style={{ color: 'rgba(255, 255, 255, 0.4)' }} />
-                        <label style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.95rem' }}>
+                        <Moon size={16} style={{ color: '#71717a' }} />
+                        <label style={{ color: '#a1a1aa', fontSize: '0.875rem' }}>
                             Dark Mode
                         </label>
                     </div>
                     <button
                         onClick={() => setSettings({ ...settings, darkMode: !settings.darkMode })}
                         style={{
-                            width: '48px',
-                            height: '28px',
+                            width: '44px',
+                            height: '24px',
                             border: 'none',
-                            borderRadius: '100px',
+                            borderRadius: '9999px',
                             position: 'relative',
                             cursor: 'pointer',
-                            background: settings.darkMode ? 'rgba(16, 185, 129, 0.5)' : 'rgba(255, 255, 255, 0.1)',
+                            background: settings.darkMode ? '#22c55e' : '#27272a',
                             transition: 'background 0.2s ease'
                         }}
                     >
                         <span style={{
                             position: 'absolute',
-                            left: '4px',
-                            top: '4px',
+                            left: '2px',
+                            top: '2px',
                             width: '20px',
                             height: '20px',
-                            background: '#ffffff',
+                            background: '#fafafa',
                             borderRadius: '50%',
                             transition: 'transform 0.2s ease',
                             transform: settings.darkMode ? 'translateX(20px)' : 'translateX(0)'
@@ -247,18 +248,24 @@ const Settings: React.FC = () => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '8px',
-                        padding: '12px 32px',
-                        background: saved ? 'rgba(16, 185, 129, 0.15)' : 'rgba(253, 230, 138, 0.15)',
-                        border: saved ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(253, 230, 138, 0.4)',
-                        borderRadius: '100px',
-                        color: saved ? '#10b981' : '#FDE68A',
-                        fontSize: '0.95rem',
+                        padding: '10px 24px',
+                        background: saved ? '#22c55e' : '#fafafa',
+                        border: 'none',
+                        borderRadius: '6px',
+                        color: saved ? '#fafafa' : '#09090b',
+                        fontSize: '0.875rem',
                         fontWeight: 500,
                         cursor: 'pointer',
                         transition: 'all 0.2s ease'
                     }}
+                    onMouseOver={(e) => {
+                        if (!saved) e.currentTarget.style.opacity = '0.9';
+                    }}
+                    onMouseOut={(e) => {
+                        if (!saved) e.currentTarget.style.opacity = '1';
+                    }}
                 >
-                    <Save size={18} />
+                    <Save size={16} />
                     {saved ? 'Saved!' : 'Save Changes'}
                 </button>
             </div>
@@ -267,3 +274,4 @@ const Settings: React.FC = () => {
 };
 
 export default Settings;
+

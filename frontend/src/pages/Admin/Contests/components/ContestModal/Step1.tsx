@@ -7,156 +7,48 @@ interface Step1Props {
     setFormData: React.Dispatch<React.SetStateAction<FormData>>;
 }
 
+const labelStyle = { display: 'block', marginBottom: '8px', color: '#fafafa', fontSize: '0.875rem', fontWeight: 500 };
+const inputStyle = { width: '100%', padding: '10px 14px', background: '#09090b', border: '1px solid #27272a', borderRadius: '6px', color: '#fafafa', fontSize: '0.875rem', outline: 'none' };
+
 const Step1: React.FC<Step1Props> = ({ formData, handleChange, setFormData }) => {
     return (
         <>
-            {/* Title */}
-            <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', marginBottom: '10px', color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.9rem', fontWeight: 600 }}>
-                    Title *
-                </label>
-                <input
-                    name="title"
-                    value={formData.title}
-                    onChange={handleChange}
-                    placeholder="Contest title..."
-                    required
-                    style={{
-                        width: '100%',
-                        padding: '14px 16px',
-                        background: 'rgba(255, 255, 255, 0.04)',
-                        border: '1.5px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '10px',
-                        color: '#ffffff',
-                        fontSize: '0.95rem',
-                        outline: 'none'
-                    }}
-                />
+            <div style={{ marginBottom: '20px' }}>
+                <label style={labelStyle}>Title *</label>
+                <input name="title" value={formData.title} onChange={handleChange} placeholder="Contest title..." required style={inputStyle} />
             </div>
 
-            {/* Description */}
-            <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', marginBottom: '10px', color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.9rem', fontWeight: 600 }}>
-                    Description
-                </label>
-                <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    placeholder="Contest description..."
-                    rows={3}
-                    style={{
-                        width: '100%',
-                        padding: '14px 16px',
-                        background: 'rgba(255, 255, 255, 0.04)',
-                        border: '1.5px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '10px',
-                        color: '#ffffff',
-                        fontSize: '0.95rem',
-                        outline: 'none',
-                        resize: 'vertical',
-                        minHeight: '90px'
-                    }}
-                />
+            <div style={{ marginBottom: '20px' }}>
+                <label style={labelStyle}>Description</label>
+                <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Contest description..." rows={3} style={{ ...inputStyle, resize: 'vertical', minHeight: '80px' }} />
             </div>
 
-            {/* Difficulty & Duration */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
                 <div>
-                    <label style={{ display: 'block', marginBottom: '10px', color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.9rem', fontWeight: 600 }}>
-                        Difficulty
-                    </label>
-                    <select
-                        name="difficulty"
-                        value={formData.difficulty}
-                        onChange={handleChange}
-                        style={{
-                            width: '100%',
-                            padding: '14px 16px',
-                            background: '#1e2433',
-                            border: '1.5px solid rgba(255, 255, 255, 0.1)',
-                            borderRadius: '10px',
-                            color: '#ffffff',
-                            fontSize: '0.95rem',
-                            outline: 'none',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        <option value="Easy" style={{ background: '#1e2433', color: '#ffffff' }}>Easy</option>
-                        <option value="Medium" style={{ background: '#1e2433', color: '#ffffff' }}>Medium</option>
-                        <option value="Hard" style={{ background: '#1e2433', color: '#ffffff' }}>Hard</option>
+                    <label style={labelStyle}>Difficulty</label>
+                    <select name="difficulty" value={formData.difficulty} onChange={handleChange} style={{ ...inputStyle, cursor: 'pointer' }}>
+                        <option value="Easy" style={{ background: '#09090b', color: '#fafafa' }}>Easy</option>
+                        <option value="Medium" style={{ background: '#09090b', color: '#fafafa' }}>Medium</option>
+                        <option value="Hard" style={{ background: '#09090b', color: '#fafafa' }}>Hard</option>
                     </select>
                 </div>
                 <div>
-                    <label style={{ display: 'block', marginBottom: '10px', color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.9rem', fontWeight: 600 }}>
-                        Duration (min) *
-                    </label>
-                    <input
-                        type="number"
-                        name="duration"
-                        value={formData.duration}
-                        onChange={handleChange}
-                        min="1"
-                        required
-                        style={{
-                            width: '100%',
-                            padding: '14px 16px',
-                            background: 'rgba(255, 255, 255, 0.04)',
-                            border: '1.5px solid rgba(255, 255, 255, 0.1)',
-                            borderRadius: '10px',
-                            color: '#ffffff',
-                            fontSize: '0.95rem',
-                            outline: 'none'
-                        }}
-                    />
+                    <label style={labelStyle}>Duration (min) *</label>
+                    <input type="number" name="duration" value={formData.duration} onChange={handleChange} min="1" required style={inputStyle} />
                 </div>
             </div>
 
-            {/* Start Password */}
-            <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', marginBottom: '10px', color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.9rem', fontWeight: 600 }}>
-                    Start Password (optional)
-                </label>
-                <input
-                    type="password"
-                    name="startPassword"
-                    value={formData.startPassword}
-                    onChange={handleChange}
-                    placeholder="Password to start contest..."
-                    style={{
-                        width: '100%',
-                        padding: '14px 16px',
-                        background: 'rgba(255, 255, 255, 0.04)',
-                        border: '1.5px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '10px',
-                        color: '#ffffff',
-                        fontSize: '0.95rem',
-                        outline: 'none'
-                    }}
-                />
+            <div style={{ marginBottom: '20px' }}>
+                <label style={labelStyle}>Start Password (optional)</label>
+                <input type="password" name="startPassword" value={formData.startPassword} onChange={handleChange} placeholder="Password to start contest..." style={inputStyle} />
             </div>
 
-            {/* Full Screen Mode Toggle */}
-            <div style={{ marginBottom: '24px' }}>
+            <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', userSelect: 'none' }}>
-                    <input
-                        type="checkbox"
-                        checked={formData.fullScreenMode}
-                        onChange={(e) => setFormData(prev => ({ ...prev, fullScreenMode: e.target.checked }))}
-                        style={{
-                            width: '20px',
-                            height: '20px',
-                            cursor: 'pointer',
-                            accentColor: '#FDE68A'
-                        }}
-                    />
+                    <input type="checkbox" checked={formData.fullScreenMode} onChange={(e) => setFormData(prev => ({ ...prev, fullScreenMode: e.target.checked }))} style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#fafafa' }} />
                     <div>
-                        <span style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.9rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-                            Enable Full Screen Mode
-                        </span>
-                        <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.8rem' }}>
-                            Participants will be locked in full-screen mode during the contest
-                        </span>
+                        <span style={{ color: '#fafafa', fontSize: '0.875rem', fontWeight: 500, display: 'block', marginBottom: '2px' }}>Enable Full Screen Mode</span>
+                        <span style={{ color: '#71717a', fontSize: '0.75rem' }}>Participants will be locked in full-screen mode during the contest</span>
                     </div>
                 </label>
             </div>

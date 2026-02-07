@@ -4,20 +4,17 @@ import { Plus, X } from 'lucide-react';
 import { contestAPI, userAPI } from '../../../utils/api';
 import { Contest, User, FormData } from './types';
 import ContestList from './components/ContestList';
-import ParticipantsModal from './components/ParticipantsModal';
 import ContestModal from './components/ContestModal';
 
 const Contests: React.FC = () => {
     const [contests, setContests] = useState<Contest[]>([]);
-    const [allUsers, setAllUsers] = useState<User[]>([]);
     const [filter, setFilter] = useState<string>('all');
     const [showModal, setShowModal] = useState<boolean>(false);
-    const [showParticipantModal, setShowParticipantModal] = useState<boolean>(false);
     const [editingContest, setEditingContest] = useState<Contest | null>(null);
-    const [selectedContestId, setSelectedContestId] = useState<number | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [fetchingDetails, setFetchingDetails] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
+    const [modalInitialStep, setModalInitialStep] = useState<number>(1);
 
     // Form Data State
     const [formData, setFormData] = useState<FormData>({
@@ -28,17 +25,8 @@ const Contests: React.FC = () => {
         startPassword: '',
         tasks: [],
         fullScreenMode: true,
+        participants: [],
     });
-
-    // Rich text editor modal state
-    const [showRichTextModal, setShowRichTextModal] = useState<boolean>(false);
-
-    const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
-
-    // Step navigation for 2-step wizard
-    const [currentStep, setCurrentStep] = useState<1 | 2>(1);
-
-
 
     useEffect(() => {
         loadContests();
@@ -62,13 +50,14 @@ const Contests: React.FC = () => {
     const loadUsers = async () => {
         try {
             const data = await userAPI.getAll();
-            setAllUsers(data.users.filter((u: User) => u.role === 'student'));
+            setAllUsers(data.users.filter((u: User) => u.role === 'player' && u.status === 'active'));
         } catch (error) {
             console.error('Failed to load users:', error);
         }
     };
 
-    const openModal = async (contest: Contest | null = null) => {
+    const openModal = async (contest: Contest | null = null, initialStep: number = 1) => {
+        setModalInitialStep(initialStep);
         if (contest) {
             setEditingContest(contest);
             setFetchingDetails(true);
@@ -83,18 +72,20 @@ const Contests: React.FC = () => {
                 startPassword: '',
                 tasks: [],
                 fullScreenMode: contest.fullScreenMode !== undefined ? contest.fullScreenMode : true,
+                participants: [],
             });
 
-            // Fetch tasks for this contest
+            // Fetch tasks and participants for this contest
             try {
                 const data = await contestAPI.getById(contest.id);
                 setFormData(prev => ({
                     ...prev,
-                    tasks: data.contest.tasks || []
+                    tasks: data.contest.tasks || [],
+                    participants: data.contest.participants?.map((p: any) => p.id) || []
                 }));
             } catch (err) {
-                console.error('Failed to load contest tasks:', err);
-                setError('Failed to load contest tasks. Please try again.');
+                console.error('Failed to load contest details:', err);
+                setError('Failed to load contest details. Please try again.');
             } finally {
                 setFetchingDetails(false);
             }
@@ -109,8 +100,8 @@ const Contests: React.FC = () => {
                 startPassword: '',
                 tasks: [],
                 fullScreenMode: true,
+                participants: [],
             });
-            setCurrentStep(1);
             setShowModal(true);
             setError('');
         }
@@ -127,8 +118,9 @@ const Contests: React.FC = () => {
             startPassword: '',
             tasks: [],
             fullScreenMode: true,
+            participants: [],
         });
-        setCurrentStep(1);
+        setModalInitialStep(1);
         setError('');
     };
 
@@ -180,33 +172,9 @@ const Contests: React.FC = () => {
     };
 
     const openParticipantModal = (contestId: number) => {
-        setSelectedContestId(contestId);
-        setSelectedUserIds([]);
-        setShowParticipantModal(true);
-    };
-
-    const toggleUserSelection = (userId: number) => {
-        setSelectedUserIds(prev =>
-            prev.includes(userId)
-                ? prev.filter(id => id !== userId)
-                : [...prev, userId]
-        );
-    };
-
-    const addParticipants = async () => {
-        if (!selectedContestId || selectedUserIds.length === 0) return;
-
-        setLoading(true);
-        try {
-            await contestAPI.addParticipants(selectedContestId, selectedUserIds);
-            setShowParticipantModal(false);
-            setSelectedUserIds([]);
-            loadContests(); // Refresh stats
-        } catch (err) {
-            console.error('Failed to add participants:', err);
-            setError('Failed to add participants');
-        } finally {
-            setLoading(false);
+        const contest = contests.find(c => c.id === contestId);
+        if (contest) {
+            openModal(contest, 3);
         }
     };
 
@@ -218,7 +186,6 @@ const Contests: React.FC = () => {
     return (
         <div>
             <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-                {/* Page Header */}
                 <header style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -227,15 +194,16 @@ const Contests: React.FC = () => {
                 }}>
                     <div>
                         <h1 style={{
-                            fontSize: '2rem',
+                            fontSize: '1.875rem',
                             fontWeight: 600,
                             margin: 0,
-                            marginBottom: '8px',
-                            color: '#ffffff'
+                            marginBottom: '4px',
+                            color: '#fafafa',
+                            letterSpacing: '-0.025em'
                         }}>
                             My Contests
                         </h1>
-                        <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.5)' }}>
+                        <p style={{ margin: 0, fontSize: '0.875rem', color: '#a1a1aa' }}>
                             Create and manage coding battles
                         </p>
                     </div>
@@ -245,31 +213,35 @@ const Contests: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
-                            padding: '12px 24px',
-                            background: 'rgba(253, 230, 138, 0.15)',
-                            border: '1px solid rgba(253, 230, 138, 0.4)',
-                            borderRadius: '100px',
-                            color: '#FDE68A',
-                            fontSize: '0.9rem',
+                            padding: '10px 20px',
+                            background: '#fafafa',
+                            border: 'none',
+                            borderRadius: '6px',
+                            color: '#09090b',
+                            fontSize: '0.875rem',
                             fontWeight: 500,
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            transition: 'opacity 0.2s ease'
                         }}
+                        onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+                        onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
                     >
-                        <Plus size={18} /> New Contest
+                        <Plus size={16} /> New Contest
                     </button>
                 </header>
 
                 {error && (
                     <div style={{
                         background: 'rgba(239, 68, 68, 0.1)',
-                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        border: '1px solid rgba(239, 68, 68, 0.2)',
                         color: '#ef4444',
-                        padding: '16px',
-                        borderRadius: '12px',
+                        padding: '12px 16px',
+                        borderRadius: '8px',
                         marginBottom: '24px',
                         display: 'flex',
                         justifyContent: 'space-between',
-                        alignItems: 'center'
+                        alignItems: 'center',
+                        fontSize: '0.875rem'
                     }}>
                         {error}
                         <button
@@ -278,7 +250,8 @@ const Contests: React.FC = () => {
                                 background: 'transparent',
                                 border: 'none',
                                 color: '#ef4444',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                padding: '4px'
                             }}
                         >
                             <X size={16} />
@@ -286,22 +259,21 @@ const Contests: React.FC = () => {
                     </div>
                 )}
 
-                {/* Filter Bar */}
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
                     {['all', 'active', 'upcoming', 'completed'].map(f => (
                         <button
                             key={f}
                             onClick={() => setFilter(f)}
                             style={{
-                                padding: '8px 20px',
-                                background: filter === f ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-                                border: filter === f ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(255, 255, 255, 0.1)',
-                                borderRadius: '100px',
-                                color: filter === f ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
-                                fontSize: '0.85rem',
+                                padding: '8px 16px',
+                                background: filter === f ? '#27272a' : 'transparent',
+                                border: filter === f ? 'none' : '1px solid #27272a',
+                                borderRadius: '6px',
+                                color: filter === f ? '#fafafa' : '#a1a1aa',
+                                fontSize: '0.875rem',
                                 fontWeight: 500,
                                 cursor: 'pointer',
-                                transition: 'all 0.2s ease'
+                                transition: 'all 0.15s ease'
                             }}
                         >
                             {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -309,19 +281,17 @@ const Contests: React.FC = () => {
                     ))}
                 </div>
 
-                {/* Contests List */}
                 <ContestList
                     contests={filteredContests}
                     loading={loading}
                     onCreate={() => openModal()}
-                    onEdit={openModal}
+                    onEdit={(c) => openModal(c)}
                     onDelete={deleteContest}
                     onStart={startContest}
                     onManageParticipants={openParticipantModal}
                 />
             </div>
 
-            {/* Create/Edit Contest Modal */}
             <ContestModal
                 isOpen={showModal}
                 onClose={closeModal}
@@ -331,18 +301,7 @@ const Contests: React.FC = () => {
                 onSave={handleSave}
                 loading={loading}
                 fetchingDetails={fetchingDetails}
-            />
-
-            {/* Add Participants Modal */}
-            <ParticipantsModal
-                isOpen={showParticipantModal}
-                onClose={() => setShowParticipantModal(false)}
-                users={allUsers}
-                selectedUserIds={selectedUserIds}
-                onToggleSelection={toggleUserSelection}
-                onAdd={addParticipants}
-                loading={loading}
-                error={error}
+                initialStep={modalInitialStep}
             />
         </div>
     );

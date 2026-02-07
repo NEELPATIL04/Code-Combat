@@ -64,7 +64,7 @@ const Participants: React.FC = () => {
 
     // Generate avatar color based on username
     const getAvatarColor = (username: string) => {
-        const colors = ['#FBBF24', '#F59E0B', '#EAB308', '#FDE68A', '#FCD34D'];
+        const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#22c55e'];
         const index = username.charCodeAt(0) % colors.length;
         return colors[index];
     };
@@ -80,55 +80,58 @@ const Participants: React.FC = () => {
             }}>
                 <div>
                     <h1 style={{
-                        fontSize: '2rem',
+                        fontSize: '1.875rem',
                         fontWeight: 600,
                         margin: 0,
-                        marginBottom: '8px',
-                        color: '#ffffff'
+                        marginBottom: '4px',
+                        color: '#fafafa',
+                        letterSpacing: '-0.025em'
                     }}>
                         Participants
                     </h1>
-                    <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.5)' }}>
+                    <p style={{ margin: 0, fontSize: '0.875rem', color: '#a1a1aa' }}>
                         View and manage all participants
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>
                     <div style={{
                         textAlign: 'center',
-                        padding: '12px 24px',
-                        background: 'rgba(255, 255, 255, 0.03)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        borderRadius: '12px'
+                        padding: '12px 20px',
+                        background: '#09090b',
+                        border: '1px solid #27272a',
+                        borderRadius: '8px'
                     }}>
                         <span style={{
                             display: 'block',
                             fontSize: '1.5rem',
-                            fontWeight: 600,
-                            color: '#ffffff'
+                            fontWeight: 700,
+                            color: '#fafafa',
+                            letterSpacing: '-0.025em'
                         }}>{participants.length}</span>
                         <span style={{
-                            fontSize: '0.7rem',
-                            color: 'rgba(255, 255, 255, 0.4)',
+                            fontSize: '0.75rem',
+                            color: '#71717a',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em'
                         }}>Total</span>
                     </div>
                     <div style={{
                         textAlign: 'center',
-                        padding: '12px 24px',
-                        background: 'rgba(255, 255, 255, 0.03)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        borderRadius: '12px'
+                        padding: '12px 20px',
+                        background: '#09090b',
+                        border: '1px solid #27272a',
+                        borderRadius: '8px'
                     }}>
                         <span style={{
                             display: 'block',
                             fontSize: '1.5rem',
-                            fontWeight: 600,
-                            color: '#ffffff'
+                            fontWeight: 700,
+                            color: '#fafafa',
+                            letterSpacing: '-0.025em'
                         }}>{activeParticipants.length}</span>
                         <span style={{
-                            fontSize: '0.7rem',
-                            color: 'rgba(255, 255, 255, 0.4)',
+                            fontSize: '0.75rem',
+                            color: '#71717a',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em'
                         }}>Active</span>
@@ -140,11 +143,12 @@ const Participants: React.FC = () => {
             {error && (
                 <div style={{
                     background: 'rgba(239, 68, 68, 0.1)',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    border: '1px solid rgba(239, 68, 68, 0.2)',
                     color: '#ef4444',
-                    padding: '16px',
-                    borderRadius: '12px',
-                    marginBottom: '24px'
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    marginBottom: '24px',
+                    fontSize: '0.875rem'
                 }}>
                     {error}
                 </div>
@@ -156,13 +160,13 @@ const Participants: React.FC = () => {
                 marginBottom: '24px'
             }}>
                 <Search
-                    size={18}
+                    size={16}
                     style={{
                         position: 'absolute',
-                        left: '16px',
+                        left: '12px',
                         top: '50%',
                         transform: 'translateY(-50%)',
-                        color: 'rgba(255, 255, 255, 0.4)'
+                        color: '#71717a'
                     }}
                 />
                 <input
@@ -172,12 +176,12 @@ const Participants: React.FC = () => {
                     onChange={(e) => setSearchTerm(e.target.value)}
                     style={{
                         width: '100%',
-                        padding: '14px 16px 14px 48px',
-                        background: 'rgba(255, 255, 255, 0.03)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        borderRadius: '12px',
-                        color: '#ffffff',
-                        fontSize: '0.95rem',
+                        padding: '10px 12px 10px 40px',
+                        background: '#09090b',
+                        border: '1px solid #27272a',
+                        borderRadius: '6px',
+                        color: '#fafafa',
+                        fontSize: '0.875rem',
                         outline: 'none'
                     }}
                 />
@@ -185,24 +189,24 @@ const Participants: React.FC = () => {
 
             {/* Loading State */}
             {loading ? (
-                <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255, 255, 255, 0.5)' }}>
+                <div style={{ textAlign: 'center', padding: '60px 0', color: '#71717a' }}>
                     <div style={{
                         width: '32px',
                         height: '32px',
-                        border: '2px solid rgba(253, 230, 138, 0.2)',
-                        borderTopColor: '#FDE68A',
+                        border: '2px solid #27272a',
+                        borderTopColor: '#fafafa',
                         borderRadius: '50%',
                         margin: '0 auto 16px',
                         animation: 'spin 1s linear infinite'
                     }}></div>
-                    <p>Loading participants...</p>
+                    <p style={{ fontSize: '0.875rem' }}>Loading participants...</p>
                 </div>
             ) : (
                 /* Table */
                 <div style={{
-                    background: 'rgba(20, 20, 22, 0.6)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '16px',
+                    background: '#09090b',
+                    border: '1px solid #27272a',
+                    borderRadius: '12px',
                     overflow: 'hidden'
                 }}>
                     {/* Table Header */}
@@ -210,13 +214,13 @@ const Participants: React.FC = () => {
                         display: 'grid',
                         gridTemplateColumns: '2fr 2fr 100px 100px 120px 100px 100px',
                         gap: '16px',
-                        padding: '16px 24px',
-                        background: 'rgba(255, 255, 255, 0.02)',
+                        padding: '12px 24px',
+                        background: '#0a0a0b',
                         fontSize: '0.75rem',
-                        color: 'rgba(255, 255, 255, 0.4)',
+                        color: '#71717a',
                         textTransform: 'uppercase',
-                        letterSpacing: '0.1em',
-                        fontWeight: 600,
+                        letterSpacing: '0.05em',
+                        fontWeight: 500,
                         alignItems: 'center'
                     }}>
                         <span>Participant</span>
@@ -233,13 +237,14 @@ const Participants: React.FC = () => {
                         <div style={{
                             padding: '60px 24px',
                             textAlign: 'center',
-                            color: 'rgba(255, 255, 255, 0.4)'
+                            color: '#71717a',
+                            fontSize: '0.875rem'
                         }}>
                             {searchTerm ? 'No participants found matching your search' : 'No participants yet'}
                         </div>
                     ) : (
                         /* Table Rows */
-                        filteredParticipants.map(participant => (
+                        filteredParticipants.map((participant, index) => (
                             <div
                                 key={participant.id}
                                 onClick={() => handleRowClick(participant.id)}
@@ -248,80 +253,94 @@ const Participants: React.FC = () => {
                                     gridTemplateColumns: '2fr 2fr 100px 100px 120px 100px 100px',
                                     gap: '16px',
                                     padding: '16px 24px',
-                                    borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                                    borderTop: index === 0 ? 'none' : '1px solid #27272a',
                                     alignItems: 'center',
                                     cursor: 'pointer',
                                     transition: 'background 0.2s ease'
                                 }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'}
                                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                             >
                                 {/* Participant Cell */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     <div style={{
-                                        width: '36px',
-                                        height: '36px',
+                                        width: '32px',
+                                        height: '32px',
                                         borderRadius: '50%',
                                         background: getAvatarColor(participant.username),
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         fontWeight: 600,
-                                        fontSize: '0.9rem',
-                                        color: '#000000',
+                                        fontSize: '0.75rem',
+                                        color: '#ffffff',
                                         flexShrink: 0
                                     }}>
                                         {participant.username.charAt(0).toUpperCase()}
                                     </div>
-                                    <span style={{ fontWeight: 500, color: '#ffffff' }}>
-                                        {participant.username}
-                                    </span>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <span style={{ fontWeight: 500, fontSize: '0.875rem', color: '#fafafa', display: 'block' }}>
+                                            {participant.firstName && participant.lastName ? `${participant.firstName} ${participant.lastName}` : participant.username}
+                                        </span>
+                                        {participant.firstName && participant.lastName && (
+                                            <span style={{ fontSize: '0.75rem', color: '#71717a', display: 'block' }}>
+                                                {participant.username}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Email Cell */}
-                                <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.9rem' }}>
+                                <span style={{ color: '#a1a1aa', fontSize: '0.875rem' }}>
                                     {participant.email}
                                 </span>
 
                                 {/* Status Cell */}
                                 <span>
                                     <span style={{
-                                        display: 'inline-block',
-                                        padding: '4px 12px',
-                                        borderRadius: '100px',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '6px',
+                                        padding: '4px 10px',
+                                        borderRadius: '9999px',
                                         fontSize: '0.75rem',
                                         fontWeight: 500,
+                                        width: '85px',
                                         background: participant.status === 'active'
-                                            ? 'rgba(16, 185, 129, 0.15)'
+                                            ? 'rgba(34, 197, 94, 0.15)'
                                             : 'rgba(107, 114, 128, 0.15)',
                                         color: participant.status === 'active'
-                                            ? '#10b981'
-                                            : '#9ca3af',
-                                        border: participant.status === 'active'
-                                            ? '1px solid rgba(16, 185, 129, 0.3)'
-                                            : '1px solid rgba(107, 114, 128, 0.3)'
+                                            ? '#22c55e'
+                                            : '#9ca3af'
                                     }}>
+                                        <span style={{
+                                            width: '6px',
+                                            height: '6px',
+                                            borderRadius: '50%',
+                                            background: participant.status === 'active' ? '#22c55e' : '#9ca3af'
+                                        }}></span>
                                         {participant.status === 'active' ? 'Active' : 'Inactive'}
                                     </span>
                                 </span>
 
                                 {/* Contests Cell */}
-                                <span style={{ textAlign: 'center', color: '#ffffff' }}>
+                                <span style={{ textAlign: 'center', color: '#fafafa', fontSize: '0.875rem' }}>
                                     {participant.contestCount ?? Math.floor(Math.random() * 20)}
                                 </span>
 
                                 {/* Submissions Cell */}
-                                <span style={{ textAlign: 'center', color: '#ffffff' }}>
+                                <span style={{ textAlign: 'center', color: '#fafafa', fontSize: '0.875rem' }}>
                                     {participant.submissionCount ?? Math.floor(Math.random() * 100)}
                                 </span>
 
                                 {/* Success Rate Cell */}
-                                <span style={{ textAlign: 'center', color: '#FBBF24', fontWeight: 500 }}>
+                                <span style={{ textAlign: 'center', color: '#22c55e', fontWeight: 500, fontSize: '0.875rem' }}>
                                     {participant.successRate ?? Math.floor(Math.random() * 40 + 60)}%
                                 </span>
 
                                 {/* Date Cell */}
-                                <span style={{ textAlign: 'center', color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.85rem' }}>
+                                <span style={{ textAlign: 'center', color: '#71717a', fontSize: '0.75rem' }}>
                                     {formatDate(participant.createdAt)}
                                 </span>
                             </div>
@@ -340,3 +359,4 @@ const Participants: React.FC = () => {
 };
 
 export default Participants;
+

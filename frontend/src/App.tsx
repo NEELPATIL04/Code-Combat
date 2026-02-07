@@ -18,6 +18,7 @@ import Participants from './pages/Admin/Participants';
 import ParticipantProfile from './pages/Admin/Participants/Profile';
 import Submissions from './pages/Admin/Participants/Submissions';
 import Contests from './pages/Admin/Contests';
+import ContestDetails from './pages/Admin/Contests/Details';
 import ManageUsers from './pages/Admin/ManageUsers';
 import Settings from './pages/Admin/Settings';
 
@@ -51,6 +52,7 @@ const App: React.FC = () => {
                     <Route path="/admin/participants/:id" element={<ParticipantProfile />} />
                     <Route path="/admin/participants/:id/contest/:contestId" element={<Submissions />} />
                     <Route path="/admin/contests" element={<Contests />} />
+                    <Route path="/admin/contests/:id" element={<ContestDetails />} />
                     <Route path="/admin/manage-users" element={<ManageUsers />} />
                     <Route path="/admin/settings" element={<Settings />} />
 

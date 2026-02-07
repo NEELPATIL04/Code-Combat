@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Clock, CheckCircle, XCircle, Code } from 'lucide-react';
-
 
 interface Submission {
     id: number;
@@ -26,259 +25,144 @@ const mockSubmissions: Submission[] = [
     { id: 3, timestamp: '2024-02-15 14:15:33', status: 'failed', runtime: 'N/A', memory: 'N/A', language: 'TypeScript', code: 'function search(nums: number[], target: number): number {\n  return nums.indexOf(target);\n}' },
 ];
 
-const mockContestInfo: ContestInfo = {
-    title: 'Binary Search Challenge',
-    participantName: 'player1',
-    totalSubmissions: 3,
-    bestScore: 85
-};
+const mockContestInfo: ContestInfo = { title: 'Binary Search Challenge', participantName: 'player1', totalSubmissions: 3, bestScore: 85 };
 
 const Submissions: React.FC = () => {
     const { id, contestId } = useParams<{ id: string; contestId: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
     const [submissions, setSubmissions] = useState<Submission[]>([]);
     const [contestInfo, setContestInfo] = useState<ContestInfo | null>(null);
     const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
 
+    // Context-aware back navigation
+    const fromContext = location.state?.from || 'profile';
+    const backPath = fromContext === 'contest'
+        ? `/admin/contests/${contestId}`
+        : `/admin/participants/${id}`;
+    const backLabel = fromContext === 'contest' ? 'Back to Contest' : 'Back to Profile';
+
     useEffect(() => {
-        setTimeout(() => {
-            setSubmissions(mockSubmissions);
-            setContestInfo(mockContestInfo);
-            setSelectedSubmission(mockSubmissions[0]);
-        }, 300);
+        setTimeout(() => { setSubmissions(mockSubmissions); setContestInfo(mockContestInfo); setSelectedSubmission(mockSubmissions[0]); }, 300);
     }, [id, contestId]);
 
     const getStatusIcon = (status: string) => {
         switch (status) {
-            case 'passed': return <CheckCircle size={16} style={{ color: '#10b981' }} />;
+            case 'passed': return <CheckCircle size={16} style={{ color: '#22c55e' }} />;
             case 'failed': return <XCircle size={16} style={{ color: '#ef4444' }} />;
-            default: return <Clock size={16} style={{ color: '#f59e0b' }} />;
+            default: return <Clock size={16} style={{ color: '#eab308' }} />;
         }
     };
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'passed': return '#10b981';
+            case 'passed': return '#22c55e';
             case 'failed': return '#ef4444';
-            default: return '#f59e0b';
+            default: return '#eab308';
         }
     };
 
     if (!contestInfo) return (
-        <div style={{ padding: '48px', textAlign: 'center', color: 'rgba(255, 255, 255, 0.5)' }}>
-            <div style={{
-                width: '32px',
-                height: '32px',
-                border: '2px solid rgba(253, 230, 138, 0.2)',
-                borderTopColor: '#FDE68A',
-                borderRadius: '50%',
-                margin: '0 auto 16px',
-                animation: 'spin 1s linear infinite'
-            }}></div>
-            Loading...
+        <div style={{ padding: '48px', textAlign: 'center', color: '#71717a' }}>
+            <div style={{ width: '32px', height: '32px', border: '2px solid #27272a', borderTopColor: '#fafafa', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 1s linear infinite' }}></div>
+            <span style={{ fontSize: '0.875rem' }}>Loading...</span>
         </div>
     );
 
     return (
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-            {/* Back Button */}
-            <button
-                onClick={() => navigate(`/admin/participants/${id}`)}
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '10px 18px',
-                    background: 'transparent',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '100px',
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    fontSize: '0.9rem',
-                    cursor: 'pointer',
-                    marginBottom: '24px'
-                }}
-            >
-                <ArrowLeft size={18} /> Back to Profile
-            </button>
+            <div style={{ marginBottom: '24px' }}>
+                <button
+                    onClick={() => navigate(backPath)}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 18px',
+                        background: 'transparent',
+                        border: '1px solid #27272a',
+                        borderRadius: '6px',
+                        color: '#a1a1aa',
+                        fontSize: '0.875rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.background = '#18181b'; e.currentTarget.style.color = '#fafafa'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#a1a1aa'; }}
+                >
+                    <ArrowLeft size={16} /> {backLabel}
+                </button>
+            </div>
 
-            {/* Submissions Header */}
-            <header style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: '24px'
-            }}>
+            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
                 <div>
-                    <h1 style={{
-                        fontSize: '1.75rem',
-                        fontWeight: 600,
-                        margin: 0,
-                        marginBottom: '8px',
-                        color: '#ffffff'
-                    }}>
-                        {contestInfo.title}
-                    </h1>
-                    <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.5)' }}>
-                        Submissions by {contestInfo.participantName}
-                    </p>
+                    <h1 style={{ fontSize: '1.875rem', fontWeight: 600, margin: 0, marginBottom: '4px', color: '#fafafa', letterSpacing: '-0.025em' }}>{contestInfo.title}</h1>
+                    <p style={{ margin: 0, fontSize: '0.875rem', color: '#a1a1aa' }}>Submissions by {contestInfo.participantName}</p>
                 </div>
-                <div style={{ display: 'flex', gap: '16px' }}>
-                    <div style={{
-                        textAlign: 'center',
-                        padding: '12px 20px',
-                        background: 'rgba(20, 20, 22, 0.6)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        borderRadius: '12px'
-                    }}>
-                        <span style={{ display: 'block', fontSize: '1.25rem', fontWeight: 600, color: '#FBBF24' }}>
-                            {contestInfo.totalSubmissions}
-                        </span>
-                        <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase' }}>
-                            Submissions
-                        </span>
-                    </div>
-                    <div style={{
-                        textAlign: 'center',
-                        padding: '12px 20px',
-                        background: 'rgba(20, 20, 22, 0.6)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        borderRadius: '12px'
-                    }}>
-                        <span style={{ display: 'block', fontSize: '1.25rem', fontWeight: 600, color: '#FBBF24' }}>
-                            {contestInfo.bestScore}
-                        </span>
-                        <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase' }}>
-                            Best Score
-                        </span>
-                    </div>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    {[{ label: 'Submissions', value: contestInfo.totalSubmissions }, { label: 'Best Score', value: contestInfo.bestScore }].map((stat, i) => (
+                        <div key={i} style={{ textAlign: 'center', padding: '12px 20px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px' }}>
+                            <span style={{ display: 'block', fontSize: '1.25rem', fontWeight: 700, color: '#fafafa', letterSpacing: '-0.025em' }}>{stat.value}</span>
+                            <span style={{ fontSize: '0.75rem', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</span>
+                        </div>
+                    ))}
                 </div>
             </header>
 
-            {/* Submissions Layout */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: '320px 1fr',
-                gap: '20px',
-                height: 'calc(100vh - 280px)'
-            }}>
-                {/* Submissions List */}
-                <div style={{
-                    background: 'rgba(20, 20, 22, 0.6)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '16px',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column'
-                }}>
-                    <div style={{
-                        padding: '16px 20px',
-                        fontSize: '0.8rem',
-                        color: 'rgba(255, 255, 255, 0.5)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.1em',
-                        borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
-                    }}>
-                        All Submissions
-                    </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '16px', height: 'calc(100vh - 280px)' }}>
+                <div style={{ background: '#09090b', border: '1px solid #27272a', borderRadius: '12px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ padding: '14px 20px', fontSize: '0.75rem', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #27272a', fontWeight: 500 }}>All Submissions</div>
                     <div style={{ flex: 1, overflowY: 'auto' }}>
                         {submissions.map(sub => (
-                            <div
-                                key={sub.id}
-                                onClick={() => setSelectedSubmission(sub)}
-                                style={{
-                                    padding: '16px 20px',
-                                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                                    cursor: 'pointer',
-                                    background: selectedSubmission?.id === sub.id ? 'rgba(253, 230, 138, 0.05)' : 'transparent',
-                                    borderLeft: selectedSubmission?.id === sub.id ? '3px solid #FDE68A' : '3px solid transparent',
-                                    transition: 'all 0.2s ease'
-                                }}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                            <div key={sub.id} onClick={() => setSelectedSubmission(sub)} style={{ padding: '14px 20px', borderBottom: '1px solid #27272a', cursor: 'pointer', background: selectedSubmission?.id === sub.id ? 'rgba(255,255,255,0.02)' : 'transparent', borderLeft: selectedSubmission?.id === sub.id ? '2px solid #fafafa' : '2px solid transparent', transition: 'all 0.2s ease' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
                                     {getStatusIcon(sub.status)}
                                     <div>
-                                        <span style={{ display: 'block', fontSize: '0.9rem', fontWeight: 500, color: '#ffffff' }}>
-                                            {sub.timestamp}
-                                        </span>
+                                        <span style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#fafafa' }}>{sub.timestamp}</span>
                                         <span style={{
-                                            fontSize: '0.75rem',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            width: '85px',
+                                            padding: '2px 8px',
+                                            marginTop: '4px',
+                                            borderRadius: '9999px',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 500,
                                             textTransform: 'capitalize',
-                                            color: getStatusColor(sub.status)
+                                            color: getStatusColor(sub.status),
+                                            background: `${getStatusColor(sub.status)}1a`, // Adding 10% opacity for background
+                                            border: `1px solid ${getStatusColor(sub.status)}33` // Adding 20% opacity for border
                                         }}>
                                             {sub.status}
                                         </span>
                                     </div>
                                 </div>
-                                <div style={{ display: 'flex', gap: '16px', fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.4)', paddingLeft: '28px' }}>
-                                    <span>{sub.runtime}</span>
-                                    <span>{sub.memory}</span>
+                                <div style={{ display: 'flex', gap: '16px', fontSize: '0.75rem', color: '#71717a', paddingLeft: '28px' }}>
+                                    <span>{sub.runtime}</span><span>{sub.memory}</span>
                                 </div>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                {/* Code Viewer */}
-                <div style={{
-                    background: 'rgba(20, 20, 22, 0.6)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '16px',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: '100%'
-                }}>
+                <div style={{ background: '#09090b', border: '1px solid #27272a', borderRadius: '12px', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
                     {selectedSubmission && (
                         <>
-                            <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                padding: '14px 20px',
-                                borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem' }}>
-                                    <Code size={16} />
-                                    <span>solution.ts</span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid #27272a' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#a1a1aa', fontSize: '0.875rem' }}>
+                                    <Code size={16} /><span>solution.ts</span>
                                 </div>
-                                <span style={{
-                                    padding: '4px 10px',
-                                    background: 'rgba(253, 230, 138, 0.1)',
-                                    borderRadius: '100px',
-                                    fontSize: '0.8rem',
-                                    color: '#FDE68A'
-                                }}>
-                                    {selectedSubmission.language}
-                                </span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: 'rgba(59,130,246,0.15)', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 500, color: '#3b82f6' }}>{selectedSubmission.language}</span>
                             </div>
-                            <div style={{
-                                flex: 1,
-                                padding: '20px',
-                                overflow: 'auto',
-                                background: 'rgba(0, 0, 0, 0.3)'
-                            }}>
-                                <pre style={{ margin: 0 }}>
-                                    <code style={{
-                                        fontFamily: 'monospace',
-                                        fontSize: '0.9rem',
-                                        lineHeight: 1.6,
-                                        color: 'rgba(255, 255, 255, 0.85)',
-                                        whiteSpace: 'pre'
-                                    }}>
-                                        {selectedSubmission.code}
-                                    </code>
-                                </pre>
+                            <div style={{ flex: 1, padding: '20px', overflow: 'auto', background: 'rgba(0,0,0,0.3)' }}>
+                                <pre style={{ margin: 0 }}><code style={{ fontFamily: 'monospace', fontSize: '0.875rem', lineHeight: 1.6, color: '#fafafa', whiteSpace: 'pre' }}>{selectedSubmission.code}</code></pre>
                             </div>
                         </>
                     )}
                 </div>
             </div>
-
-            <style>{`
-                @keyframes spin {
-                    to { transform: rotate(360deg); }
-                }
-            `}</style>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
     );
 };

@@ -53,6 +53,7 @@ export interface User {
     firstName?: string;
     lastName?: string;
     role: string;
+    status: string;
 }
 
 export interface FormData {
@@ -63,4 +64,5 @@ export interface FormData {
     startPassword: string;
     tasks: Task[];
     fullScreenMode: boolean;
+    participants: number[];
 }
