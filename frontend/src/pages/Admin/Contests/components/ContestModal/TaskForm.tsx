@@ -9,9 +9,10 @@ interface TaskFormProps {
     setTaskInput: React.Dispatch<React.SetStateAction<Task>>;
     onSave: () => void;
     isEditing: boolean;
+    readOnly?: boolean;
 }
 
-const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, isEditing }) => {
+const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, isEditing, readOnly }) => {
     const [showHTMLModal, setShowHTMLModal] = useState(false);
 
     const handleTaskInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -52,6 +53,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, is
                         fontSize: '0.95rem',
                         outline: 'none'
                     }}
+                    disabled={readOnly}
                 />
             </div>
             <div style={{ marginBottom: '16px' }}>
@@ -121,31 +123,48 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, is
                 </div>
                 {taskInput.descriptionType === 'html' ? (
                     <div>
-                        <button
-                            type="button"
-                            onClick={() => setShowHTMLModal(true)}
-                            style={{
+                        {!readOnly ? (
+                            <button
+                                type="button"
+                                onClick={() => setShowHTMLModal(true)}
+                                style={{
+                                    width: '100%',
+                                    padding: '20px',
+                                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)',
+                                    border: '1.5px dashed rgba(59, 130, 246, 0.4)',
+                                    borderRadius: '10px',
+                                    color: '#60a5fa',
+                                    fontSize: '0.95rem',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '10px',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
+                                <FileEdit size={18} />
+                                {taskInput.description && taskInput.description.trim() !== ''
+                                    ? 'Edit HTML Content'
+                                    : 'Open HTML Editor'}
+                            </button>
+                        ) : (
+                            <div style={{
                                 width: '100%',
                                 padding: '20px',
-                                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)',
-                                border: '1.5px dashed rgba(59, 130, 246, 0.4)',
+                                background: 'rgba(255, 255, 255, 0.04)',
+                                border: '1.5px solid rgba(255, 255, 255, 0.1)',
                                 borderRadius: '10px',
-                                color: '#60a5fa',
+                                color: '#e2e8f0',
                                 fontSize: '0.95rem',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '10px',
-                                transition: 'all 0.2s ease'
-                            }}
-                        >
-                            <FileEdit size={18} />
-                            {taskInput.description && taskInput.description.trim() !== ''
-                                ? 'Edit HTML Content'
-                                : 'Open HTML Editor'}
-                        </button>
+                                lineHeight: '1.6',
+                                maxHeight: '300px',
+                                overflowY: 'auto'
+                            }}>
+                                <div dangerouslySetInnerHTML={{ __html: taskInput.description || '<p>No description provided.</p>' }} />
+                            </div>
+                        )}
                         {taskInput.description && taskInput.description.trim() !== '' && (
                             <p style={{
                                 margin: '8px 0 0',
@@ -183,6 +202,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, is
                             minHeight: '70px',
                             lineHeight: '1.5'
                         }}
+                        disabled={readOnly}
                     />
                 )}
 
@@ -203,6 +223,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, is
                         outline: 'none',
                         cursor: 'pointer'
                     }}
+                    disabled={readOnly}
                 >
                     <option value="Easy" style={{ background: '#1e2433', color: '#ffffff' }}>Easy</option>
                     <option value="Medium" style={{ background: '#1e2433', color: '#ffffff' }}>Medium</option>
@@ -238,7 +259,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, is
                         <button
                             key={lang.id}
                             type="button"
-                            onClick={() => toggleLanguage(lang.id)}
+                            onClick={() => !readOnly && toggleLanguage(lang.id)}
                             style={{
                                 padding: '6px 12px',
                                 borderRadius: '100px',
@@ -262,27 +283,29 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, is
                 </div>
             </div>
 
-            <button
-                type="button"
-                onClick={onSave}
-                style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    padding: '10px 18px',
-                    background: 'rgba(253, 230, 138, 0.1)',
-                    border: '1.5px solid rgba(253, 230, 138, 0.35)',
-                    borderRadius: '10px',
-                    color: '#FDE68A',
-                    fontSize: '0.88rem',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                }}
-            >
-                {isEditing ? <><Edit2 size={16} /> Update Task</> : <><Plus size={16} /> Add Task</>}
-            </button>
+            {!readOnly && (
+                <button
+                    type="button"
+                    onClick={onSave}
+                    style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        padding: '10px 18px',
+                        background: 'rgba(253, 230, 138, 0.1)',
+                        border: '1.5px solid rgba(253, 230, 138, 0.35)',
+                        borderRadius: '10px',
+                        color: '#FDE68A',
+                        fontSize: '0.88rem',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                    }}
+                >
+                    {isEditing ? <><Edit2 size={16} /> Update Task</> : <><Plus size={16} /> Add Task</>}
+                </button>
+            )}
 
             {/* Test Case Manager with AI & Code Config */}
             <h3 style={{
@@ -343,7 +366,9 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, is
                     ...prev,
                     testRunnerTemplate: { ...prev.testRunnerTemplate, [lang]: code }
                 }))}
+
                 functionName={taskInput.functionName}
+                readOnly={readOnly}
             />
 
             {/* HTML Editor Modal */}
