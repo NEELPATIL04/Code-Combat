@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getParticipantSubmissions, updateSubmissionScore, getAiUsageStats, getAiUsageLogs } from '../controllers/admin.controller';
+import { getParticipantSubmissions, updateSubmissionScore, getAiUsageStats, getAiUsageLogs, getDashboardStats, getParticipantProfile } from '../controllers/admin.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/roleCheck.middleware';
 
@@ -35,6 +35,30 @@ router.get(
     authenticate,
     requireRole(['admin', 'super_admin']),
     getAiUsageLogs
+);
+
+// Dashboard Stats
+router.get(
+    '/dashboard',
+    authenticate,
+    requireRole(['admin', 'super_admin']),
+    getDashboardStats
+);
+
+// Participant Profile
+router.get(
+    '/participants/:id',
+    authenticate,
+    requireRole(['admin', 'super_admin']),
+    getParticipantProfile
+);
+
+// Participant Profile
+router.get(
+    '/participants/:id',
+    authenticate,
+    requireRole(['admin', 'super_admin']),
+    getParticipantProfile
 );
 
 export default router;
