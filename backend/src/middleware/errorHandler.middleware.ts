@@ -17,19 +17,19 @@ import { env } from '../config/env';
  *   app.use(routes);            // Register routes first
  *   app.use(errorHandler);      // Register error handler LAST
  */
-export function errorHandler(
-  error: Error,
-  req: Request,
+export const errorHandler = (
+  err: any,
+  _req: Request,
   res: Response,
-  next: NextFunction
-): void {
+  _next: NextFunction
+) => {
   // Log error details for debugging
-  console.error('Error occurred:', error);
+  console.error('Error occurred:', err);
 
   // Send error response to client
   res.status(500).json({
     message: 'Internal server error',
     // Only show error details in development mode (not in production)
-    error: env.NODE_ENV === 'development' ? error.message : undefined,
+    error: env.NODE_ENV === 'development' ? err.message : undefined,
   });
 }

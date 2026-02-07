@@ -29,8 +29,8 @@ export interface JwtPayload {
  *   // Returns: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
  */
 export function generateToken(payload: JwtPayload): string {
-  return jwt.sign(payload, env.JWT_SECRET, {
-    expiresIn: env.JWT_EXPIRES_IN, // Token will expire after this duration
+  return jwt.sign(payload, env.JWT_SECRET as any, {
+    expiresIn: env.JWT_EXPIRES_IN as any, // Token will expire after this duration
   });
 }
 

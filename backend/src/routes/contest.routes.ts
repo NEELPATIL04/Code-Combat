@@ -10,7 +10,6 @@ import {
   startContest,
   getMyContests,
   getContestTasks,
-  getTaskById,
 } from '../controllers/contest.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/roleCheck.middleware';

@@ -49,7 +49,7 @@ router.use('/admin', adminRoutes);
  * Response:
  *   { status: 'OK', timestamp: string, environment: string }
  */
-router.get('/health', (req, res) => {
+router.get('/health', (_req, res) => {
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../config/database';
-import { submissions, contestParticipants, users, contests, aiUsageLogs } from '../db/schema';
+import { submissions, contestParticipants } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 
 /**
@@ -22,14 +22,14 @@ export const getParticipantSubmissions = async (req: Request, res: Response, nex
             )
             .orderBy(desc(submissions.submittedAt));
 
-        res.json({
+        return res.json({
             success: true,
             data: {
                 submissions: userSubmissions,
             },
         });
     } catch (error) {
-        next(error);
+        return next(error);
     }
 };
 
@@ -102,7 +102,7 @@ export const updateSubmissionScore = async (req: Request, res: Response, next: N
                 )
             );
 
-        res.json({
+        return res.json({
             success: true,
             data: {
                 submission: updatedSubmission,
@@ -110,7 +110,7 @@ export const updateSubmissionScore = async (req: Request, res: Response, next: N
             },
         });
     } catch (error) {
-        next(error);
+        return next(error);
     }
 };
 
@@ -138,11 +138,11 @@ export const getAiUsageStats = async (_req: Request, res: Response, next: NextFu
                 },
                 recentErrors: 0
             };
-            res.json(stats);
+            return res.json(stats);
         });
 
     } catch (error) {
-        next(error);
+        return next(error);
     }
 };
 
@@ -174,11 +174,11 @@ export const getAiUsageLogs = async (req: Request, res: Response, next: NextFunc
                 .limit(limit)
                 .offset(offset);
 
-            res.json({ logs, page, limit });
+            return res.json({ logs, page, limit });
         });
 
     } catch (error) {
-        next(error);
+        return next(error);
     }
 };
 /**
@@ -256,7 +256,7 @@ export const getDashboardStats = async (_req: Request, res: Response, next: Next
                 ? Math.round((acceptedSubmissionsCount / submissionsCount) * 100)
                 : 0;
 
-            res.json({
+            return res.json({
                 success: true,
                 data: {
                     stats: {
@@ -272,7 +272,7 @@ export const getDashboardStats = async (_req: Request, res: Response, next: Next
         });
 
     } catch (error) {
-        next(error);
+        return next(error);
     }
 };
 
@@ -384,7 +384,7 @@ export const getParticipantProfile = async (req: Request, res: Response, next: N
                 }
             };
 
-            res.json({
+            return res.json({
                 success: true,
                 data: {
                     id: user.id,
@@ -400,6 +400,6 @@ export const getParticipantProfile = async (req: Request, res: Response, next: N
         });
 
     } catch (error) {
-        next(error);
+        return next(error);
     }
 };
