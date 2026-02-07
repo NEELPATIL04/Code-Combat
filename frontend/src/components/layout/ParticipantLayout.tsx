@@ -206,7 +206,7 @@ const ParticipantLayout: React.FC = () => {
                                     <button
                                         onClick={() => {
                                             setShowUserMenu(false);
-                                            navigate('/player/settings');
+                                            navigate('/settings');
                                         }}
                                         style={{
                                             width: '100%',
