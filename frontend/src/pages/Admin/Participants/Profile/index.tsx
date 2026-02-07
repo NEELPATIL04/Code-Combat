@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mail, Calendar, Trophy, FileText, TrendingUp } from 'lucide-react';
+import { adminAPI } from '../../../../utils/api';
 
 interface Contest {
     id: number;
@@ -45,7 +46,19 @@ const ParticipantProfile: React.FC = () => {
     const [hoveredCard, setHoveredCard] = useState<number | null>(null);
 
     useEffect(() => {
-        setTimeout(() => setParticipant({ ...mockParticipant, id: Number(id) }), 300);
+        const fetchParticipant = async () => {
+            if (!id) return;
+            try {
+                const response = await adminAPI.getParticipantProfile(Number(id));
+                if (response.success && response.data) {
+                    setParticipant(response.data);
+                }
+            } catch (error) {
+                console.error('Failed to fetch participant:', error);
+            }
+        };
+
+        fetchParticipant();
     }, [id]);
 
     const handleContestClick = (contestId: number) => {

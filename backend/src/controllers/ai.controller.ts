@@ -151,6 +151,7 @@ import { groqService } from '../services/groq.service';
 export const generateCode = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { description, functionName, languages, inputFormat, outputFormat } = req.body;
+    const userId = (req as any).user.id;
 
     if (!description || !functionName || !languages || languages.length === 0) {
       res.status(400).json({ message: 'Missing required fields' });
@@ -162,10 +163,37 @@ export const generateCode = async (req: Request, res: Response, next: NextFuncti
       functionName,
       languages,
       inputFormat,
-      outputFormat
-    });
+      outputFormat,
+      userId // Pass userId for logging
+    } as any);
 
     res.json(generatedCode);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const generateTestCases = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { description, boilerplateCode, wrapperCode, functionName, language, numberOfTestCases } = req.body;
+    const userId = (req as any).user.id;
+
+    if (!description || !boilerplateCode || !functionName || !language) {
+      res.status(400).json({ message: 'Missing required fields' });
+      return;
+    }
+
+    const testCases = await groqService.generateTestCases({
+      description,
+      boilerplateCode,
+      wrapperCode,
+      functionName,
+      language,
+      numberOfTestCases: numberOfTestCases || 5,
+      userId // Pass userId for logging
+    } as any);
+
+    res.json({ success: true, testCases });
   } catch (error) {
     next(error);
   }

@@ -267,6 +267,27 @@ export const updateContest = async (req: Request, res: Response, next: NextFunct
       }
     }
 
+    // Update participants if provided
+    // Check for both 'participants' (from frontend FormData) and 'participantIds' (consistency)
+    const newParticipants = req.body.participants || req.body.participantIds;
+
+    if (newParticipants && Array.isArray(newParticipants)) {
+      console.log('Updating participants for contest:', contestId, 'Count:', newParticipants.length);
+
+      // Delete existing participants
+      await db.delete(contestParticipants).where(eq(contestParticipants.contestId, contestId));
+
+      // Insert new participants
+      if (newParticipants.length > 0) {
+        const participantValues = newParticipants.map((userId: number) => ({
+          contestId,
+          userId,
+        }));
+        await db.insert(contestParticipants).values(participantValues);
+        console.log('Participants updated successfully');
+      }
+    }
+
     res.status(200).json({
       message: 'Contest updated successfully',
       contest: updatedContest,
