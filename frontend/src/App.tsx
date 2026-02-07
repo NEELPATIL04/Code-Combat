@@ -27,6 +27,7 @@ import AiUsagePage from './pages/Admin/AiUsage';
 import TaskPage from './pages/Participant/Task';
 import ParticipantDashboard from './pages/Participant/Dashboard';
 import ProfilePage from './pages/Participant/Profile';
+import SettingsPage from './pages/Participant/Settings';
 
 const App: React.FC = () => {
     return (
@@ -73,6 +74,7 @@ const App: React.FC = () => {
                 }>
                     <Route path="/player" element={<ParticipantDashboard />} />
                     <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
                 </Route>
 
                 {/* Task Page - Standalone without ParticipantLayout navbar */}

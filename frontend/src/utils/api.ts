@@ -191,14 +191,14 @@ export const userAPI = {
   },
 
   getContestHistory: async () => {
-    const response = await fetch(`${API_BASE_URL}/profile/contests`, {
+    const response = await fetch(`${API_BASE_URL}/users/profile/contests`, {
       headers: getAuthHeaders(),
     });
     return handleResponse(response);
   },
 
   getContestDetails: async (contestId: number) => {
-    const response = await fetch(`${API_BASE_URL}/profile/contests/${contestId}`, {
+    const response = await fetch(`${API_BASE_URL}/users/profile/contests/${contestId}`, {
       headers: getAuthHeaders(),
     });
     return handleResponse(response);

@@ -9,7 +9,7 @@ interface Step2Props {
     readOnly?: boolean;
 }
 
-const Step2: React.FC<Step2Props> = ({ formData, setFormData }) => {
+const Step2: React.FC<Step2Props> = ({ formData, setFormData, readOnly = false }) => {
     const [taskInput, setTaskInput] = useState<Task>({ title: '', description: '', descriptionType: 'text', difficulty: 'Medium', maxPoints: 100, allowedLanguages: ['javascript', 'typescript', 'python', 'java', 'cpp'], boilerplateCode: {}, testRunnerTemplate: {}, testCases: [], functionName: 'solution', aiConfig: { hintsEnabled: true, hintThreshold: 2, solutionThreshold: 5 } });
     const [editingTaskIndex, setEditingTaskIndex] = useState<number | null>(null);
     const [viewingTaskIndex, setViewingTaskIndex] = useState<number | null>(null);
@@ -101,19 +101,30 @@ const Step2: React.FC<Step2Props> = ({ formData, setFormData }) => {
                                     </div>
                                 )}
                             </div>
-                            <div style={{ display: 'flex', gap: '6px' }}>
-                                <button onClick={() => handleEditTask(index)} title="Edit Task" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '1px solid #27272a', borderRadius: '6px', color: '#a1a1aa', cursor: 'pointer' }}><Edit2 size={14} /></button>
-                                <button onClick={() => handleRemoveTask(index)} title="Remove Task" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '1px solid #27272a', borderRadius: '6px', color: '#ef4444', cursor: 'pointer' }}><X size={14} /></button>
-                            </div>
+                            {!readOnly && (
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                    <button onClick={() => handleEditTask(index)} title="Edit Task" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '1px solid #27272a', borderRadius: '6px', color: '#a1a1aa', cursor: 'pointer' }}><Edit2 size={14} /></button>
+                                    <button onClick={() => handleRemoveTask(index)} title="Remove Task" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '1px solid #27272a', borderRadius: '6px', color: '#ef4444', cursor: 'pointer' }}><X size={14} /></button>
+                                </div>
+                            )}
+                            {readOnly && (
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                    <button onClick={() => handleViewTask(index)} title="View Task" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '1px solid #27272a', borderRadius: '6px', color: '#a1a1aa', cursor: 'pointer' }}><Eye size={14} /></button>
+                                </div>
+                            )}
                         </div>
                     ))}
                     <div style={{ height: '1px', background: '#27272a', margin: '12px 0' }}></div>
                 </div>
             )}
-            <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#fafafa', marginBottom: '12px' }}>{editingTaskIndex !== null ? 'Edit Task' : 'Add New Task'}</h3>
-            <div style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid #27272a' }}>
-                <TaskForm taskInput={taskInput} setTaskInput={setTaskInput} onSave={handleSaveTask} isEditing={editingTaskIndex !== null} />
-            </div>
+            {!readOnly && (
+                <>
+                    <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#fafafa', marginBottom: '12px' }}>{editingTaskIndex !== null ? 'Edit Task' : 'Add New Task'}</h3>
+                    <div style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid #27272a' }}>
+                        <TaskForm taskInput={taskInput} setTaskInput={setTaskInput} onSave={handleSaveTask} isEditing={editingTaskIndex !== null} />
+                    </div>
+                </>
+            )}
         </>
     );
 };

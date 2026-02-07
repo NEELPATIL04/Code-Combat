@@ -6,9 +6,10 @@ import { userAPI } from '../../../../../utils/api';
 interface Step3Props {
     formData: FormData;
     setFormData: React.Dispatch<React.SetStateAction<FormData>>;
+    readOnly?: boolean;
 }
 
-const Step3: React.FC<Step3Props> = ({ formData, setFormData }) => {
+const Step3: React.FC<Step3Props> = ({ formData, setFormData, readOnly = false }) => {
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -30,6 +31,7 @@ const Step3: React.FC<Step3Props> = ({ formData, setFormData }) => {
     }, []);
 
     const toggleParticipant = (userId: number) => {
+        if (readOnly) return;
         setFormData(prev => {
             const isSelected = prev.participants.includes(userId);
             if (isSelected) {
@@ -41,6 +43,7 @@ const Step3: React.FC<Step3Props> = ({ formData, setFormData }) => {
     };
 
     const toggleAll = () => {
+        if (readOnly) return;
         if (formData.participants.length === filteredUsers.length) {
             setFormData(prev => ({ ...prev, participants: [] }));
         } else {
@@ -90,12 +93,14 @@ const Step3: React.FC<Step3Props> = ({ formData, setFormData }) => {
             <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid #27272a', borderRadius: '8px', overflow: 'hidden' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #27272a', background: 'rgba(255,255,255,0.01)' }}>
                     <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#71717a', textTransform: 'uppercase' }}>Available Players ({filteredUsers.length})</span>
-                    <button
-                        onClick={toggleAll}
-                        style={{ background: 'transparent', border: 'none', color: '#3b82f6', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}
-                    >
-                        {formData.participants.length === filteredUsers.length ? 'Deselect All' : 'Select All'}
-                    </button>
+                    {!readOnly && (
+                        <button
+                            onClick={toggleAll}
+                            style={{ background: 'transparent', border: 'none', color: '#3b82f6', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                        >
+                            {formData.participants.length === filteredUsers.length ? 'Deselect All' : 'Select All'}
+                        </button>
+                    )}
                 </div>
                 <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                     {loading ? (
