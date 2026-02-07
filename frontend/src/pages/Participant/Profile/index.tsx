@@ -4,8 +4,12 @@ import {
     Trophy,
     Calendar,
     Target,
-    Award
+    Award,
+    TrendingUp,
+    Zap,
+    User
 } from 'lucide-react';
+import { useAuth } from '../../../hooks/useAuth';
 import { userAPI } from '../../../utils/api';
 
 interface ContestHistory {
@@ -19,6 +23,7 @@ interface ContestHistory {
 }
 
 const ProfilePage: React.FC = () => {
+    const { user } = useAuth();
     const [history, setHistory] = useState<ContestHistory[]>([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
@@ -39,7 +44,6 @@ const ProfilePage: React.FC = () => {
             const contests = data.contests || [];
             setHistory(contests);
 
-            // Calculate stats
             const totalScore = contests.reduce((acc: number, c: ContestHistory) => acc + (c.score || 0), 0);
             const avgScore = contests.length ? Math.round(totalScore / contests.length) : 0;
             const ranks = contests.map((c: ContestHistory) => c.rank).filter((r: number) => r && r > 0);
@@ -61,123 +65,454 @@ const ProfilePage: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="flex justify-center items-center h-64 text-gray-500">
-                Loading Profile...
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                minHeight: '400px',
+                color: 'rgba(255, 255, 255, 0.5)'
+            }}>
+                <div style={{
+                    width: '32px',
+                    height: '32px',
+                    border: '3px solid rgba(253, 230, 138, 0.2)',
+                    borderTopColor: '#FDE68A',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                }} />
             </div>
         );
     }
 
     return (
-        <div className="max-w-5xl mx-auto space-y-8">
-            {/* Header / Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-[#1e1e24] border border-white/5 p-6 rounded-xl flex items-center gap-4">
-                    <div className="p-3 bg-yellow-500/10 rounded-lg">
-                        <Trophy size={24} className="text-yellow-400" />
+        <div style={{
+            fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif",
+            width: '100%',
+            maxWidth: '1200px',
+            margin: '0 auto'
+        }}>
+            {/* Header Section */}
+            <div style={{
+                background: 'rgba(255, 255, 255, 0.01)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '16px',
+                padding: '32px 40px',
+                marginBottom: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '32px'
+            }}>
+                <div style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #FDE68A 0%, #F59E0B 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                }}>
+                    <User size={40} style={{ color: '#0a0a0b' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                    <h1 style={{
+                        fontSize: '1.8rem',
+                        fontWeight: 600,
+                        color: '#ffffff',
+                        margin: '0 0 8px'
+                    }}>
+                        {user?.name || 'Participant'}
+                    </h1>
+                    <p style={{
+                        fontSize: '0.95rem',
+                        color: 'rgba(255, 255, 255, 0.6)',
+                        margin: '0 0 8px'
+                    }}>
+                        {user?.email || 'user@example.com'}
+                    </p>
+                    <p style={{
+                        fontSize: '0.85rem',
+                        color: 'rgba(255, 255, 255, 0.5)',
+                        margin: 0
+                    }}>
+                        Member since {user && new Date(user.createdAt || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
+                    </p>
+                </div>
+            </div>
+
+            {/* Stats Grid */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                gap: '16px',
+                marginBottom: '32px'
+            }}>
+                {/* Total Score Card */}
+                <div style={{
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(253, 230, 138, 0.15)',
+                    borderRadius: '12px',
+                    padding: '24px',
+                    transition: 'all 0.3s ease'
+                }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(253, 230, 138, 0.05)';
+                        e.currentTarget.style.borderColor = 'rgba(253, 230, 138, 0.3)';
+                        e.currentTarget.style.transform = 'translateY(-4px)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                        e.currentTarget.style.borderColor = 'rgba(253, 230, 138, 0.15)';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                        <h3 style={{
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            letterSpacing: '0.05em',
+                            margin: 0
+                        }}>Total Score</h3>
+                        <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            background: 'rgba(253, 230, 138, 0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <Trophy size={18} style={{ color: '#FDE68A' }} />
+                        </div>
                     </div>
-                    <div>
-                        <div className="text-2xl font-bold text-white">{stats.totalScore}</div>
-                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">Total Score</div>
+                    <div style={{
+                        fontSize: '2.5rem',
+                        fontWeight: 700,
+                        color: '#FDE68A'
+                    }}>
+                        {stats.totalScore}
                     </div>
                 </div>
 
-                <div className="bg-[#1e1e24] border border-white/5 p-6 rounded-xl flex items-center gap-4">
-                    <div className="p-3 bg-blue-500/10 rounded-lg">
-                        <Target size={24} className="text-blue-400" />
+                {/* Total Contests Card */}
+                <div style={{
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(59, 130, 246, 0.15)',
+                    borderRadius: '12px',
+                    padding: '24px',
+                    transition: 'all 0.3s ease'
+                }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(59, 130, 246, 0.05)';
+                        e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                        e.currentTarget.style.transform = 'translateY(-4px)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                        e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.15)';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
+                        <div>
+                            <h3 style={{
+                                fontSize: '0.85rem',
+                                fontWeight: 600,
+                                textTransform: 'uppercase',
+                                color: 'rgba(255, 255, 255, 0.6)',
+                                letterSpacing: '0.05em',
+                                margin: '0 0 4px'
+                            }}>Contests</h3>
+                            <h3 style={{
+                                fontSize: '0.85rem',
+                                fontWeight: 600,
+                                textTransform: 'uppercase',
+                                color: 'rgba(255, 255, 255, 0.6)',
+                                letterSpacing: '0.05em',
+                                margin: 0
+                            }}>Participated</h3>
+                        </div>
+                        <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            background: 'rgba(59, 130, 246, 0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <Target size={18} style={{ color: '#60a5fa' }} />
+                        </div>
                     </div>
-                    <div>
-                        <div className="text-2xl font-bold text-white">{stats.totalContests}</div>
-                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">Contests</div>
+                    <div style={{
+                        fontSize: '2.5rem',
+                        fontWeight: 700,
+                        color: '#60a5fa'
+                    }}>
+                        {stats.totalContests}
                     </div>
                 </div>
 
-                <div className="bg-[#1e1e24] border border-white/5 p-6 rounded-xl flex items-center gap-4">
-                    <div className="p-3 bg-purple-500/10 rounded-lg">
-                        <Award size={24} className="text-purple-400" />
+                {/* Best Rank Card */}
+                <div style={{
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(168, 85, 247, 0.15)',
+                    borderRadius: '12px',
+                    padding: '24px',
+                    transition: 'all 0.3s ease'
+                }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(168, 85, 247, 0.05)';
+                        e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.3)';
+                        e.currentTarget.style.transform = 'translateY(-4px)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                        e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.15)';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                        <h3 style={{
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            letterSpacing: '0.05em',
+                            margin: 0
+                        }}>Best Rank</h3>
+                        <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            background: 'rgba(168, 85, 247, 0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <Award size={18} style={{ color: '#c084fc' }} />
+                        </div>
                     </div>
-                    <div>
-                        <div className="text-2xl font-bold text-white">{stats.bestRank}</div>
-                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">Best Rank</div>
+                    <div style={{
+                        fontSize: '2.5rem',
+                        fontWeight: 700,
+                        color: '#c084fc'
+                    }}>
+                        {stats.bestRank === '-' ? '-' : `#${stats.bestRank}`}
                     </div>
                 </div>
 
-                <div className="bg-[#1e1e24] border border-white/5 p-6 rounded-xl flex items-center gap-4">
-                    <div className="p-3 bg-green-500/10 rounded-lg">
-                        <ActivityIcon size={24} className="text-green-400" />
+                {/* Average Score Card */}
+                <div style={{
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(34, 197, 94, 0.15)',
+                    borderRadius: '12px',
+                    padding: '24px',
+                    transition: 'all 0.3s ease'
+                }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(34, 197, 94, 0.05)';
+                        e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+                        e.currentTarget.style.transform = 'translateY(-4px)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                        e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.15)';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                        <h3 style={{
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            letterSpacing: '0.05em',
+                            margin: 0
+                        }}>Average Score</h3>
+                        <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            background: 'rgba(34, 197, 94, 0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <TrendingUp size={18} style={{ color: '#22c55e' }} />
+                        </div>
                     </div>
-                    <div>
-                        <div className="text-2xl font-bold text-white">{stats.averageScore}</div>
-                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider">Avg Score</div>
+                    <div style={{
+                        fontSize: '2.5rem',
+                        fontWeight: 700,
+                        color: '#22c55e'
+                    }}>
+                        {stats.averageScore}
                     </div>
                 </div>
             </div>
 
-            {/* Contest History List */}
-            <div className="bg-[#1e1e24] border border-white/5 rounded-xl overflow-hidden">
-                <div className="p-6 border-b border-white/5">
-                    <h2 className="text-lg font-bold text-white">Contest History</h2>
+            {/* Contest History Section */}
+            <div style={{
+                background: 'rgba(255, 255, 255, 0.01)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '12px',
+                overflow: 'hidden'
+            }}>
+                {/* Header */}
+                <div style={{
+                    padding: '20px 24px',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px'
+                }}>
+                    <Zap size={20} style={{ color: '#FDE68A' }} />
+                    <h2 style={{
+                        fontSize: '1.2rem',
+                        fontWeight: 600,
+                        color: '#ffffff',
+                        margin: 0
+                    }}>
+                        Contest History
+                    </h2>
                 </div>
-                <div className="divide-y divide-white/5">
+
+                {/* Content */}
+                <div>
                     {history.length === 0 ? (
-                        <div className="p-8 text-center text-gray-500">
-                            No contests participated in yet.
+                        <div style={{
+                            padding: '80px 24px',
+                            textAlign: 'center',
+                            color: 'rgba(255, 255, 255, 0.4)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <Trophy size={48} style={{ marginBottom: '24px', color: '#FDE68A', opacity: 0.3 }} />
+                            <p style={{ fontSize: '0.95rem', margin: '0 0 8px', fontWeight: 500 }}>
+                                No contests participated yet
+                            </p>
+                            <p style={{ fontSize: '0.85rem', margin: 0, opacity: 0.7 }}>
+                                Start your first contest from My Contests section
+                            </p>
                         </div>
                     ) : (
-                        history.map((contest) => (
-                            <div key={contest.id} className="p-4 hover:bg-white/[0.02] transition-colors flex items-center justify-between">
-                                <div className="flex-1">
-                                    <h3 className="font-semibold text-white mb-1">{contest.title}</h3>
-                                    <div className="flex items-center gap-4 text-xs text-gray-400">
-                                        <span className="flex items-center gap-1">
-                                            <Calendar size={12} />
-                                            {new Date(contest.startedAt).toLocaleDateString()}
-                                        </span>
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${contest.difficulty === 'Hard' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                                            contest.difficulty === 'Medium' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
-                                                'bg-green-500/10 text-green-400 border-green-500/20'
-                                            }`}>
-                                            {contest.difficulty}
-                                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            {history.map((contest, index) => (
+                                <div
+                                    key={contest.id}
+                                    style={{
+                                        padding: '16px 24px',
+                                        borderBottom: index !== history.length - 1 ? '1px solid rgba(255, 255, 255, 0.04)' : 'none',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        transition: 'all 0.15s ease',
+                                        background: 'transparent'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = 'transparent';
+                                    }}
+                                >
+                                    <div style={{ flex: 1 }}>
+                                        <h4 style={{
+                                            fontSize: '0.95rem',
+                                            fontWeight: 600,
+                                            color: '#ffffff',
+                                            margin: '0 0 8px'
+                                        }}>
+                                            {contest.title}
+                                        </h4>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '12px',
+                                            fontSize: '0.85rem'
+                                        }}>
+                                            <span style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                                color: 'rgba(255, 255, 255, 0.5)'
+                                            }}>
+                                                <Calendar size={14} />
+                                                {new Date(contest.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                            </span>
+                                            <span style={{
+                                                padding: '3px 10px',
+                                                borderRadius: '6px',
+                                                fontWeight: 600,
+                                                background: contest.difficulty === 'Hard' ? 'rgba(239, 68, 68, 0.15)' :
+                                                    contest.difficulty === 'Medium' ? 'rgba(251, 191, 36, 0.15)' :
+                                                        'rgba(34, 197, 94, 0.15)',
+                                                color: contest.difficulty === 'Hard' ? '#f87171' :
+                                                    contest.difficulty === 'Medium' ? '#fbbf24' :
+                                                        '#22c55e'
+                                            }}>
+                                                {contest.difficulty}
+                                            </span>
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div className="flex items-center gap-8">
-                                    <div className="text-right">
-                                        <div className="text-xs text-gray-500 uppercase">Score</div>
-                                        <div className="font-mono text-xl font-bold text-yellow-400">{contest.score}</div>
-                                    </div>
-                                    <div className="text-right w-16">
-                                        <div className="text-xs text-gray-500 uppercase">Rank</div>
-                                        <div className="font-mono text-xl font-bold text-white">
-                                            {contest.rank ? `#${contest.rank}` : '-'}
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '40px',
+                                        marginLeft: '24px'
+                                    }}>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{
+                                                fontSize: '0.75rem',
+                                                fontWeight: 600,
+                                                textTransform: 'uppercase',
+                                                color: 'rgba(255, 255, 255, 0.5)',
+                                                marginBottom: '4px'
+                                            }}>
+                                                Score
+                                            </div>
+                                            <div style={{
+                                                fontSize: '1.5rem',
+                                                fontWeight: 700,
+                                                color: '#FDE68A'
+                                            }}>
+                                                {contest.score}
+                                            </div>
+                                        </div>
+                                        <div style={{ textAlign: 'right', minWidth: '60px' }}>
+                                            <div style={{
+                                                fontSize: '0.75rem',
+                                                fontWeight: 600,
+                                                textTransform: 'uppercase',
+                                                color: 'rgba(255, 255, 255, 0.5)',
+                                                marginBottom: '4px'
+                                            }}>
+                                                Rank
+                                            </div>
+                                            <div style={{
+                                                fontSize: '1.5rem',
+                                                fontWeight: 700,
+                                                color: contest.rank ? '#ffffff' : 'rgba(255, 255, 255, 0.5)'
+                                            }}>
+                                                {contest.rank ? `#${contest.rank}` : '-'}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))
+                            ))}
+                        </div>
                     )}
                 </div>
             </div>
         </div>
     );
 };
-
-// Simple icon component helper if needed, or import Activity from lucide-react
-const ActivityIcon = ({ size, className }: { size: number, className?: string }) => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width={size}
-        height={size}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className={className}
-    >
-        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-    </svg>
-);
 
 export default ProfilePage;
