@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Play, Users, Edit2, Trash2, X } from 'lucide-react';
+import { Plus, Play, Users, Edit2, Trash2, X, Eye } from 'lucide-react';
 import { Contest } from '../types';
 
 interface ContestListProps {
@@ -10,6 +10,7 @@ interface ContestListProps {
     onDelete: (id: number) => void;
     onStart: (id: number) => void;
     onManageParticipants: (id: number) => void;
+    onView: (contest: Contest) => void;
 }
 
 const ContestList: React.FC<ContestListProps> = ({
@@ -19,7 +20,8 @@ const ContestList: React.FC<ContestListProps> = ({
     onEdit,
     onDelete,
     onStart,
-    onManageParticipants
+    onManageParticipants,
+    onView
 }) => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -211,6 +213,24 @@ const ContestList: React.FC<ContestListProps> = ({
                                 }}
                             >
                                 <Users size={16} />
+                            </button>
+                            <button
+                                onClick={() => onView(contest)}
+                                title="View Details"
+                                style={{
+                                    width: '40px',
+                                    height: '40px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    background: 'rgba(255, 255, 255, 0.05)',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    borderRadius: '10px',
+                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <Eye size={16} />
                             </button>
                             <button
                                 onClick={() => onEdit(contest)}

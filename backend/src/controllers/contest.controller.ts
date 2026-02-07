@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../config/database';
-import { contests, tasks, contestParticipants, users } from '../db/schema';
+import { contests, tasks, contestParticipants, users, testCases } from '../db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { hashPassword } from '../utils/password.util';
 
@@ -18,7 +18,7 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
     console.log('📝 Received create contest request');
     console.log('Query:', req.query);
     console.log('Body keys:', Object.keys(req.body));
-    
+
     const { title, description, difficulty, duration, startPassword, contestTasks, participantIds, fullScreenMode } = req.body;
 
     console.log(`Title: ${title}, Duration: ${duration}, Tasks: ${contestTasks?.length || 0}, Full Screen: ${fullScreenMode}`);
@@ -182,7 +182,13 @@ export const getContestById = async (req: Request, res: Response, next: NextFunc
     res.status(200).json({
       contest: {
         ...contest,
-        tasks: contestTasks,
+        tasks: await Promise.all(contestTasks.map(async (task) => {
+          const taskTestCases = await db
+            .select()
+            .from(testCases)
+            .where(eq(testCases.taskId, task.id));
+          return { ...task, testCases: taskTestCases };
+        })),
         participants,
       },
     });

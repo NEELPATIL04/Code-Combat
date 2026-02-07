@@ -7,6 +7,7 @@ interface CodeConfigurationProps {
     onWrapperCodeChange: (language: string, code: string) => void;
     boilerplateCode: Record<string, string>;
     wrapperCode: Record<string, string>;
+    readOnly?: boolean;
 }
 
 const CodeConfiguration: React.FC<CodeConfigurationProps> = ({
@@ -14,7 +15,8 @@ const CodeConfiguration: React.FC<CodeConfigurationProps> = ({
     onBoilerplateChange,
     onWrapperCodeChange,
     boilerplateCode,
-    wrapperCode
+    wrapperCode,
+    readOnly
 }) => {
     const [selectedLanguage, setSelectedLanguage] = useState<string>(
         allowedLanguages.length > 0 ? allowedLanguages[0] : 'javascript'
@@ -132,13 +134,14 @@ const CodeConfiguration: React.FC<CodeConfigurationProps> = ({
                 <textarea
                     value={
                         activeTab === 'boilerplate'
-                            ? (boilerplateCode[selectedLanguage] || '')
-                            : (wrapperCode[selectedLanguage] || '')
+                            ? ((boilerplateCode && boilerplateCode[selectedLanguage]) || '')
+                            : ((wrapperCode && wrapperCode[selectedLanguage]) || '')
                     }
                     onChange={(e) => activeTab === 'boilerplate'
                         ? onBoilerplateChange(selectedLanguage, e.target.value)
                         : onWrapperCodeChange(selectedLanguage, e.target.value)
                     }
+                    readOnly={readOnly}
                     placeholder={activeTab === 'boilerplate' ? '// Default code...' : '// Wrapper code...'}
                     spellCheck={false}
                     style={{

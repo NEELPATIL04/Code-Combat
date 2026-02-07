@@ -18,6 +18,7 @@ const Contests: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const [fetchingDetails, setFetchingDetails] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
+    const [readOnly, setReadOnly] = useState<boolean>(false);
 
     // Form Data State
     const [formData, setFormData] = useState<FormData>({
@@ -34,6 +35,7 @@ const Contests: React.FC = () => {
     const [showRichTextModal, setShowRichTextModal] = useState<boolean>(false);
 
     const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+    const [initialParticipantIds, setInitialParticipantIds] = useState<number[]>([]);
 
     // Step navigation for 2-step wizard
     const [currentStep, setCurrentStep] = useState<1 | 2>(1);
@@ -62,7 +64,7 @@ const Contests: React.FC = () => {
     const loadUsers = async () => {
         try {
             const data = await userAPI.getAll();
-            setAllUsers(data.users.filter((u: User) => u.role === 'student'));
+            setAllUsers(data.users.filter((u: User) => u.role === 'player'));
         } catch (error) {
             console.error('Failed to load users:', error);
         }
@@ -100,6 +102,7 @@ const Contests: React.FC = () => {
             }
         } else {
             setEditingContest(null);
+            setReadOnly(false);
             setFetchingDetails(false);
             setFormData({
                 title: '',
@@ -179,10 +182,26 @@ const Contests: React.FC = () => {
         }
     };
 
-    const openParticipantModal = (contestId: number) => {
+    const openParticipantModal = async (contestId: number) => {
         setSelectedContestId(contestId);
-        setSelectedUserIds([]);
-        setShowParticipantModal(true);
+        setLoading(true);
+        try {
+            const data = await contestAPI.getById(contestId);
+            if (data.contest && data.contest.participants) {
+                const currentParticipantIds = data.contest.participants.map((p: any) => p.userId);
+                setSelectedUserIds(currentParticipantIds);
+                setInitialParticipantIds(currentParticipantIds);
+            } else {
+                setSelectedUserIds([]);
+                setInitialParticipantIds([]);
+            }
+            setShowParticipantModal(true);
+        } catch (err) {
+            console.error('Failed to fetch contest details:', err);
+            setError('Failed to load participants');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const toggleUserSelection = (userId: number) => {
@@ -194,17 +213,29 @@ const Contests: React.FC = () => {
     };
 
     const addParticipants = async () => {
-        if (!selectedContestId || selectedUserIds.length === 0) return;
+        if (!selectedContestId) return;
 
         setLoading(true);
         try {
-            await contestAPI.addParticipants(selectedContestId, selectedUserIds);
+            // Calculate diff
+            const usersToAdd = selectedUserIds.filter(id => !initialParticipantIds.includes(id));
+            const usersToRemove = initialParticipantIds.filter(id => !selectedUserIds.includes(id));
+
+            if (usersToAdd.length > 0) {
+                await contestAPI.addParticipants(selectedContestId, usersToAdd);
+            }
+
+            if (usersToRemove.length > 0) {
+                await Promise.all(usersToRemove.map(userId => contestAPI.removeParticipant(selectedContestId, userId)));
+            }
+
             setShowParticipantModal(false);
             setSelectedUserIds([]);
+            setInitialParticipantIds([]);
             loadContests(); // Refresh stats
-        } catch (err) {
-            console.error('Failed to add participants:', err);
-            setError('Failed to add participants');
+        } catch (err: any) {
+            console.error('Failed to update participants:', err);
+            setError(err.message || 'Failed to update participants');
         } finally {
             setLoading(false);
         }
@@ -318,6 +349,32 @@ const Contests: React.FC = () => {
                     onDelete={deleteContest}
                     onStart={startContest}
                     onManageParticipants={openParticipantModal}
+                    onView={(contest) => {
+                        setEditingContest(contest);
+                        setReadOnly(true);
+                        setFetchingDetails(true);
+                        setShowModal(true);
+                        setFormData({
+                            title: contest.title,
+                            description: contest.description || '',
+                            difficulty: contest.difficulty,
+                            duration: contest.duration,
+                            startPassword: '',
+                            tasks: [],
+                            fullScreenMode: contest.fullScreenMode !== undefined ? contest.fullScreenMode : true,
+                        });
+                        contestAPI.getById(contest.id).then(data => {
+                            setFormData(prev => ({
+                                ...prev,
+                                tasks: data.contest.tasks || []
+                            }));
+                        }).catch(err => {
+                            console.error('Failed to load contest tasks:', err);
+                            setError('Failed to load contest tasks.');
+                        }).finally(() => {
+                            setFetchingDetails(false);
+                        });
+                    }}
                 />
             </div>
 
@@ -331,6 +388,7 @@ const Contests: React.FC = () => {
                 onSave={handleSave}
                 loading={loading}
                 fetchingDetails={fetchingDetails}
+                readOnly={readOnly}
             />
 
             {/* Add Participants Modal */}

@@ -5,9 +5,10 @@ interface Step1Props {
     formData: FormData;
     handleChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
     setFormData: React.Dispatch<React.SetStateAction<FormData>>;
+    readOnly?: boolean;
 }
 
-const Step1: React.FC<Step1Props> = ({ formData, handleChange, setFormData }) => {
+const Step1: React.FC<Step1Props> = ({ formData, handleChange, setFormData, readOnly }) => {
     return (
         <>
             {/* Title */}
@@ -21,6 +22,7 @@ const Step1: React.FC<Step1Props> = ({ formData, handleChange, setFormData }) =>
                     onChange={handleChange}
                     placeholder="Contest title..."
                     required
+                    disabled={readOnly}
                     style={{
                         width: '100%',
                         padding: '14px 16px',
@@ -45,6 +47,7 @@ const Step1: React.FC<Step1Props> = ({ formData, handleChange, setFormData }) =>
                     onChange={handleChange}
                     placeholder="Contest description..."
                     rows={3}
+                    disabled={readOnly}
                     style={{
                         width: '100%',
                         padding: '14px 16px',
@@ -70,6 +73,7 @@ const Step1: React.FC<Step1Props> = ({ formData, handleChange, setFormData }) =>
                         name="difficulty"
                         value={formData.difficulty}
                         onChange={handleChange}
+                        disabled={readOnly}
                         style={{
                             width: '100%',
                             padding: '14px 16px',
@@ -98,6 +102,7 @@ const Step1: React.FC<Step1Props> = ({ formData, handleChange, setFormData }) =>
                         onChange={handleChange}
                         min="1"
                         required
+                        disabled={readOnly}
                         style={{
                             width: '100%',
                             padding: '14px 16px',
@@ -143,6 +148,7 @@ const Step1: React.FC<Step1Props> = ({ formData, handleChange, setFormData }) =>
                         type="checkbox"
                         checked={formData.fullScreenMode}
                         onChange={(e) => setFormData(prev => ({ ...prev, fullScreenMode: e.target.checked }))}
+                        disabled={readOnly}
                         style={{
                             width: '20px',
                             height: '20px',

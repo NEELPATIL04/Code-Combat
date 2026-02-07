@@ -13,6 +13,7 @@ interface ContestModalProps {
     onSave: () => void;
     loading: boolean;
     fetchingDetails: boolean;
+    readOnly?: boolean;
 }
 
 const ContestModal: React.FC<ContestModalProps> = ({
@@ -23,7 +24,8 @@ const ContestModal: React.FC<ContestModalProps> = ({
     setFormData,
     onSave,
     loading,
-    fetchingDetails
+    fetchingDetails,
+    readOnly = false
 }) => {
     const [currentStep, setCurrentStep] = useState(1);
 
@@ -100,7 +102,7 @@ const ContestModal: React.FC<ContestModalProps> = ({
                 }}>
                     <div>
                         <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 600, color: '#ffffff' }}>
-                            {fetchingDetails ? 'Loading...' : isEditing ? 'Edit Contest' : 'Create New Contest'}
+                            {fetchingDetails ? 'Loading...' : readOnly ? 'View Contest' : isEditing ? 'Edit Contest' : 'Create New Contest'}
                         </h2>
                         <p style={{ margin: '4px 0 0', color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.9rem' }}>
                             {currentStep === 1 ? 'Step 1: Basic Information' : 'Step 2: Manage Tasks'}
@@ -156,12 +158,14 @@ const ContestModal: React.FC<ContestModalProps> = ({
                                     formData={formData}
                                     handleChange={handleChange}
                                     setFormData={setFormData}
+                                    readOnly={readOnly}
                                 />
                             )}
                             {currentStep === 2 && (
                                 <Step2
                                     formData={formData}
                                     setFormData={setFormData}
+                                    readOnly={readOnly}
                                 />
                             )}
                         </>
@@ -240,7 +244,7 @@ const ContestModal: React.FC<ContestModalProps> = ({
                                 Next
                                 <ChevronRight size={18} />
                             </button>
-                        ) : (
+                        ) : !readOnly && (
                             <button
                                 onClick={onSave}
                                 disabled={loading || fetchingDetails}
