@@ -269,9 +269,11 @@ export const updateContest = async (req: Request, res: Response, next: NextFunct
 
     // Update participants if provided
     // Check for both 'participants' (from frontend FormData) and 'participantIds' (consistency)
-    const newParticipants = req.body.participants || req.body.participantIds;
+    const newParticipantsRaw = req.body.participants || req.body.participantIds;
 
-    if (newParticipants && Array.isArray(newParticipants)) {
+    if (newParticipantsRaw && Array.isArray(newParticipantsRaw)) {
+      // Deduplicate participants
+      const newParticipants = [...new Set(newParticipantsRaw)];
       console.log('Updating participants for contest:', contestId, 'Count:', newParticipants.length);
 
       // Delete existing participants
@@ -279,9 +281,9 @@ export const updateContest = async (req: Request, res: Response, next: NextFunct
 
       // Insert new participants
       if (newParticipants.length > 0) {
-        const participantValues = newParticipants.map((userId: number) => ({
+        const participantValues = newParticipants.map((userId: any) => ({
           contestId,
-          userId,
+          userId: Number(userId),
         }));
         await db.insert(contestParticipants).values(participantValues);
         console.log('Participants updated successfully');
@@ -336,11 +338,14 @@ export const deleteContest = async (req: Request, res: Response, next: NextFunct
 export const addParticipants = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const contestId = parseInt(req.params.id);
-    const { userIds } = req.body;
+    const { userIds: userIdsRaw } = req.body;
 
-    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+    if (!userIdsRaw || !Array.isArray(userIdsRaw) || userIdsRaw.length === 0) {
       return res.status(400).json({ message: 'User IDs are required' });
     }
+
+    // Deduplicate input user IDs
+    const userIds = [...new Set(userIdsRaw.map((id: any) => Number(id)))];
 
     const [contest] = await db
       .select()
