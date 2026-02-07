@@ -1,4 +1,5 @@
 import { useEditor, EditorContent } from '@tiptap/react';
+import ImageResize from 'tiptap-extension-resize-image';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -41,7 +42,7 @@ const HTMLEditor: React.FC<HTMLEditorProps> = ({
         formData.append('image', file);
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
 
-        const response = await fetch('/api/upload/image', {
+        const response = await fetch('/api/upload', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` },
           body: formData,
@@ -72,6 +73,7 @@ const HTMLEditor: React.FC<HTMLEditorProps> = ({
         inline: true,
         allowBase64: true,
       }),
+      ImageResize,
       Placeholder.configure({
         placeholder,
       }),

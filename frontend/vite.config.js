@@ -35,6 +35,11 @@ export default defineConfig(({ mode }) => {
           target: proxyTarget,
           changeOrigin: true,
           secure: false,
+        },
+        '/uploads': {
+          target: proxyTarget,
+          changeOrigin: true,
+          secure: false,
         }
       }
     }
