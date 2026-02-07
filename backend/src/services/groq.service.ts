@@ -55,6 +55,16 @@ class GroqService {
       const responseText = chatCompletion.choices[0]?.message?.content || '{}';
       console.log('📝 Groq AI Response:', responseText.substring(0, 200) + '...');
 
+      // Log usage
+      await this.logUsage(
+        'llama-3.3-70b-versatile',
+        'test_case_generation',
+        chatCompletion.usage?.total_tokens || 0,
+        (params as any).userId,
+        (params as any).contestId,
+        (params as any).taskId
+      );
+
       const parsed = JSON.parse(responseText);
       const testCases = parsed.testCases || parsed.test_cases || [];
 
@@ -244,10 +254,52 @@ Respond with JSON: { "isValid": true/false, "suggestions": "improvement suggesti
         throw new Error('Received empty response from Groq');
       }
 
+      // Log usage
+      await this.logUsage(
+        'llama-3.3-70b-versatile',
+        'code_generation',
+        chatCompletion.usage?.total_tokens || 0,
+        (params as any).userId,  // Need to pass userId in params
+        (params as any).contestId,
+        (params as any).taskId
+      );
+
       return JSON.parse(responseContent);
     } catch (error) {
       console.error('Error generating task code:', error);
       throw error;
+    }
+  }
+  /**
+   * Log AI usage to database
+   */
+  private async logUsage(
+    model: string,
+    purpose: string,
+    tokens: number,
+    userId?: number,
+    contestId?: number,
+    taskId?: number
+  ) {
+    if (!userId) return; // Don't log if no user associated (though usually there is)
+
+    try {
+      const { db } = await import('../config/database');
+      const { aiUsageLogs } = await import('../db/schema');
+
+      await db.insert(aiUsageLogs).values({
+        provider: 'groq',
+        model,
+        purpose,
+        tokensUsed: tokens,
+        userId,
+        contestId,
+        taskId,
+        timestamp: new Date(),
+      });
+      console.log('✅ AI Usage logged successfully');
+    } catch (error) {
+      console.error('❌ Failed to log AI usage:', error);
     }
   }
 }
