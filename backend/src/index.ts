@@ -27,6 +27,9 @@ const io = new Server(httpServer, {
   }
 });
 
+// Make io accessible to our routers and controllers
+app.set('io', io);
+
 // Socket.IO Logic
 const connectedUsers = new Map<string, { contestId: string, userId: string, role: 'admin' | 'participant' }>();
 

@@ -1,9 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../config/database';
-import { submissions, testCases, tasks, contestParticipants, userTaskProgress } from '../db/schema';
+import { submissions, testCases, tasks, contestParticipants, userTaskProgress, activityLogs } from '../db/schema';
 import { judge0Service } from '../services/judge0.service';
 import { getJudge0LanguageId } from '../utils/judge0.util';
 import { eq, and, desc } from 'drizzle-orm';
+import { Server } from 'socket.io';
 
 /**
  * Run code against test cases (without saving as submission)
@@ -231,6 +232,34 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
             eq(contestParticipants.userId, userId)
           )
         );
+    }
+
+    // Log activity
+    const [activity] = await db.insert(activityLogs).values({
+      contestId,
+      userId,
+      activityType: 'task_submitted',
+      activityData: {
+        taskId,
+        submissionId: submission.id,
+        status,
+        passed: passedCount,
+        total: totalCount,
+        score
+      },
+      severity: allPassed ? 'normal' : 'warning'
+    }).returning();
+
+    // Emit real-time update to admins
+    const io = req.app.get('io') as Server;
+    if (io) {
+      io.to(`admin-contest-${contestId}`).emit('new-activity', {
+        activity: {
+          ...activity,
+          // We need to fetch user details to send complete info, or frontend can re-fetch
+          // For now, let's trigger a re-fetch on frontend
+        }
+      });
     }
 
     return res.json({

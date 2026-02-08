@@ -63,14 +63,21 @@ const ActivityLogs: React.FC<ActivityLogsProps> = ({ contestId }) => {
             setActiveParticipants(prev => prev.filter(p => p.socketId !== socketId));
         };
 
+        const handleNewActivity = () => {
+            loadLogs();
+            loadStats();
+        };
+
         socket.on('active-participants', handleActiveParticipants);
         socket.on('participant-joined', handleParticipantJoined);
         socket.on('participant-left', handleParticipantLeft);
+        socket.on('new-activity', handleNewActivity);
 
         return () => {
             socket.off('active-participants', handleActiveParticipants);
             socket.off('participant-joined', handleParticipantJoined);
             socket.off('participant-left', handleParticipantLeft);
+            socket.off('new-activity', handleNewActivity);
         };
     }, [socket, contestId]);
 
