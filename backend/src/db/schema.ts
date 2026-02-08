@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, timestamp, pgEnum, text, integer, boolean, json } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, timestamp, pgEnum, text, integer, boolean, json, jsonb } from 'drizzle-orm/pg-core';
 
 /**
  * User Role Enum
@@ -352,6 +352,74 @@ export const submissions = pgTable('submissions', {
   processedAt: timestamp('processed_at'),
 });
 
+/**
+ * Activity Severity Enum
+ * Defines the severity level of user activities
+ */
+export const activitySeverityEnum = pgEnum('activity_severity', ['normal', 'warning', 'alert']);
+
+/**
+ * Activity Logs Table
+ * Stores real-time user activity during contests
+ */
+export const activityLogs = pgTable('activity_logs', {
+  // Primary key
+  id: serial('id').primaryKey(),
+
+  // Contest reference
+  contestId: integer('contest_id').notNull().references(() => contests.id, { onDelete: 'cascade' }),
+
+  // User reference
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Activity type (e.g., 'join', 'screen_shift', 'submit', 'hint_request', 'copy_attempt', 'complete')
+  activityType: varchar('activity_type', { length: 50 }).notNull(),
+
+  // Additional activity data as JSON
+  activityData: jsonb('activity_data'),
+
+  // Severity level
+  severity: activitySeverityEnum('severity').notNull().default('normal'),
+
+  // Timestamp when activity occurred
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+});
+
+/**
+ * Contest Settings Table
+ * Stores test mode and other settings for contests
+ */
+export const contestSettings = pgTable('contest_settings', {
+  // Primary key
+  id: serial('id').primaryKey(),
+
+  // Contest reference (one-to-one relationship)
+  contestId: integer('contest_id').notNull().unique().references(() => contests.id, { onDelete: 'cascade' }),
+
+  // Test mode settings
+  testModeEnabled: boolean('test_mode_enabled').notNull().default(false),
+  aiHintsEnabled: boolean('ai_hints_enabled').notNull().default(true),
+  aiModeEnabled: boolean('ai_mode_enabled').notNull().default(true),
+  fullScreenModeEnabled: boolean('full_screen_mode_enabled').notNull().default(true),
+  allowCopyPaste: boolean('allow_copy_paste').notNull().default(false),
+  enableActivityLogs: boolean('enable_activity_logs').notNull().default(false),
+
+  // Task timing settings
+  perTaskTimeLimit: integer('per_task_time_limit'), // in minutes
+  enablePerTaskTimer: boolean('enable_per_task_timer').notNull().default(false),
+
+  // Scheduling settings
+  autoStart: boolean('auto_start').notNull().default(false),
+  autoEnd: boolean('auto_end').notNull().default(true),
+
+  // Additional settings as JSON for flexibility
+  additionalSettings: jsonb('additional_settings'),
+
+  // Timestamps
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 // TypeScript types inferred from the schema
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -370,3 +438,9 @@ export type NewTestCase = typeof testCases.$inferInsert;
 
 export type Submission = typeof submissions.$inferSelect;
 export type NewSubmission = typeof submissions.$inferInsert;
+
+export type ActivityLog = typeof activityLogs.$inferSelect;
+export type NewActivityLog = typeof activityLogs.$inferInsert;
+
+export type ContestSettings = typeof contestSettings.$inferSelect;
+export type NewContestSettings = typeof contestSettings.$inferInsert;

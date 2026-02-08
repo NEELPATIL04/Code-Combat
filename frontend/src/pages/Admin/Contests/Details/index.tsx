@@ -12,9 +12,13 @@ import {
     Activity,
     Clock,
     BarChart3,
-    Eye
+    Eye,
+    Settings as SettingsIcon,
+    LayoutDashboard
 } from 'lucide-react';
 import { contestAPI } from '../../../../utils/api';
+import ContestSettings from './ContestSettings';
+import ActivityLogs from './ActivityLogs';
 
 interface ParticipantPerformance {
     id: number;
@@ -49,6 +53,7 @@ const ContestDetails: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [activeTab, setActiveTab] = useState<'overview' | 'settings' | 'activity'>('overview');
 
     useEffect(() => {
         loadContestDetails();
@@ -163,6 +168,37 @@ const ContestDetails: React.FC = () => {
                 </button>
             </div>
 
+            {/* Tabs Navigation */}
+            <div style={{
+                display: 'flex',
+                gap: '4px',
+                marginBottom: '32px',
+                borderBottom: '1px solid #27272a',
+                paddingBottom: '0'
+            }}>
+                <TabButton
+                    icon={<LayoutDashboard size={18} />}
+                    label="Overview"
+                    active={activeTab === 'overview'}
+                    onClick={() => setActiveTab('overview')}
+                />
+                <TabButton
+                    icon={<SettingsIcon size={18} />}
+                    label="Settings"
+                    active={activeTab === 'settings'}
+                    onClick={() => setActiveTab('settings')}
+                />
+                <TabButton
+                    icon={<Activity size={18} />}
+                    label="Activity Logs"
+                    active={activeTab === 'activity'}
+                    onClick={() => setActiveTab('activity')}
+                />
+            </div>
+
+            {/* Tab Content */}
+            {activeTab === 'overview' && (
+                <>
             {/* Bento Grid */}
             <div style={{
                 display: 'grid',
@@ -476,6 +512,18 @@ const ContestDetails: React.FC = () => {
                     </table>
                 </div>
             </div>
+                </>
+            )}
+
+            {/* Settings Tab */}
+            {activeTab === 'settings' && contest && (
+                <ContestSettings contestId={contest.id} />
+            )}
+
+            {/* Activity Logs Tab */}
+            {activeTab === 'activity' && contest && (
+                <ActivityLogs contestId={contest.id} />
+            )}
         </div>
     );
 };
@@ -550,5 +598,48 @@ const tdStyle: React.CSSProperties = {
     padding: '20px 24px',
     fontSize: '0.875rem'
 };
+
+interface TabButtonProps {
+    icon: React.ReactNode;
+    label: string;
+    active: boolean;
+    onClick: () => void;
+}
+
+const TabButton: React.FC<TabButtonProps> = ({ icon, label, active, onClick }) => (
+    <button
+        onClick={onClick}
+        style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '12px 20px',
+            background: 'transparent',
+            border: 'none',
+            borderBottom: `2px solid ${active ? '#3b82f6' : 'transparent'}`,
+            color: active ? '#3b82f6' : '#a1a1aa',
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            position: 'relative'
+        }}
+        onMouseEnter={(e) => {
+            if (!active) {
+                e.currentTarget.style.color = '#fafafa';
+                e.currentTarget.style.borderBottomColor = '#27272a';
+            }
+        }}
+        onMouseLeave={(e) => {
+            if (!active) {
+                e.currentTarget.style.color = '#a1a1aa';
+                e.currentTarget.style.borderBottomColor = 'transparent';
+            }
+        }}
+    >
+        {icon}
+        {label}
+    </button>
+);
 
 export default ContestDetails;

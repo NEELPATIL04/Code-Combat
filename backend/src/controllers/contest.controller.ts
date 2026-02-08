@@ -19,9 +19,12 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
     console.log('Query:', req.query);
     console.log('Body keys:', Object.keys(req.body));
 
-    const { title, description, difficulty, duration, startPassword, contestTasks, participantIds, fullScreenMode, scheduledStartTime, endTime } = req.body;
+    const { title, description, difficulty, duration, startPassword, contestTasks, tasks: tasksFromBody, participantIds, fullScreenMode, scheduledStartTime, endTime } = req.body;
 
-    console.log(`Title: ${title}, Duration: ${duration}, Tasks: ${contestTasks?.length || 0}, Full Screen: ${fullScreenMode}`);
+    // Support both 'tasks' and 'contestTasks' parameter names
+    const tasksList = contestTasks || tasksFromBody;
+
+    console.log(`Title: ${title}, Duration: ${duration}, Tasks: ${tasksList?.length || 0}, Full Screen: ${fullScreenMode}`);
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -54,8 +57,8 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
     }).returning();
 
     // Create tasks if provided
-    if (contestTasks && Array.isArray(contestTasks) && contestTasks.length > 0) {
-      const taskValues = contestTasks.map((task: any, index: number) => {
+    if (tasksList && Array.isArray(tasksList) && tasksList.length > 0) {
+      const taskValues = tasksList.map((task: any, index: number) => {
         console.log(`Task ${index}: ${task.title} - Allowed Languages:`, task.allowedLanguages);
         return {
           contestId: contest.id,
@@ -204,7 +207,10 @@ export const getContestById = async (req: Request, res: Response, next: NextFunc
 export const updateContest = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const contestId = parseInt(req.params.id as string);
-    const { title, description, difficulty, duration, status, startPassword, contestTasks, fullScreenMode, scheduledStartTime, endTime } = req.body;
+    const { title, description, difficulty, duration, status, startPassword, contestTasks, tasks: tasksFromBody, fullScreenMode, scheduledStartTime, endTime } = req.body;
+
+    // Support both 'tasks' and 'contestTasks' parameter names
+    const tasksList = contestTasks || tasksFromBody;
 
     const [existingContest] = await db
       .select()
@@ -243,14 +249,14 @@ export const updateContest = async (req: Request, res: Response, next: NextFunct
       .returning();
 
     // Update tasks if provided
-    if (contestTasks && Array.isArray(contestTasks)) {
-      console.log('Updating tasks for contest:', contestId, 'Count:', contestTasks.length);
+    if (tasksList && Array.isArray(tasksList)) {
+      console.log('Updating tasks for contest:', contestId, 'Count:', tasksList.length);
       // Delete existing tasks
       await db.delete(tasks).where(eq(tasks.contestId, contestId));
 
       // Insert new tasks
-      if (contestTasks.length > 0) {
-        const taskValues = contestTasks.map((task: any, index: number) => {
+      if (tasksList.length > 0) {
+        const taskValues = tasksList.map((task: any, index: number) => {
           console.log(`Updating Task ${index}: ${task.title} - Allowed Languages:`, task.allowedLanguages);
           return {
             contestId: contestId,
