@@ -643,6 +643,7 @@ const TaskPage: React.FC = () => {
                         if (!requireCamera && !requireMicrophone && !requireScreenShare) {
                             setMediaVerified(true);
                         }
+                        setLoading(false); // <--- Added this
                         return;
                     }
                 }
@@ -665,6 +666,7 @@ const TaskPage: React.FC = () => {
                 setContestSettings(defaultSettings);
                 setMediaVerified(true); // Auto-verify if we can't load strict settings
                 setSettingsError(null); // Clear error since we are recovering
+                setLoading(false); // <--- Added this
             }
         };
         fetchSettings();
