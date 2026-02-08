@@ -294,6 +294,63 @@ export const getTaskSubmissions = async (req: Request, res: Response, next: Next
 };
 
 /**
+ * Reset user submissions for a specific task
+ * DELETE /api/submissions/task/:taskId/user/:userId/reset
+ * Admin only - resets all submissions and progress for a user on a task
+ */
+export const resetUserTaskSubmissions = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const taskId = parseInt(req.params.taskId);
+    const userId = parseInt(req.params.userId);
+
+    if (!taskId || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Task ID and User ID are required',
+      });
+    }
+
+    // Verify task exists
+    const [task] = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.id, taskId))
+      .limit(1);
+
+    if (!task) {
+      return res.status(404).json({
+        success: false,
+        message: 'Task not found',
+      });
+    }
+
+    // Delete all submissions for this user and task
+    await db
+      .delete(submissions)
+      .where(and(
+        eq(submissions.taskId, taskId),
+        eq(submissions.userId, userId)
+      ));
+
+    // Reset user task progress
+    await db
+      .delete(userTaskProgress)
+      .where(and(
+        eq(userTaskProgress.taskId, taskId),
+        eq(userTaskProgress.userId, userId)
+      ));
+
+    return res.status(200).json({
+      success: true,
+      message: 'User submissions reset successfully',
+    });
+  } catch (error: any) {
+    console.error('Reset submissions error:', error);
+    return next(error);
+  }
+};
+
+/**
  * Health check - verify Judge0 is running
  * GET /api/submissions/health
  */

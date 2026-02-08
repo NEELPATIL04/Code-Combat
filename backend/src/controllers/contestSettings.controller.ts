@@ -49,6 +49,14 @@ export const getContestSettings = async (req: Request, res: Response, next: Next
           enablePerTaskTimer: false,
           autoStart: false,
           autoEnd: true,
+          // AI Hint Configuration defaults
+          maxHintsAllowed: 3,
+          hintUnlockAfterSubmissions: 0,
+          hintUnlockAfterSeconds: 0,
+          provideLastSubmissionContext: true,
+          // Submission Limits defaults
+          maxSubmissionsAllowed: 0,
+          autoSubmitOnTimeout: true,
           additionalSettings: {},
         },
       });
@@ -81,6 +89,14 @@ export const updateContestSettings = async (req: Request, res: Response, next: N
       enablePerTaskTimer,
       autoStart,
       autoEnd,
+      // AI Hint Configuration
+      maxHintsAllowed,
+      hintUnlockAfterSubmissions,
+      hintUnlockAfterSeconds,
+      provideLastSubmissionContext,
+      // Submission Limits
+      maxSubmissionsAllowed,
+      autoSubmitOnTimeout,
       additionalSettings,
     } = req.body;
 
@@ -119,6 +135,14 @@ export const updateContestSettings = async (req: Request, res: Response, next: N
           enablePerTaskTimer: enablePerTaskTimer !== undefined ? enablePerTaskTimer : existingSettings.enablePerTaskTimer,
           autoStart: autoStart !== undefined ? autoStart : existingSettings.autoStart,
           autoEnd: autoEnd !== undefined ? autoEnd : existingSettings.autoEnd,
+          // AI Hint Configuration
+          maxHintsAllowed: maxHintsAllowed !== undefined ? maxHintsAllowed : existingSettings.maxHintsAllowed,
+          hintUnlockAfterSubmissions: hintUnlockAfterSubmissions !== undefined ? hintUnlockAfterSubmissions : existingSettings.hintUnlockAfterSubmissions,
+          hintUnlockAfterSeconds: hintUnlockAfterSeconds !== undefined ? hintUnlockAfterSeconds : existingSettings.hintUnlockAfterSeconds,
+          provideLastSubmissionContext: provideLastSubmissionContext !== undefined ? provideLastSubmissionContext : existingSettings.provideLastSubmissionContext,
+          // Submission Limits
+          maxSubmissionsAllowed: maxSubmissionsAllowed !== undefined ? maxSubmissionsAllowed : existingSettings.maxSubmissionsAllowed,
+          autoSubmitOnTimeout: autoSubmitOnTimeout !== undefined ? autoSubmitOnTimeout : existingSettings.autoSubmitOnTimeout,
           additionalSettings: additionalSettings || existingSettings.additionalSettings,
           updatedAt: new Date(),
         })
@@ -140,6 +164,14 @@ export const updateContestSettings = async (req: Request, res: Response, next: N
           enablePerTaskTimer: enablePerTaskTimer ?? false,
           autoStart: autoStart ?? false,
           autoEnd: autoEnd ?? true,
+          // AI Hint Configuration
+          maxHintsAllowed: maxHintsAllowed ?? 3,
+          hintUnlockAfterSubmissions: hintUnlockAfterSubmissions ?? 0,
+          hintUnlockAfterSeconds: hintUnlockAfterSeconds ?? 0,
+          provideLastSubmissionContext: provideLastSubmissionContext ?? true,
+          // Submission Limits
+          maxSubmissionsAllowed: maxSubmissionsAllowed ?? 0,
+          autoSubmitOnTimeout: autoSubmitOnTimeout ?? true,
           additionalSettings: additionalSettings ?? null,
         })
         .returning();

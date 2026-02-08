@@ -16,6 +16,14 @@ interface SettingsData {
     enablePerTaskTimer: boolean;
     autoStart: boolean;
     autoEnd: boolean;
+    // AI Hint Configuration
+    maxHintsAllowed: number | null;
+    hintUnlockAfterSubmissions: number | null;
+    hintUnlockAfterSeconds: number | null;
+    provideLastSubmissionContext: boolean;
+    // Submission Limits
+    maxSubmissionsAllowed: number | null;
+    autoSubmitOnTimeout: boolean;
     additionalSettings: any;
 }
 
@@ -31,6 +39,14 @@ const ContestSettings: React.FC<ContestSettingsProps> = ({ contestId }) => {
         enablePerTaskTimer: false,
         autoStart: false,
         autoEnd: true,
+        // AI Hint Configuration
+        maxHintsAllowed: 3,
+        hintUnlockAfterSubmissions: 0,
+        hintUnlockAfterSeconds: 0,
+        provideLastSubmissionContext: true,
+        // Submission Limits
+        maxSubmissionsAllowed: 0,
+        autoSubmitOnTimeout: true,
         additionalSettings: {},
     });
     const [loading, setLoading] = useState(true);
@@ -296,6 +312,189 @@ const ContestSettings: React.FC<ContestSettingsProps> = ({ contestId }) => {
                                 checked={settings.aiHintsEnabled}
                                 onChange={(checked) => setSettings({ ...settings, aiHintsEnabled: checked })}
                             />
+
+                            {/* AI Hint Configuration - nested under AI Hints Enabled */}
+                            {settings.aiHintsEnabled && (
+                                <div style={{
+                                    paddingLeft: '16px',
+                                    borderLeft: '2px solid rgba(59, 130, 246, 0.3)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '16px',
+                                    background: 'rgba(59, 130, 246, 0.03)',
+                                    padding: '16px',
+                                    borderRadius: '8px'
+                                }}>
+                                    <div style={{ color: '#3b82f6', fontSize: '0.875rem', fontWeight: 600, marginBottom: '8px' }}>
+                                        AI Hint Configuration
+                                    </div>
+
+                                    <div>
+                                        <label style={{
+                                            display: 'block',
+                                            color: '#a1a1aa',
+                                            fontSize: '0.875rem',
+                                            marginBottom: '8px',
+                                            fontWeight: 500
+                                        }}>
+                                            Maximum Hints Allowed (per task)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="10"
+                                            value={settings.maxHintsAllowed || ''}
+                                            onChange={(e) => setSettings({
+                                                ...settings,
+                                                maxHintsAllowed: e.target.value ? parseInt(e.target.value) : null
+                                            })}
+                                            placeholder="e.g., 3"
+                                            style={{
+                                                width: '100%',
+                                                background: '#18181b',
+                                                border: '1px solid #27272a',
+                                                borderRadius: '6px',
+                                                color: '#fafafa',
+                                                padding: '10px 12px',
+                                                fontSize: '0.875rem',
+                                                outline: 'none'
+                                            }}
+                                        />
+                                        <div style={{ color: '#71717a', fontSize: '0.75rem', marginTop: '4px' }}>
+                                            Set how many AI hints a user can request per task
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label style={{
+                                            display: 'block',
+                                            color: '#a1a1aa',
+                                            fontSize: '0.875rem',
+                                            marginBottom: '8px',
+                                            fontWeight: 500
+                                        }}>
+                                            Unlock After Submissions
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="10"
+                                            value={settings.hintUnlockAfterSubmissions ?? ''}
+                                            onChange={(e) => setSettings({
+                                                ...settings,
+                                                hintUnlockAfterSubmissions: e.target.value ? parseInt(e.target.value) : 0
+                                            })}
+                                            placeholder="e.g., 2"
+                                            style={{
+                                                width: '100%',
+                                                background: '#18181b',
+                                                border: '1px solid #27272a',
+                                                borderRadius: '6px',
+                                                color: '#fafafa',
+                                                padding: '10px 12px',
+                                                fontSize: '0.875rem',
+                                                outline: 'none'
+                                            }}
+                                        />
+                                        <div style={{ color: '#71717a', fontSize: '0.75rem', marginTop: '4px' }}>
+                                            Hints unlock after user makes X submissions (0 = immediate access)
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label style={{
+                                            display: 'block',
+                                            color: '#a1a1aa',
+                                            fontSize: '0.875rem',
+                                            marginBottom: '8px',
+                                            fontWeight: 500
+                                        }}>
+                                            Unlock After Seconds
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="3600"
+                                            value={settings.hintUnlockAfterSeconds ?? ''}
+                                            onChange={(e) => setSettings({
+                                                ...settings,
+                                                hintUnlockAfterSeconds: e.target.value ? parseInt(e.target.value) : 0
+                                            })}
+                                            placeholder="e.g., 300 (5 minutes)"
+                                            style={{
+                                                width: '100%',
+                                                background: '#18181b',
+                                                border: '1px solid #27272a',
+                                                borderRadius: '6px',
+                                                color: '#fafafa',
+                                                padding: '10px 12px',
+                                                fontSize: '0.875rem',
+                                                outline: 'none'
+                                            }}
+                                        />
+                                        <div style={{ color: '#71717a', fontSize: '0.75rem', marginTop: '4px' }}>
+                                            Hints unlock after user spends X seconds on the task (0 = immediate access)
+                                        </div>
+                                    </div>
+
+                                    <ToggleSwitch
+                                        label="Provide Last Submission Context"
+                                        description="AI will see user's last submission to give better hints"
+                                        checked={settings.provideLastSubmissionContext}
+                                        onChange={(checked) => setSettings({ ...settings, provideLastSubmissionContext: checked })}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Submission Limits Section */}
+                            <div style={{
+                                borderLeft: '3px solid #10b981',
+                                paddingLeft: '16px',
+                                marginTop: '24px',
+                                marginBottom: '24px'
+                            }}>
+                                <h4 style={{
+                                    fontSize: '0.875rem',
+                                    fontWeight: '600',
+                                    color: '#10b981',
+                                    marginBottom: '16px',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px'
+                                }}>
+                                    Submission Limits
+                                </h4>
+
+                                <div style={{ marginBottom: '16px' }}>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.875rem', fontWeight: '500', color: '#18181b' }}>
+                                        Max Submissions Allowed
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        value={settings.maxSubmissionsAllowed ?? 0}
+                                        onChange={(e) => setSettings({ ...settings, maxSubmissionsAllowed: parseInt(e.target.value) || 0 })}
+                                        style={{
+                                            width: '100%',
+                                            border: '1px solid #d4d4d8',
+                                            borderRadius: '6px',
+                                            padding: '10px 12px',
+                                            fontSize: '0.875rem',
+                                            outline: 'none'
+                                        }}
+                                    />
+                                    <div style={{ color: '#71717a', fontSize: '0.75rem', marginTop: '4px' }}>
+                                        Maximum number of submissions per task (0 = unlimited)
+                                    </div>
+                                </div>
+
+                                <ToggleSwitch
+                                    label="Auto-Submit on Timeout"
+                                    description="Automatically submit current code when time expires and show result"
+                                    checked={settings.autoSubmitOnTimeout}
+                                    onChange={(checked) => setSettings({ ...settings, autoSubmitOnTimeout: checked })}
+                                />
+                            </div>
 
                             <ToggleSwitch
                                 label="AI Mode Enabled"
