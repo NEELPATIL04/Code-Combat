@@ -33,10 +33,10 @@ app.set('io', io);
 // Socket.IO Logic
 const connectedUsers = new Map<string, { contestId: string, userId: string, role: 'admin' | 'participant' }>();
 
-io.on('connection', (socket) => {
+io.on('connection', (socket: any) => {
   console.log('User connected:', socket.id);
 
-  socket.on('join-contest', ({ contestId, userId }) => {
+  socket.on('join-contest', ({ contestId, userId }: { contestId: string, userId: string }) => {
     socket.join(`contest-${contestId}`);
     connectedUsers.set(socket.id, { contestId, userId, role: 'participant' });
     console.log(`User ${userId} joined contest ${contestId}`);
@@ -44,7 +44,7 @@ io.on('connection', (socket) => {
     io.to(`admin-contest-${contestId}`).emit('participant-joined', { userId, socketId: socket.id });
   });
 
-  socket.on('join-monitor', ({ contestId }) => {
+  socket.on('join-monitor', ({ contestId }: { contestId: string }) => {
     socket.join(`admin-contest-${contestId}`);
     console.log(`Admin joined monitor for contest ${contestId}`);
     // Send list of currently connected participants
@@ -55,15 +55,15 @@ io.on('connection', (socket) => {
   });
 
   // WebRTC Signaling
-  socket.on('offer', ({ target, payload }) => {
+  socket.on('offer', ({ target, payload }: { target: string, payload: any }) => {
     io.to(target).emit('offer', { sender: socket.id, payload });
   });
 
-  socket.on('answer', ({ target, payload }) => {
+  socket.on('answer', ({ target, payload }: { target: string, payload: any }) => {
     io.to(target).emit('answer', { sender: socket.id, payload });
   });
 
-  socket.on('ice-candidate', ({ target, candidate }) => {
+  socket.on('ice-candidate', ({ target, candidate }: { target: string, candidate: any }) => {
     io.to(target).emit('ice-candidate', { sender: socket.id, candidate });
   });
 

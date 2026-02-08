@@ -329,8 +329,8 @@ export const getTaskSubmissions = async (req: Request, res: Response, next: Next
  */
 export const resetUserTaskSubmissions = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const taskId = parseInt(req.params.taskId);
-    const userId = parseInt(req.params.userId);
+    const taskId = parseInt(req.params.taskId as string);
+    const userId = parseInt(req.params.userId as string);
 
     if (!taskId || !userId) {
       return res.status(400).json({
