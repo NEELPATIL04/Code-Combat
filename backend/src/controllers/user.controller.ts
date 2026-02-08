@@ -210,7 +210,7 @@ export const getUserContestDetails = async (req: Request, res: Response, next: N
  */
 export const updateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = parseInt(req.params.id);
+    const userId = parseInt(req.params.id as string);
     const { role, status } = req.body;
 
     if (!userId) {

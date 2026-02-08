@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../config/database';
-import { submissions, contestParticipants, aiUsageLogs, users, contests } from '../db/schema';
+import { submissions, contestParticipants, aiUsageLogs } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 
 /**
