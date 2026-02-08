@@ -404,6 +404,11 @@ export const contestSettings = pgTable('contest_settings', {
   allowCopyPaste: boolean('allow_copy_paste').notNull().default(false),
   enableActivityLogs: boolean('enable_activity_logs').notNull().default(false),
 
+  // Media Monitoring Settings
+  requireCamera: boolean('require_camera').notNull().default(false),
+  requireMicrophone: boolean('require_microphone').notNull().default(false),
+  requireScreenShare: boolean('require_screen_share').notNull().default(false),
+
   // AI Hints Configuration
   maxHintsAllowed: integer('max_hints_allowed').default(3), // Maximum number of hints per task/problem
   hintUnlockAfterSubmissions: integer('hint_unlock_after_submissions').default(0), // Unlock after X submissions

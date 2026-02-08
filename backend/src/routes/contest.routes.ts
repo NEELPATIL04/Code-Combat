@@ -87,7 +87,7 @@ router.post('/:id/start', authenticate, requireRole(['admin', 'super_admin']), s
  * Get contest settings
  * Requires: Authentication + Admin role
  */
-router.get('/:id/settings', authenticate, requireRole(['admin', 'super_admin']), getContestSettings);
+router.get('/:id/settings', authenticate, getContestSettings);
 
 /**
  * PUT /api/contests/:id/settings

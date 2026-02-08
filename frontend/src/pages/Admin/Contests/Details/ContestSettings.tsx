@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Clock, TestTube, Save, RotateCcw, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Settings, Clock, TestTube, Save, RotateCcw, AlertCircle, CheckCircle2, Monitor } from 'lucide-react';
 
 interface ContestSettingsProps {
     contestId: number;
@@ -12,6 +12,9 @@ interface SettingsData {
     fullScreenModeEnabled: boolean;
     allowCopyPaste: boolean;
     enableActivityLogs: boolean;
+    requireCamera: boolean;
+    requireMicrophone: boolean;
+    requireScreenShare: boolean;
     perTaskTimeLimit: number | null;
     enablePerTaskTimer: boolean;
     autoStart: boolean;
@@ -35,6 +38,9 @@ const ContestSettings: React.FC<ContestSettingsProps> = ({ contestId }) => {
         fullScreenModeEnabled: true,
         allowCopyPaste: false,
         enableActivityLogs: false,
+        requireCamera: false,
+        requireMicrophone: false,
+        requireScreenShare: false,
         perTaskTimeLimit: null,
         enablePerTaskTimer: false,
         autoStart: false,
@@ -525,6 +531,50 @@ const ContestSettings: React.FC<ContestSettingsProps> = ({ contestId }) => {
                             />
                         </div>
                     )}
+                </div>
+            </div>
+
+            {/* Media Monitoring Settings */}
+            <div style={{
+                background: '#09090b',
+                border: '1px solid #27272a',
+                borderRadius: '12px',
+                padding: '24px',
+                marginBottom: '20px'
+            }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    marginBottom: '20px'
+                }}>
+                    <Monitor size={20} color="#ec4899" />
+                    <h3 style={{ margin: 0, color: '#fafafa', fontSize: '1.125rem', fontWeight: 600 }}>
+                        Media Monitoring Settings
+                    </h3>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <ToggleSwitch
+                        label="Require Camera"
+                        description="Participants must enable their camera to enter the contest"
+                        checked={settings.requireCamera}
+                        onChange={(checked) => setSettings({ ...settings, requireCamera: checked })}
+                    />
+
+                    <ToggleSwitch
+                        label="Require Microphone"
+                        description="Participants must enable their microphone to enter the contest"
+                        checked={settings.requireMicrophone}
+                        onChange={(checked) => setSettings({ ...settings, requireMicrophone: checked })}
+                    />
+
+                    <ToggleSwitch
+                        label="Require Screen Share"
+                        description="Participants must share their screen to enter the contest"
+                        checked={settings.requireScreenShare}
+                        onChange={(checked) => setSettings({ ...settings, requireScreenShare: checked })}
+                    />
                 </div>
             </div>
 

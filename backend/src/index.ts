@@ -1,6 +1,8 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import { env } from './config/env';
 import { testDatabaseConnection, closeDatabaseConnection } from './config/database';
 import routes from './routes';
@@ -16,6 +18,61 @@ import { errorHandler } from './middleware/errorHandler.middleware';
 
 // Initialize Express application
 const app: Application = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: env.CORS_ORIGIN,
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
+// Socket.IO Logic
+const connectedUsers = new Map<string, { contestId: string, userId: string, role: 'admin' | 'participant' }>();
+
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+
+  socket.on('join-contest', ({ contestId, userId }) => {
+    socket.join(`contest-${contestId}`);
+    connectedUsers.set(socket.id, { contestId, userId, role: 'participant' });
+    console.log(`User ${userId} joined contest ${contestId}`);
+    // Notify admins in the room
+    io.to(`admin-contest-${contestId}`).emit('participant-joined', { userId, socketId: socket.id });
+  });
+
+  socket.on('join-monitor', ({ contestId }) => {
+    socket.join(`admin-contest-${contestId}`);
+    console.log(`Admin joined monitor for contest ${contestId}`);
+    // Send list of currently connected participants
+    const participants = Array.from(connectedUsers.entries())
+      .filter(([_, data]) => data.contestId === contestId && data.role === 'participant')
+      .map(([sid, data]) => ({ socketId: sid, userId: data.userId }));
+    socket.emit('active-participants', participants);
+  });
+
+  // WebRTC Signaling
+  socket.on('offer', ({ target, payload }) => {
+    io.to(target).emit('offer', { sender: socket.id, payload });
+  });
+
+  socket.on('answer', ({ target, payload }) => {
+    io.to(target).emit('answer', { sender: socket.id, payload });
+  });
+
+  socket.on('ice-candidate', ({ target, candidate }) => {
+    io.to(target).emit('ice-candidate', { sender: socket.id, candidate });
+  });
+
+  socket.on('disconnect', () => {
+    const user = connectedUsers.get(socket.id);
+    if (user && user.role === 'participant') {
+      io.to(`admin-contest-${user.contestId}`).emit('participant-left', { socketId: socket.id });
+    }
+    connectedUsers.delete(socket.id);
+    console.log('User disconnected:', socket.id);
+  });
+});
 
 /**
  * Middleware Configuration
@@ -93,7 +150,7 @@ async function startServer() {
     }
 
     // Start listening for requests
-    const server = app.listen(env.PORT, () => {
+    const server = httpServer.listen(env.PORT, () => {
       console.log('='.repeat(60));
       console.log('🚀 Code Combat Backend Server');
       console.log('='.repeat(60));
