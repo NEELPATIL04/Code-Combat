@@ -175,6 +175,51 @@ export const tasks = pgTable('tasks', {
 });
 
 /**
+ * Contest Settings Table
+ * Specific configuration for each contest
+ */
+export const contestSettings = pgTable('contest_settings', {
+  id: serial('id').primaryKey(),
+
+  contestId: integer('contest_id').notNull().references(() => contests.id, { onDelete: 'cascade' }).unique(),
+
+  // Features
+  testModeEnabled: boolean('test_mode_enabled').default(false),
+  aiHintsEnabled: boolean('ai_hints_enabled').default(true),
+  aiModeEnabled: boolean('ai_mode_enabled').default(true),
+  fullScreenModeEnabled: boolean('full_screen_mode_enabled').default(true),
+  allowCopyPaste: boolean('allow_copy_paste').default(false),
+  enableActivityLogs: boolean('enable_activity_logs').default(false),
+
+  // Media Monitoring
+  requireCamera: boolean('require_camera').default(false),
+  requireMicrophone: boolean('require_microphone').default(false),
+  requireScreenShare: boolean('require_screen_share').default(false),
+
+  // Timing
+  perTaskTimeLimit: integer('per_task_time_limit'), // in minutes
+  enablePerTaskTimer: boolean('enable_per_task_timer').default(false),
+  autoStart: boolean('auto_start').default(false),
+  autoEnd: boolean('auto_end').default(true),
+
+  // AI Configuration
+  maxHintsAllowed: integer('max_hints_allowed').default(3),
+  hintUnlockAfterSubmissions: integer('hint_unlock_after_submissions').default(0),
+  hintUnlockAfterSeconds: integer('hint_unlock_after_seconds').default(0),
+  provideLastSubmissionContext: boolean('provide_last_submission_context').default(true),
+
+  // Submissions
+  maxSubmissionsAllowed: integer('max_submissions_allowed').default(0), // 0 = unlimited
+  autoSubmitOnTimeout: boolean('auto_submit_on_timeout').default(true),
+
+  // Extra
+  additionalSettings: json('additional_settings').$type<Record<string, any>>(),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+/**
  * Contest Participants Table
  * Maps users to contests they are assigned to
  */
@@ -627,3 +672,6 @@ export const aiUsageLogs = pgTable('ai_usage_logs', {
 
 export type AiUsageLog = typeof aiUsageLogs.$inferSelect;
 export type NewAiUsageLog = typeof aiUsageLogs.$inferInsert;
+
+export type ContestWrapper = typeof contestSettings.$inferSelect;
+export type NewContestSettings = typeof contestSettings.$inferInsert;
