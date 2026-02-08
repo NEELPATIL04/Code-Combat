@@ -64,6 +64,7 @@ export const contestAPI = {
 
   // Create contest
   create: async (contestData: any) => {
+    console.log('API: Creating contest with data:', contestData);
     const response = await fetch(`${API_BASE_URL}/contests`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -103,11 +104,14 @@ export const contestAPI = {
 
   // Complete contest
   completeContest: async (id: number) => {
+    console.log(`API: Completing contest ${id}`);
     const response = await fetch(`${API_BASE_URL}/contests/${id}/complete`, {
       method: 'POST',
       headers: getAuthHeaders(),
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    console.log('API: Complete contest response:', data);
+    return data;
   },
 
   // Log activity

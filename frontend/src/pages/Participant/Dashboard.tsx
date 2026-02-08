@@ -63,8 +63,8 @@ const ParticipantDashboard: React.FC = () => {
     // Filter based on active filter
     const filteredContests =
         activeFilter === 'live' ? activeContests :
-        activeFilter === 'completed' ? completedContests :
-        completedContests; // 'expired' also shows completed
+            activeFilter === 'completed' ? completedContests :
+                completedContests; // 'expired' also shows completed
 
     const getTimeRemaining = (targetDate: string) => {
         const total = Date.parse(targetDate) - currentTime.getTime();
@@ -132,6 +132,11 @@ const ParticipantDashboard: React.FC = () => {
             }
         }
 
+        if (contest.status === 'completed') {
+            alert('You have already completed this contest.');
+            return;
+        }
+
         if (contest.startPassword && !contest.isStarted) {
             setSelectedContest(contest);
             setShowPasswordModal(true);
@@ -145,7 +150,7 @@ const ParticipantDashboard: React.FC = () => {
         try {
             // Verify password via API or just start if logic is client-side (usually API)
             // Ideally we call startContest API here if needed, but navigation usually triggers check
-            await contestAPI.startContest(selectedContest.id, password);
+            await contestAPI.start(selectedContest.id, password);
             setShowPasswordModal(false);
             navigate(`/contest/${selectedContest.id}`);
         } catch (err) {
