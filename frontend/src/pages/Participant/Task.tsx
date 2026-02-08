@@ -55,13 +55,8 @@ interface SubmissionHistory {
 // Panel types for drag-drop
 type PanelType = 'description' | 'editor' | 'testcases';
 
-const LANGUAGE_BOILERPLATES: Record<string, string> = {
-    javascript: '// Write your JavaScript solution here\nfunction solve(nums, target) {\n    // Your code here\n    return [];\n}\n',
-    typescript: '// Write your TypeScript solution here\nfunction solve(nums: number[], target: number): number[] {\n    // Your code here\n    return [];\n}\n',
-    python: '# Write your Python solution here\ndef solve(nums, target):\n    # Your code here\n    pass\n',
-    java: '// Write your Java solution here\nclass Solution {\n    public int[] solve(int[] nums, int target) {\n        // Your code here\n        return new int[]{};\n    }\n}\n',
-    cpp: '// Write your C++ solution here\n#include <vector>\nusing namespace std;\n\nclass Solution {\npublic:\n    vector<int> solve(vector<int>& nums, int target) {\n        // Your code here\n        return {};\n    }\n};\n',
-};
+// NOTE: Boilerplate code is now provided by admin from the backend (task.boilerplateCode)
+// No longer using hardcoded boilerplates to ensure admin's custom boilerplate is used
 
 const getFileExtension = (lang: string): string => {
     switch (lang) {
@@ -554,7 +549,8 @@ const TaskPage: React.FC = () => {
             const savedCode = localStorage.getItem(`task_${contestId}_code`);
             if (savedCode) return savedCode;
         }
-        return LANGUAGE_BOILERPLATES['javascript'];
+        // Return empty string initially, will be set from backend boilerplate when task loads
+        return '';
     });
     const codeRef = useRef<string>(code);
     const debounceTimer = useRef<any>(null);
@@ -1064,26 +1060,37 @@ const TaskPage: React.FC = () => {
                     const savedLang = localStorage.getItem(`task_${contestId}_language`);
                     const savedCode = localStorage.getItem(`task_${contestId}_code`);
 
-                    // Only set initial language/code if nothing is saved
-                    if (!savedLang && !savedCode && data.tasks[0].allowedLanguages?.length > 0) {
-                        const initialLang = data.tasks[0].allowedLanguages[0];
-                        setLanguage(initialLang);
-                        const dbBoilerplate = data.tasks[0].boilerplateCode?.[initialLang];
-                        if (dbBoilerplate) {
-                            setCode(dbBoilerplate);
+                    // Determine initial language
+                    let initialLang = 'javascript';
+                    if (data.tasks[0].allowedLanguages?.length > 0) {
+                        // Use saved language if it's in allowed languages, otherwise use first allowed language
+                        if (savedLang && data.tasks[0].allowedLanguages.includes(savedLang)) {
+                            initialLang = savedLang;
+                        } else {
+                            initialLang = data.tasks[0].allowedLanguages[0];
                         }
-                    } else if (savedLang && !data.tasks[0].allowedLanguages?.includes(savedLang)) {
-                        // If saved language is not in allowed languages, reset
-                        const initialLang = data.tasks[0].allowedLanguages[0];
-                        setLanguage(initialLang);
+                    }
+                    setLanguage(initialLang);
+
+                    // Determine initial code
+                    // Priority: 1. Saved code (if exists), 2. DB boilerplate, 3. Empty string
+                    if (savedCode) {
+                        // User has existing work, keep it
+                        console.log('📝 Loading saved code from localStorage');
+                        setCode(savedCode);
+                    } else {
+                        // No saved work, use boilerplate from database
                         const dbBoilerplate = data.tasks[0].boilerplateCode?.[initialLang];
-                        if (dbBoilerplate) {
-                            setCode(dbBoilerplate);
-                        }
+                        console.log('🎯 Loading boilerplate for', initialLang, ':', dbBoilerplate ? 'Found' : 'Not found');
+                        console.log('📦 Available boilerplates:', Object.keys(data.tasks[0].boilerplateCode || {}));
+                        setCode(dbBoilerplate || '');
+                    }
+
+                    // Clean up localStorage if saved language is not in allowed languages
+                    if (savedLang && !data.tasks[0].allowedLanguages?.includes(savedLang)) {
                         localStorage.removeItem(`task_${contestId}_language`);
                         localStorage.removeItem(`task_${contestId}_code`);
                     }
-                    // If savedLang and savedCode exist, they're already loaded in useState initializer
 
                     if (data.contest?.duration) setTime(data.contest.duration * 60);
 
@@ -1197,10 +1204,19 @@ const TaskPage: React.FC = () => {
 
     const handleLanguageChange = useCallback((newLang: string) => {
         setLanguage((prevLang: string) => {
-            const currentBoilerplate = (task?.boilerplateCode && task.boilerplateCode[prevLang]) || LANGUAGE_BOILERPLATES[prevLang];
-            if (code !== currentBoilerplate && !window.confirm('Switching languages will reset your code. Continue?')) return prevLang;
+            // Get current boilerplate from task (admin's custom boilerplate) or empty string
+            const currentBoilerplate = (task?.boilerplateCode && task.boilerplateCode[prevLang]) || '';
 
-            const newBoilerplate = (task?.boilerplateCode && task.boilerplateCode[newLang]) || LANGUAGE_BOILERPLATES[newLang] || LANGUAGE_BOILERPLATES['javascript'];
+            // Only show confirmation if user has modified the code
+            if (code !== currentBoilerplate && code.trim() !== '' && !window.confirm('Switching languages will reset your code. Continue?')) {
+                return prevLang;
+            }
+
+            // Get new boilerplate from task (admin's custom boilerplate) or empty string
+            const newBoilerplate = (task?.boilerplateCode && task.boilerplateCode[newLang]) || '';
+            console.log('🔄 Switching language from', prevLang, 'to', newLang);
+            console.log('📦 Available boilerplates:', Object.keys(task?.boilerplateCode || {}));
+            console.log('🎯 Loading boilerplate for', newLang, ':', newBoilerplate ? 'Found' : 'Not found (will be empty)');
             setCode(newBoilerplate);
             return newLang;
         });
