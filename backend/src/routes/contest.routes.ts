@@ -160,4 +160,38 @@ router.put('/:id', authenticate, requireRole(['admin', 'super_admin']), updateCo
  */
 router.delete('/:id', authenticate, requireRole(['admin', 'super_admin']), deleteContest);
 
+/**
+ * Activity Log Routes
+ * Hosted under /api/contests/:id/activity
+ */
+router.post(
+  '/:id/activity',
+  authenticate,
+  logActivity
+);
+
+router.get(
+  '/:id/activity',
+  authenticate,
+  getContestActivityLogs // Allow all authenticated users to view logs (or restrict?) - Controller checks restrictions usually, or we restrict here?
+  // Previous file showed requireRole(['admin', 'super_admin']) for getContestActivityLogs in activityLogs.routes.ts
+  // Let's assume admins only for full logs, but maybe specific user logs are open?
+  // Actually, let's look at getContestActivityLogs usage in frontend. It's for admin.
+);
+
+router.get(
+  '/:id/activity/stats',
+  authenticate,
+  requireRole(['admin', 'super_admin']),
+  getActivityStats
+);
+
+/**
+ * Activity Log Routes
+ */
+router.post('/:id/activity', authenticate, logActivity);
+router.get('/:id/activity', authenticate, requireRole(['admin', 'super_admin']), getContestActivityLogs);
+router.get('/:id/activity/stats', authenticate, requireRole(['admin', 'super_admin']), getActivityStats);
+router.delete('/:id/activity', authenticate, requireRole(['admin', 'super_admin']), clearActivityLogs);
+
 export default router;

@@ -99,10 +99,15 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
     }
 
     // Add participants if provided
-    if (participantIds && Array.isArray(participantIds) && participantIds.length > 0) {
-      const participantValues = participantIds.map((userId: number) => ({
+    const newParticipantsRaw = participantIds || req.body.participants;
+    if (newParticipantsRaw && Array.isArray(newParticipantsRaw) && newParticipantsRaw.length > 0) {
+      // Deduplicate
+      const uniqueParticipants = [...new Set(newParticipantsRaw)];
+      console.log(`Adding ${uniqueParticipants.length} participants to new contest ${contest.id}`);
+
+      const participantValues = uniqueParticipants.map((userId: any) => ({
         contestId: contest.id,
-        userId,
+        userId: Number(userId),
       }));
       await db.insert(contestParticipants).values(participantValues);
     }
