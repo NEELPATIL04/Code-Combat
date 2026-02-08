@@ -178,23 +178,39 @@ export const generateTestCases = async (req: Request, res: Response, next: NextF
     const { description, boilerplateCode, wrapperCode, functionName, language, numberOfTestCases } = req.body;
     const userId = (req as any).user.id;
 
+    console.log('🧪 generateTestCases request:', {
+      userId,
+      functionName,
+      language,
+      numberOfTestCases,
+      hasDescription: !!description,
+      hasBoilerplate: !!boilerplateCode,
+      hasWrapper: !!wrapperCode,
+    });
+
     if (!description || !functionName || !language) {
-      res.status(400).json({ message: 'Missing required fields' });
+      res.status(400).json({ 
+        success: false,
+        message: 'Missing required fields: description, functionName, language are required' 
+      });
       return;
     }
 
     const testCases = await groqService.generateTestCases({
       description,
-      boilerplateCode,
-      wrapperCode,
+      boilerplateCode: boilerplateCode || '',
+      wrapperCode: wrapperCode || '',
       functionName,
       language,
       numberOfTestCases: numberOfTestCases || 5,
       userId // Pass userId for logging
     } as any);
 
+    console.log('✅ Test cases generated successfully:', testCases.length);
+
     res.json({ success: true, testCases });
-  } catch (error) {
+  } catch (error: any) {
+    console.error('❌ generateTestCases error:', error.message);
     next(error);
   }
 };

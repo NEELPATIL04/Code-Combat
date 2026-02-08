@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Play, Send, XCircle, Clock, ChevronRight, Check, X, GripHorizontal, Minimize2, Lightbulb, Brain, Unlock, MessageSquare } from 'lucide-react';
+import { Play, Send, XCircle, Clock, ChevronRight, Check, X, GripHorizontal, Minimize2, Lightbulb, Brain, Unlock, MessageSquare, CheckCircle2 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import MediaCheckHelper from '../../components/MediaCheckHelper';
+import TaskSidebar from '../../components/TaskSidebar';
+import AIModal from '../../components/Modal/AIModal';
+import { useToast } from '../../components/Toast/ToastProvider';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../hooks/useAuth';
 import { submissionAPI, aiAPI, contestAPI } from '../../utils/api';
@@ -295,7 +298,7 @@ const PanelHeader = React.memo<{
 PanelHeader.displayName = 'PanelHeader';
 
 // Memoized Description Content
-const MemoizedDescription = React.memo<{ task: Task; testCases: TestCase[]; leftActiveTab: string; submissions: SubmissionHistory[]; onTabChange: (tab: 'description' | 'submissions') => void }>(({ task, testCases, leftActiveTab, submissions, onTabChange }) => {
+const MemoizedDescription = React.memo<{ task: Task; testCases: TestCase[]; leftActiveTab: string; submissions: SubmissionHistory[]; onTabChange: (tab: 'description' | 'submissions') => void; completedTasks: number[]; latestSubmissionResult: { passed: number; total: number; percentage: number; code: string } | null; showSubmittedCode: boolean; setShowSubmittedCode: (show: boolean) => void }>(({ task, testCases, leftActiveTab, submissions, onTabChange, completedTasks, latestSubmissionResult, showSubmittedCode, setShowSubmittedCode }) => {
     const getDifficultyStyles = (difficulty: string) => {
         switch (difficulty) {
             case 'Easy': return { background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' };
@@ -332,7 +335,22 @@ const MemoizedDescription = React.memo<{ task: Task; testCases: TestCase[]; left
             {leftActiveTab === 'description' ? (
                 <>
                     <div style={{ marginBottom: 16 }}>
-                        <h1 style={{ margin: '0 0 10px', fontSize: 18, fontWeight: 600 }}>{task.title}</h1>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                            <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>{task.title}</h1>
+                            {completedTasks.includes(task.id) && (
+                                <span style={{
+                                    padding: '2px 8px',
+                                    borderRadius: 4,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    background: 'rgba(34, 197, 94, 0.2)',
+                                    color: '#22c55e',
+                                    border: '1px solid rgba(34, 197, 94, 0.4)',
+                                }}>
+                                    ✓ SOLVED
+                                </span>
+                            )}
+                        </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <span style={{ padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, ...getDifficultyStyles(task.difficulty) }}>
                                 {task.difficulty}
@@ -422,6 +440,88 @@ const MemoizedDescription = React.memo<{ task: Task; testCases: TestCase[]; left
                             </div>
                         ))}
                     </div>
+
+                    {latestSubmissionResult && (
+                        <div style={{ marginTop: 24, borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: 16 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                                <div style={{
+                                    background: latestSubmissionResult.percentage === 100 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                    border: `2px solid ${latestSubmissionResult.percentage === 100 ? '#22c55e' : '#ef4444'}`,
+                                    borderRadius: 8,
+                                    padding: '12px 16px',
+                                    flex: 1,
+                                }}>
+                                    <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)', marginBottom: 4 }}>Test Results</div>
+                                    <div style={{
+                                        fontSize: 20,
+                                        fontWeight: 700,
+                                        color: latestSubmissionResult.percentage === 100 ? '#22c55e' : '#ef4444',
+                                    }}>
+                                        {latestSubmissionResult.passed}/{latestSubmissionResult.total} ({latestSubmissionResult.percentage}%)
+                                    </div>
+                                </div>
+                                {latestSubmissionResult.percentage === 100 && (
+                                    <div style={{
+                                        background: 'rgba(34, 197, 94, 0.2)',
+                                        border: '2px solid #22c55e',
+                                        borderRadius: 8,
+                                        padding: '12px 16px',
+                                        textAlign: 'center',
+                                    }}>
+                                        <div style={{ fontSize: 12, color: '#22c55e', fontWeight: 600 }}>✓ SOLVED</div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div style={{ marginTop: 12 }}>
+                                <button
+                                    onClick={() => setShowSubmittedCode(!showSubmittedCode)}
+                                    style={{
+                                        background: 'rgba(255, 255, 255, 0.08)',
+                                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                                        borderRadius: 6,
+                                        padding: '8px 12px',
+                                        color: '#60a5fa',
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                        width: '100%',
+                                        textAlign: 'left',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = 'rgba(96, 165, 250, 0.15)';
+                                        e.currentTarget.style.borderColor = 'rgba(96, 165, 250, 0.3)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                                    }}
+                                >
+                                    {showSubmittedCode ? '▼ Hide Submitted Code' : '▶ Show Submitted Code'}
+                                </button>
+
+                                {showSubmittedCode && (
+                                    <div style={{
+                                        background: '#0d0d0d',
+                                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                                        borderRadius: 6,
+                                        padding: 12,
+                                        marginTop: 12,
+                                        fontFamily: 'monospace',
+                                        fontSize: 12,
+                                        color: '#f8f8f2',
+                                        maxHeight: 300,
+                                        overflowY: 'auto' as const,
+                                        whiteSpace: 'pre-wrap' as const,
+                                        wordWrap: 'break-word' as const,
+                                    }}>
+                                        {latestSubmissionResult.code}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </>
             ) : (
                 <div>
@@ -523,6 +623,7 @@ const MemoizedTestCases = React.memo<{
 
 const TaskPage: React.FC = () => {
     const navigate = useNavigate();
+    const { showToast } = useToast();
     const { id: contestId } = useParams<{ id: string }>();
 
     // Data state
@@ -751,11 +852,11 @@ const TaskPage: React.FC = () => {
             }
         } catch (err: any) {
             console.error('Failed to get hint:', err);
-            alert(err.message || 'Failed to get hint. Please try again.');
+            showToast(err.message || 'Failed to get hint. Please try again.', 'error');
         } finally {
             setIsGeneratingHint(false);
         }
-    }, [task, code, language]);
+    }, [task, code, language, showToast]);
 
     const handleGetSolution = useCallback(async () => {
         if (!task) return;
@@ -770,11 +871,11 @@ const TaskPage: React.FC = () => {
             }
         } catch (err: any) {
             console.error('Failed to get solution:', err);
-            alert(err.message || 'Failed to get solution.');
+            showToast(err.message || 'Failed to get solution.', 'error');
         } finally {
             setIsGeneratingSolution(false);
         }
-    }, [task]);
+    }, [task, showToast]);
 
     const handleAnalyze = useCallback(async () => {
         if (!task) return;
@@ -785,12 +886,13 @@ const TaskPage: React.FC = () => {
                 setEvaluation(result.feedback);
                 setShowEvaluationModal(true);
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to evaluate code:', err);
+            showToast(err.message || 'Failed to analyze code.', 'error');
         } finally {
             setIsAnalyzing(false);
         }
-    }, [task, code, language]);
+    }, [task, code, language, showToast]);
 
     // Function to request fullscreen
     const requestFullscreen = useCallback((showAlert = false) => {
@@ -1027,6 +1129,15 @@ const TaskPage: React.FC = () => {
         }
     }, []);
 
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [currentTaskIndex, setCurrentTaskIndex] = useState<number>(0);
+    const [completedTasks, setCompletedTasks] = useState<number[]>([]);
+    const [submittedTasks, setSubmittedTasks] = useState<Map<number, string>>(new Map()); // taskId -> last submitted code
+    const [showShiftWarning, setShowShiftWarning] = useState<boolean>(false);
+    const [pendingTaskIndex, setPendingTaskIndex] = useState<number | null>(null);
+    const [latestSubmissionResult, setLatestSubmissionResult] = useState<{ passed: number; total: number; percentage: number; code: string } | null>(null);
+    const [showSubmittedCode, setShowSubmittedCode] = useState<boolean>(false);
+
     // Fetch task data
     useEffect(() => {
         const fetchTaskData = async () => {
@@ -1048,48 +1159,14 @@ const TaskPage: React.FC = () => {
 
                 const data = await response.json();
                 if (data.tasks && data.tasks.length > 0) {
+                    setTasks(data.tasks);
                     setTask(data.tasks[0]);
+                    setCurrentTaskIndex(0);
                     setContest(data.contest);
 
                     // Load test cases from task data
                     if (data.tasks[0].testCases && data.tasks[0].testCases.length > 0) {
                         setTestCases(data.tasks[0].testCases);
-                    }
-
-                    // Check if we have saved code/language in localStorage
-                    const savedLang = localStorage.getItem(`task_${contestId}_language`);
-                    const savedCode = localStorage.getItem(`task_${contestId}_code`);
-
-                    // Determine initial language
-                    let initialLang = 'javascript';
-                    if (data.tasks[0].allowedLanguages?.length > 0) {
-                        // Use saved language if it's in allowed languages, otherwise use first allowed language
-                        if (savedLang && data.tasks[0].allowedLanguages.includes(savedLang)) {
-                            initialLang = savedLang;
-                        } else {
-                            initialLang = data.tasks[0].allowedLanguages[0];
-                        }
-                    }
-                    setLanguage(initialLang);
-
-                    // Determine initial code
-                    // Priority: 1. Saved code (if exists), 2. DB boilerplate, 3. Empty string
-                    if (savedCode) {
-                        // User has existing work, keep it
-                        console.log('📝 Loading saved code from localStorage');
-                        setCode(savedCode);
-                    } else {
-                        // No saved work, use boilerplate from database
-                        const dbBoilerplate = data.tasks[0].boilerplateCode?.[initialLang];
-                        console.log('🎯 Loading boilerplate for', initialLang, ':', dbBoilerplate ? 'Found' : 'Not found');
-                        console.log('📦 Available boilerplates:', Object.keys(data.tasks[0].boilerplateCode || {}));
-                        setCode(dbBoilerplate || '');
-                    }
-
-                    // Clean up localStorage if saved language is not in allowed languages
-                    if (savedLang && !data.tasks[0].allowedLanguages?.includes(savedLang)) {
-                        localStorage.removeItem(`task_${contestId}_language`);
-                        localStorage.removeItem(`task_${contestId}_code`);
                     }
 
                     if (data.contest?.duration) setTime(data.contest.duration * 60);
@@ -1111,6 +1188,107 @@ const TaskPage: React.FC = () => {
         if (contestId) fetchTaskData();
         else { setError('No contest ID'); setLoading(false); }
     }, [contestId, navigate, fetchSubmissionHistory]);
+
+    const handleTaskSwitch = (index: number) => {
+        if (index === currentTaskIndex) return;
+
+        // Check if task shifting is allowed (from contest settings)
+        const allowShift = contestSettings?.allowTaskShift;
+        const preventBackwardShift = contestSettings?.preventBackwardShiftAfterSubmission;
+
+        // If shifting to a previous task that has been submitted
+        if (index < currentTaskIndex && submittedTasks.has(tasks[index]?.id)) {
+            if (preventBackwardShift) {
+                // Completely block navigation to submitted tasks
+                showToast('❌ Cannot access previously submitted tasks. You can only move forward.', 'error');
+                return;
+            }
+        }
+
+        // If not allowing free shifts and trying to shift without completing current task
+        if (!allowShift && !completedTasks.includes(tasks[currentTaskIndex]?.id)) {
+            // Show popup warning
+            setPendingTaskIndex(index);
+            setShowShiftWarning(true);
+            return;
+        }
+
+        // If allowing shifts, show warning popup when shifting away from uncompleted task
+        if (allowShift && !completedTasks.includes(tasks[currentTaskIndex]?.id) && index > currentTaskIndex) {
+            setPendingTaskIndex(index);
+            setShowShiftWarning(true);
+            return;
+        }
+
+        // Proceed with task switch
+        performTaskSwitch(index);
+    };
+
+    const performTaskSwitch = (index: number) => {
+        const newTask = tasks[index];
+        setTask(newTask);
+        setCurrentTaskIndex(index);
+        setShowShiftWarning(false);
+        setPendingTaskIndex(null);
+        setLatestSubmissionResult(null); // Clear previous task's submission result
+        setShowSubmittedCode(false); // Close the code viewer
+
+        // Load last submitted code if this task was submitted before
+        if (submittedTasks.has(newTask.id)) {
+            setCode(submittedTasks.get(newTask.id) || '');
+            codeRef.current = submittedTasks.get(newTask.id) || '';
+        } else {
+            // Load boilerplate if available
+            if (newTask.boilerplateCode && newTask.boilerplateCode[language]) {
+                setCode(newTask.boilerplateCode[language]);
+                codeRef.current = newTask.boilerplateCode[language];
+            }
+        }
+
+        // Load test cases for new task
+        if (newTask.testCases && newTask.testCases.length > 0) {
+            setTestCases(newTask.testCases);
+        } else {
+            setTestCases([]);
+        }
+
+        // Fetch submissions for new task
+        setSubmissions([]); // Clear previous
+        if (newTask.id) {
+            fetchSubmissionHistory(newTask.id);
+        }
+    };
+
+    // Initialize Language and Code when Task changes
+    useEffect(() => {
+        if (!task || !task.allowedLanguages || task.allowedLanguages.length === 0) return;
+
+        const savedLang = localStorage.getItem(`task_${contestId}_language`);
+        const savedCode = localStorage.getItem(`task_${contestId}_code`);
+
+        let initialLang = task.allowedLanguages[0];
+        if (savedLang && task.allowedLanguages.includes(savedLang)) {
+            initialLang = savedLang;
+        }
+
+        // Avoid resetting if already set (prevent infinite loops or overwrites)
+        setLanguage(prev => {
+            if (prev && task.allowedLanguages.includes(prev)) return prev;
+            return initialLang;
+        });
+
+        // Set code only if not already set or if explicitly needed
+        // Logic: If saved code exists, use it. Else use boilerplate.
+        if (savedCode) {
+            console.log('📝 Loading saved code from localStorage');
+            setCode(savedCode);
+        } else {
+            // Fallback to boilerplate
+            const boiler = task.boilerplateCode?.[initialLang] || '';
+            console.log('🎯 Loading boilerplate for', initialLang, ':', boiler ? 'Found' : 'Not found');
+            setCode(boiler);
+        }
+    }, [task, contestId]);
 
     // Timer countdown
     useEffect(() => {
@@ -1203,24 +1381,21 @@ const TaskPage: React.FC = () => {
     };
 
     const handleLanguageChange = useCallback((newLang: string) => {
-        setLanguage((prevLang: string) => {
-            // Get current boilerplate from task (admin's custom boilerplate) or empty string
-            const currentBoilerplate = (task?.boilerplateCode && task.boilerplateCode[prevLang]) || '';
+        if (!task) return;
 
-            // Only show confirmation if user has modified the code
-            if (code !== currentBoilerplate && code.trim() !== '' && !window.confirm('Switching languages will reset your code. Continue?')) {
-                return prevLang;
-            }
+        // Get new boilerplate from task (admin's custom boilerplate) or empty string
+        const newBoilerplate = task.boilerplateCode?.[newLang] || '';
 
-            // Get new boilerplate from task (admin's custom boilerplate) or empty string
-            const newBoilerplate = (task?.boilerplateCode && task.boilerplateCode[newLang]) || '';
-            console.log('🔄 Switching language from', prevLang, 'to', newLang);
-            console.log('📦 Available boilerplates:', Object.keys(task?.boilerplateCode || {}));
-            console.log('🎯 Loading boilerplate for', newLang, ':', newBoilerplate ? 'Found' : 'Not found (will be empty)');
-            setCode(newBoilerplate);
-            return newLang;
-        });
-    }, [code, task]);
+        setLanguage(newLang);
+
+        // Directly set code for new language
+        console.log('🔄 Switching language to', newLang);
+        console.log('🎯 Loading boilerplate:', newBoilerplate ? 'Found' : 'Not found');
+        setCode(newBoilerplate);
+
+        // Clear saved code for previous language to avoid mix-up
+        localStorage.removeItem(`task_${contestId}_code`);
+    }, [task, contestId]);
 
     // Memoized editor change handler to prevent re-renders
     const handleCodeChange = useCallback((value: string | undefined) => {
@@ -1305,6 +1480,36 @@ const TaskPage: React.FC = () => {
                 // Determine overall status
                 const submissionStatus = status || (passed === total ? 'Accepted' : 'Wrong Answer');
 
+                // Calculate percentage
+                const percentage = total > 0 ? Math.round((passed / total) * 100) : 0;
+
+                // Store latest submission result
+                setLatestSubmissionResult({
+                    passed,
+                    total,
+                    percentage,
+                    code: currentCode,
+                });
+
+                // Mark task as completed if all tests pass
+                if (passed === total && task) {
+                    setCompletedTasks((prev) => {
+                        if (!prev.includes(task.id)) {
+                            return [...prev, task.id];
+                        }
+                        return prev;
+                    });
+                }
+
+                // Track submitted task with its code
+                if (task) {
+                    setSubmittedTasks((prev) => {
+                        const newMap = new Map(prev);
+                        newMap.set(task.id, currentCode);
+                        return newMap;
+                    });
+                }
+
                 // Refetch submission history from backend to get the latest submissions
                 if (task?.id) {
                     fetchSubmissionHistory(task.id);
@@ -1349,6 +1554,24 @@ const TaskPage: React.FC = () => {
 
         setIsRunning(false);
     }, [language, task, contest, fetchSubmissionHistory]);
+
+    const handleFinishContest = useCallback(async () => {
+        hasExited.current = true;
+        if (document.fullscreenElement) {
+            document.exitFullscreen().catch(() => { });
+        }
+        if (contestId) {
+            try {
+                await contestAPI.completeContest(parseInt(contestId));
+                navigate('/player');
+            } catch (err: any) {
+                console.error('Failed to complete contest:', err);
+                showToast(`Failed to complete contest: ${err.message || 'Unknown error'}`, 'error');
+            }
+        } else {
+            navigate('/player');
+        }
+    }, [contestId, navigate]);
 
     const handleTestCaseTabChange = useCallback((index: number) => {
         setTestCaseActiveTab(index);
@@ -1402,6 +1625,10 @@ const TaskPage: React.FC = () => {
                         leftActiveTab={leftActiveTab}
                         submissions={submissions}
                         onTabChange={handleDescriptionTabChange}
+                        completedTasks={completedTasks}
+                        latestSubmissionResult={latestSubmissionResult}
+                        showSubmittedCode={showSubmittedCode}
+                        setShowSubmittedCode={setShowSubmittedCode}
                     />
                 )}
 
@@ -1524,531 +1751,402 @@ const TaskPage: React.FC = () => {
                         <Clock size={12} style={{ color: '#FDE68A' }} />
                         <span style={{ fontSize: 12, fontWeight: 600, color: '#FDE68A', fontFamily: 'monospace' }}>{formatTime(time)}</span>
                     </div>
-                    <button
-                        onClick={async () => {
-                            if (window.confirm('Are you sure you want to finish the contest? This will mark it as completed.')) {
-                                hasExited.current = true;
-                                if (document.fullscreenElement) {
-                                    document.exitFullscreen().catch(() => { });
-                                }
-                                if (contestId) {
-                                    try {
-                                        await contestAPI.completeContest(parseInt(contestId));
-                                        navigate('/player');
-                                    } catch (err: any) {
-                                        console.error('Failed to complete contest:', err);
-                                        alert(`Failed to complete contest: ${err.message || 'Unknown error'}`);
-                                        // Still navigate on error? Maybe not, or maybe yes if completed but API failed?
-                                        // For now, let's keep them here to retry if needed.
+                    {currentTaskIndex !== tasks.length - 1 && (
+                        <button
+                            onClick={handleSubmit}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '6px 14px',
+                                background: 'rgba(34, 197, 94, 0.15)',
+                                border: '1px solid rgba(34, 197, 94, 0.4)',
+                                borderRadius: 6,
+                                color: '#86efac',
+                                fontSize: 12,
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                whiteSpace: 'nowrap'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'rgba(34, 197, 94, 0.25)';
+                                e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.6)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'rgba(34, 197, 94, 0.15)';
+                                e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.4)';
+                            }}
+                        >
+                            <CheckCircle2 size={14} />
+                            Finish Task
+                        </button>
+                    )}
+                    {currentTaskIndex === tasks.length - 1 && (
+                        <>
+                            <button
+                                onClick={handleSubmit}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    padding: '6px 14px',
+                                    background: 'rgba(16, 185, 129, 0.15)',
+                                    border: '1px solid rgba(16, 185, 129, 0.4)',
+                                    borderRadius: 6,
+                                    color: '#34d399',
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    whiteSpace: 'nowrap'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = 'rgba(16, 185, 129, 0.25)';
+                                    e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.6)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = 'rgba(16, 185, 129, 0.15)';
+                                    e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                                }}
+                            >
+                                <Send size={14} />
+                                Submit Task
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    if (window.confirm('Are you sure you want to finish the contest? This will mark it as completed.')) {
+                                        await handleFinishContest();
                                     }
-                                } else {
-                                    navigate('/player');
-                                }
-                            }
-                        }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 6, color: '#f87171', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
-                    >
-                        <XCircle size={12} />
-                        Finish & Exit
-                    </button>
+                                }}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    padding: '6px 14px',
+                                    background: 'rgba(239, 68, 68, 0.15)',
+                                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                                    borderRadius: 6,
+                                    color: '#f87171',
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    whiteSpace: 'nowrap'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.25)';
+                                    e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.6)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
+                                    e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+                                }}
+                            >
+                                <XCircle size={14} />
+                                Finish and Exit
+                            </button>
+                        </>
+                    )}
                 </div>
             </nav>
 
 
-            {/* Main Content */}
-            <div ref={containerRef} style={{ flex: 1, display: 'flex', padding: 8, gap: 0, overflow: 'hidden' }}>
-                {/* Left Panel */}
-                <div style={{ width: `calc(${leftPanelWidth}% - 4px)`, height: '100%', flexShrink: 0 }}>
-                    {renderPanel(leftPanel, 'left')}
+            {/* Main Layout with Sidebar */}
+            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+
+                {/* Task Navigation Sidebar */}
+                {/* Task Navigation Sidebar */}
+                <div style={{ flexShrink: 0 }}>
+                    <TaskSidebar
+                        tasks={tasks.map((t, idx) => ({
+                            id: t.id,
+                            orderIndex: idx + 1,
+                            title: t.title,
+                            difficulty: t.difficulty,
+                            maxPoints: t.maxPoints,
+                        }))}
+                        currentTaskIndex={currentTaskIndex}
+                        onTaskSelect={handleTaskSwitch}
+                        completedTasks={completedTasks}
+                    />
                 </div>
 
-                {/* Horizontal Resize Handle */}
-                <div
-                    onMouseDown={handleHorizontalMouseDown}
-                    style={{ width: 8, cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                >
-                    <div style={{ width: 3, height: 30, borderRadius: 2, background: isResizingHorizontal ? 'rgba(253, 230, 138, 0.5)' : 'rgba(255, 255, 255, 0.1)', transition: 'background 0.15s' }} />
-                </div>
-
-                {/* Right Panel */}
-                <div ref={rightPanelRef} style={{ width: `calc(${100 - leftPanelWidth}% - 4px)`, height: '100%', display: 'flex', flexDirection: 'column', gap: 0, flexShrink: 0 }}>
-                    {/* Right Top */}
-                    <div style={{ height: showTestCases ? `calc(${editorHeight}% - 4px)` : '100%', flexShrink: 0 }}>
-                        {renderPanel(rightTopPanel, 'rightTop')}
+                {/* Resizable Work Area */}
+                <div ref={containerRef} style={{ flex: 1, display: 'flex', padding: 8, gap: 0, overflow: 'hidden', position: 'relative' }}>
+                    {/* Left Panel */}
+                    <div style={{ width: `calc(${leftPanelWidth}% - 4px)`, height: '100%', flexShrink: 0 }}>
+                        {renderPanel(leftPanel, 'left')}
                     </div>
 
-                    {/* Vertical Resize Handle */}
-                    {showTestCases && (
-                        <div
-                            onMouseDown={handleVerticalMouseDown}
-                            style={{ height: 8, cursor: 'row-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                        >
-                            <div style={{ width: 30, height: 3, borderRadius: 2, background: isResizingVertical ? 'rgba(253, 230, 138, 0.5)' : 'rgba(255, 255, 255, 0.1)', transition: 'background 0.15s' }} />
-                        </div>
-                    )}
+                    {/* Horizontal Resize Handle */}
+                    <div
+                        onMouseDown={handleHorizontalMouseDown}
+                        style={{ width: 8, cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                    >
+                        <div style={{ width: 3, height: 30, borderRadius: 2, background: isResizingHorizontal ? 'rgba(253, 230, 138, 0.5)' : 'rgba(255, 255, 255, 0.1)', transition: 'background 0.15s' }} />
+                    </div>
 
-                    {/* Right Bottom (Test Cases) */}
-                    {showTestCases && (
-                        <div style={{ height: `calc(${100 - editorHeight}% - 4px)`, flexShrink: 0 }}>
-                            {renderPanel(rightBottomPanel, 'rightBottom')}
+                    {/* Right Panel */}
+                    <div ref={rightPanelRef} style={{ width: `calc(${100 - leftPanelWidth}% - 4px)`, height: '100%', display: 'flex', flexDirection: 'column', gap: 0, flexShrink: 0 }}>
+                        {/* Right Top */}
+                        <div style={{ height: showTestCases ? `calc(${editorHeight}% - 4px)` : '100%', flexShrink: 0 }}>
+                            {renderPanel(rightTopPanel, 'rightTop')}
                         </div>
-                    )}
+
+                        {/* Vertical Resize Handle */}
+                        {showTestCases && (
+                            <div
+                                onMouseDown={handleVerticalMouseDown}
+                                style={{ height: 8, cursor: 'row-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                            >
+                                <div style={{ width: 30, height: 3, borderRadius: 2, background: isResizingVertical ? 'rgba(253, 230, 138, 0.5)' : 'rgba(255, 255, 255, 0.1)', transition: 'background 0.15s' }} />
+                            </div>
+                        )}
+
+                        {/* Right Bottom (Test Cases) */}
+                        {showTestCases && (
+                            <div style={{ height: `calc(${100 - editorHeight}% - 4px)`, flexShrink: 0 }}>
+                                {renderPanel(rightBottomPanel, 'rightBottom')}
+                            </div>
+                        )}
+                    </div>
                 </div>
+
+                {/* Lockout Overlay */}
+                {contest?.fullScreenMode && showLockout && (
+                    <div style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        background: 'rgba(0, 0, 0, 0.9)',
+                        backdropFilter: 'blur(8px)',
+                        zIndex: 9999,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 20,
+                        textAlign: 'center',
+                        padding: 20
+                    }}>
+                        <div style={{ padding: 40, background: '#111113', border: '1px solid rgba(253, 230, 138, 0.2)', borderRadius: 16, maxWidth: 400, boxShadow: '0 20px 50px rgba(0,0,0,0.5)', fontFamily: "'DM Sans', sans-serif" }}>
+                            <XCircle size={64} style={{ color: '#f87171', marginBottom: 20 }} />
+                            <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12, color: '#fff' }}>Test Locked</h2>
+                            <p style={{ color: 'rgba(255, 255, 255, 0.6)', marginBottom: 30, lineHeight: 1.5 }}>
+                                You have exited full-screen mode. For security reasons, the test has been locked.
+                                Please re-enter full-screen to continue.
+                            </p>
+                            <button
+                                onClick={() => requestFullscreen(true)}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px 24px',
+                                    background: '#FDE68A',
+                                    color: '#000',
+                                    border: 'none',
+                                    borderRadius: 8,
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    transition: 'transform 0.2s',
+                                }}
+                            >
+                                Re-enter Full Screen
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Hint Modal */}
+                {/* AI Hint Modal */}
+                <AIModal
+                    isOpen={showHintModal}
+                    type="hint"
+                    content={hint}
+                    onClose={() => setShowHintModal(false)}
+                />
+
+                {/* Solution Modal */}
+                <AIModal
+                    isOpen={showSolutionModal}
+                    type="solution"
+                    content={solution}
+                    language={language}
+                    onClose={() => setShowSolutionModal(false)}
+                    onUseCode={() => {
+                        setCode(solution);
+                        setShowSolutionModal(false);
+                    }}
+                />
+
+                {/* Evaluation Modal */}
+                <AIModal
+                    isOpen={showEvaluationModal}
+                    type="evaluation"
+                    content={evaluation}
+                    onClose={() => setShowEvaluationModal(false)}
+                />
+
+                {/* Task Shift Warning Modal */}
+                {showShiftWarning && pendingTaskIndex !== null && (
+                    <div style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        background: 'rgba(0, 0, 0, 0.7)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 5000,
+                        backdropFilter: 'blur(4px)',
+                    }}>
+                        <div style={{
+                            background: '#111113',
+                            border: '1px solid rgba(59, 130, 246, 0.3)',
+                            borderRadius: 12,
+                            width: '100%',
+                            maxWidth: 500,
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            flexDirection: 'column',
+                        }}>
+                            {/* Header */}
+                            <div style={{
+                                padding: '20px',
+                                borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+                                background: 'rgba(59, 130, 246, 0.05)',
+                            }}>
+                                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#fff' }}>
+                                    ⚠️ Move to Next Task?
+                                </h3>
+                            </div>
+
+                            {/* Content */}
+                            <div style={{ padding: '24px', color: 'rgba(255, 255, 255, 0.8)', lineHeight: 1.6 }}>
+                                <p style={{ marginBottom: 16 }}>
+                                    You haven't completed the current task. If you move to the next task:
+                                </p>
+                                <ul style={{ margin: '16px 0', paddingLeft: 20 }}>
+                                    <li style={{ marginBottom: 12 }}>
+                                        <strong style={{ color: '#FDE68A' }}>After you submit code</strong>, you will NOT be able to go back to previous tasks
+                                    </li>
+                                    <li>Your last submission for each task will be shown when you try to revisit it</li>
+                                </ul>
+                                <p style={{ marginBottom: 0, marginTop: 16, fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.6)' }}>
+                                    Are you sure you want to continue?
+                                </p>
+                            </div>
+
+                            {/* Footer */}
+                            <div style={{
+                                padding: '16px 20px',
+                                borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+                                background: 'rgba(255, 255, 255, 0.02)',
+                                display: 'flex',
+                                justifyContent: 'flex-end',
+                                gap: 12,
+                            }}>
+                                <button
+                                    onClick={() => {
+                                        setShowShiftWarning(false);
+                                        setPendingTaskIndex(null);
+                                    }}
+                                    style={{
+                                        padding: '10px 20px',
+                                        background: 'rgba(255, 255, 255, 0.1)',
+                                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                                        color: '#fff',
+                                        borderRadius: 6,
+                                        fontSize: 14,
+                                        fontWeight: 500,
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => performTaskSwitch(pendingTaskIndex)}
+                                    style={{
+                                        padding: '10px 20px',
+                                        background: 'linear-gradient(135deg, #FDE68A 0%, #F59E0B 100%)',
+                                        border: 'none',
+                                        color: '#000',
+                                        borderRadius: 6,
+                                        fontSize: 14,
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(245, 158, 11, 0.4)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.3)';
+                                    }}
+                                >
+                                    Yes, Continue
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Initial Entry Modal */}
+                {contest?.fullScreenMode && !isFullscreen && !showLockout && (
+                    <div style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        background: '#0a0a0b',
+                        zIndex: 10000,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 20,
+                        fontFamily: "'DM Sans', sans-serif"
+                    }}>
+                        <div style={{ textAlign: 'center', maxWidth: 500, padding: 40 }}>
+                            <div style={{
+                                width: 80, height: 80, background: 'rgba(253, 230, 138, 0.1)',
+                                borderRadius: '50%', display: 'flex', alignItems: 'center',
+                                justifyContent: 'center', margin: '0 auto 24px'
+                            }}>
+                                <Play size={40} style={{ color: '#FDE68A', marginLeft: 4 }} />
+                            </div>
+                            <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 16, color: '#fff' }}>Ready to start?</h1>
+                            <p style={{ color: 'rgba(255, 255, 255, 0.5)', marginBottom: 40, fontSize: 16, lineHeight: 1.6 }}>
+                                This test will be conducted in full-screen mode. All browser shortcuts will be disabled.
+                                Ensure you are ready before proceeding.
+                            </p>
+                            <button
+                                onClick={() => requestFullscreen(true)}
+                                style={{
+                                    padding: '16px 48px',
+                                    background: 'linear-gradient(135deg, #FDE68A 0%, #F59E0B 100%)',
+                                    color: '#000',
+                                    border: 'none',
+                                    borderRadius: 12,
+                                    fontWeight: 800,
+                                    fontSize: 18,
+                                    cursor: 'pointer',
+                                    boxShadow: '0 10px 25px rgba(245, 158, 11, 0.3)',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                Enter Full Screen & Start
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
-
-            {/* Lockout Overlay */}
-            {contest?.fullScreenMode && showLockout && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    background: 'rgba(0, 0, 0, 0.9)',
-                    backdropFilter: 'blur(8px)',
-                    zIndex: 9999,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 20,
-                    textAlign: 'center',
-                    padding: 20
-                }}>
-                    <div style={{ padding: 40, background: '#111113', border: '1px solid rgba(253, 230, 138, 0.2)', borderRadius: 16, maxWidth: 400, boxShadow: '0 20px 50px rgba(0,0,0,0.5)', fontFamily: "'DM Sans', sans-serif" }}>
-                        <XCircle size={64} style={{ color: '#f87171', marginBottom: 20 }} />
-                        <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12, color: '#fff' }}>Test Locked</h2>
-                        <p style={{ color: 'rgba(255, 255, 255, 0.6)', marginBottom: 30, lineHeight: 1.5 }}>
-                            You have exited full-screen mode. For security reasons, the test has been locked.
-                            Please re-enter full-screen to continue.
-                        </p>
-                        <button
-                            onClick={() => requestFullscreen(true)}
-                            style={{
-                                width: '100%',
-                                padding: '12px 24px',
-                                background: '#FDE68A',
-                                color: '#000',
-                                border: 'none',
-                                borderRadius: 8,
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                transition: 'transform 0.2s',
-                            }}
-                        >
-                            Re-enter Full Screen
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Hint Modal */}
-            {showHintModal && hint && (
-                <div
-                    onClick={(e) => {
-                        // Close modal only if clicking backdrop, not the content
-                        if (e.target === e.currentTarget) {
-                            setShowHintModal(false);
-                        }
-                    }}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'rgba(0, 0, 0, 0.7)',
-                        backdropFilter: 'blur(4px)',
-                        zIndex: 10000,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: 20,
-                    }}>
-                    <div style={{
-                        background: '#111113',
-                        border: '1px solid rgba(253, 230, 138, 0.3)',
-                        borderRadius: 12,
-                        width: '100%',
-                        maxWidth: 600,
-                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        maxHeight: '80vh',
-                    }}>
-                        {/* Header */}
-                        <div style={{
-                            padding: '16px 20px',
-                            borderBottom: '1px solid rgba(253, 230, 138, 0.1)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            background: 'rgba(253, 230, 138, 0.05)',
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <div style={{
-                                    width: 32,
-                                    height: 32,
-                                    borderRadius: 6,
-                                    background: 'rgba(234, 179, 8, 0.2)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    border: '1px solid rgba(234, 179, 8, 0.3)',
-                                }}>
-                                    <Brain size={18} color="#fbbf24" />
-                                </div>
-                                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#fff' }}>AI Hint</h3>
-                            </div>
-                            <button
-                                onClick={() => setShowHintModal(false)}
-                                style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    color: 'rgba(255, 255, 255, 0.5)',
-                                    padding: 4,
-                                    display: 'flex',
-                                    borderRadius: 4,
-                                }}
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        {/* Content */}
-                        <div style={{ padding: 24, overflowY: 'auto', color: 'rgba(255, 255, 255, 0.8)', lineHeight: 1.6, fontSize: 15 }}>
-                            <div dangerouslySetInnerHTML={{ __html: hint.replace(/\n/g, '<br/>') }} />
-                        </div>
-
-                        {/* Footer */}
-                        <div style={{
-                            padding: '16px 20px',
-                            borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-                            background: 'rgba(255, 255, 255, 0.02)',
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                        }}>
-                            <button
-                                onClick={() => setShowHintModal(false)}
-                                style={{
-                                    padding: '8px 16px',
-                                    background: 'rgba(255, 255, 255, 0.1)',
-                                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                                    color: '#fff',
-                                    borderRadius: 6,
-                                    fontSize: 14,
-                                    fontWeight: 500,
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Solution Modal */}
-            {showSolutionModal && solution && (
-                <div
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget) {
-                            setShowSolutionModal(false);
-                        }
-                    }}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'rgba(0, 0, 0, 0.8)',
-                        backdropFilter: 'blur(4px)',
-                        zIndex: 10000,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: 20,
-                    }}>
-                    <div style={{
-                        background: '#111113',
-                        border: '1px solid rgba(239, 68, 68, 0.3)',
-                        borderRadius: 12,
-                        width: '100%',
-                        maxWidth: 800,
-                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        height: '80vh',
-                    }}>
-                        {/* Header */}
-                        <div style={{
-                            padding: '16px 20px',
-                            borderBottom: '1px solid rgba(239, 68, 68, 0.1)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            background: 'rgba(239, 68, 68, 0.05)',
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <div style={{
-                                    width: 32,
-                                    height: 32,
-                                    borderRadius: 6,
-                                    background: 'rgba(239, 68, 68, 0.2)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                                }}>
-                                    <Unlock size={18} color="#f87171" />
-                                </div>
-                                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#fff' }}>Full Solution</h3>
-                            </div>
-                            <button
-                                onClick={() => setShowSolutionModal(false)}
-                                style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    color: 'rgba(255, 255, 255, 0.5)',
-                                    padding: 4,
-                                    display: 'flex',
-                                    borderRadius: 4,
-                                }}
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        {/* Content */}
-                        <div style={{ flex: 1, overflow: 'hidden', padding: 0 }}>
-                            <Editor
-                                height="100%"
-                                language={language}
-                                value={solution}
-                                options={{
-                                    readOnly: true,
-                                    minimap: { enabled: false },
-                                    fontSize: 14,
-                                    lineNumbers: 'on',
-                                    scrollBeyondLastLine: false,
-                                    automaticLayout: true,
-                                    theme: 'vs-dark',
-                                    fontFamily: "'JetBrains Mono', monospace",
-                                }}
-                            />
-                        </div>
-
-                        {/* Footer */}
-                        <div style={{
-                            padding: '16px 20px',
-                            borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-                            background: 'rgba(255, 255, 255, 0.02)',
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            gap: 12,
-                        }}>
-                            <button
-                                onClick={() => {
-                                    setCode(solution); // Overwrite user code
-                                    setShowSolutionModal(false);
-                                }}
-                                style={{
-                                    padding: '8px 16px',
-                                    background: 'rgba(16, 185, 129, 0.15)',
-                                    border: '1px solid rgba(16, 185, 129, 0.3)',
-                                    color: '#34d399',
-                                    borderRadius: 6,
-                                    fontSize: 14,
-                                    fontWeight: 500,
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                Use this Solution
-                            </button>
-                            <button
-                                onClick={() => setShowSolutionModal(false)}
-                                style={{
-                                    padding: '8px 16px',
-                                    background: 'rgba(255, 255, 255, 0.1)',
-                                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                                    color: '#fff',
-                                    borderRadius: 6,
-                                    fontSize: 14,
-                                    fontWeight: 500,
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            {/* Evaluation Modal */}
-            {showEvaluationModal && evaluation && (
-                <div
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget) {
-                            setShowEvaluationModal(false);
-                        }
-                    }}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'rgba(0, 0, 0, 0.7)',
-                        backdropFilter: 'blur(4px)',
-                        zIndex: 10000,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: 20,
-                    }}>
-                    <div style={{
-                        background: '#111113',
-                        border: '1px solid rgba(59, 130, 246, 0.3)',
-                        borderRadius: 12,
-                        width: '100%',
-                        maxWidth: 700,
-                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        maxHeight: '80vh',
-                    }}>
-                        {/* Header */}
-                        <div style={{
-                            padding: '16px 20px',
-                            borderBottom: '1px solid rgba(59, 130, 246, 0.1)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            background: 'rgba(59, 130, 246, 0.05)',
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <div style={{
-                                    width: 32,
-                                    height: 32,
-                                    borderRadius: 6,
-                                    background: 'rgba(59, 130, 246, 0.2)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    border: '1px solid rgba(59, 130, 246, 0.3)',
-                                }}>
-                                    <MessageSquare size={18} color="#60a5fa" />
-                                </div>
-                                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#fff' }}>AI Analysis</h3>
-                            </div>
-                            <button
-                                onClick={() => setShowEvaluationModal(false)}
-                                style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    color: 'rgba(255, 255, 255, 0.5)',
-                                    padding: 4,
-                                    display: 'flex',
-                                    borderRadius: 4,
-                                }}
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        {/* Content */}
-                        <div style={{ padding: 24, overflowY: 'auto', color: 'rgba(255, 255, 255, 0.8)', lineHeight: 1.6, fontSize: 15 }}>
-                            <div dangerouslySetInnerHTML={{ __html: evaluation.replace(/\n/g, '<br/>') }} />
-                        </div>
-
-                        {/* Footer */}
-                        <div style={{
-                            padding: '16px 20px',
-                            borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-                            background: 'rgba(255, 255, 255, 0.02)',
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                        }}>
-                            <button
-                                onClick={() => setShowEvaluationModal(false)}
-                                style={{
-                                    padding: '8px 16px',
-                                    background: 'rgba(255, 255, 255, 0.1)',
-                                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                                    color: '#fff',
-                                    borderRadius: 6,
-                                    fontSize: 14,
-                                    fontWeight: 500,
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Initial Entry Modal */}
-            {contest?.fullScreenMode && !isFullscreen && !showLockout && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    background: '#0a0a0b',
-                    zIndex: 10000,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 20,
-                    fontFamily: "'DM Sans', sans-serif"
-                }}>
-                    <div style={{ textAlign: 'center', maxWidth: 500, padding: 40 }}>
-                        <div style={{
-                            width: 80, height: 80, background: 'rgba(253, 230, 138, 0.1)',
-                            borderRadius: '50%', display: 'flex', alignItems: 'center',
-                            justifyContent: 'center', margin: '0 auto 24px'
-                        }}>
-                            <Play size={40} style={{ color: '#FDE68A', marginLeft: 4 }} />
-                        </div>
-                        <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 16, color: '#fff' }}>Ready to start?</h1>
-                        <p style={{ color: 'rgba(255, 255, 255, 0.5)', marginBottom: 40, fontSize: 16, lineHeight: 1.6 }}>
-                            This test will be conducted in full-screen mode. All browser shortcuts will be disabled.
-                            Ensure you are ready before proceeding.
-                        </p>
-                        <button
-                            onClick={() => requestFullscreen(true)}
-                            style={{
-                                padding: '16px 48px',
-                                background: 'linear-gradient(135deg, #FDE68A 0%, #F59E0B 100%)',
-                                color: '#000',
-                                border: 'none',
-                                borderRadius: 12,
-                                fontWeight: 800,
-                                fontSize: 18,
-                                cursor: 'pointer',
-                                boxShadow: '0 10px 25px rgba(245, 158, 11, 0.3)',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            Enter Full Screen & Start
-                        </button>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

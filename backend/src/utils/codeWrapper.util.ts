@@ -124,10 +124,12 @@ export function parseTestInput(input: string): {
   values: any[];
 } {
   try {
+    const trimmed = input.trim();
+
     // Try to parse as JSON array first
-    const jsonMatch = input.match(/^\[(.*)\]$/s);
+    const jsonMatch = trimmed.match(/^\[(.*)\]$/s);
     if (jsonMatch) {
-      const values = JSON.parse(input);
+      const values = JSON.parse(trimmed);
       return {
         params: values.map((v: any) => JSON.stringify(v)).join(', '),
         values,
@@ -135,32 +137,51 @@ export function parseTestInput(input: string): {
     }
 
     // Parse "param1 = value1, param2 = value2" format
-    const parts = input.split(',').map(s => s.trim());
+    const parts: string[] = [];
     const values: any[] = [];
     const params: string[] = [];
 
+    // Smart splitting that respects brackets and braces
+    let current = '';
+    let bracketDepth = 0;
+    let braceDepth = 0;
+
+    for (const char of trimmed) {
+      if (char === '[') bracketDepth++;
+      if (char === ']') bracketDepth--;
+      if (char === '{') braceDepth++;
+      if (char === '}') braceDepth--;
+      
+      if (char === ',' && bracketDepth === 0 && braceDepth === 0) {
+        parts.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    if (current) parts.push(current.trim());
+
+    // Parse each part
     for (const part of parts) {
-      const match = part.match(/^(\w+)\s*=\s*(.+)$/);
-      if (match) {
-        const value = match[2].trim();
-        try {
-          const parsed = JSON.parse(value);
-          values.push(parsed);
-          params.push(JSON.stringify(parsed));
-        } catch {
-          values.push(value);
-          params.push(value);
-        }
+      const eqIndex = part.indexOf('=');
+      let value: string;
+
+      if (eqIndex > -1) {
+        // Has "=" separator
+        value = part.substring(eqIndex + 1).trim();
       } else {
         // No "=" found, treat whole part as value
-        try {
-          const parsed = JSON.parse(part);
-          values.push(parsed);
-          params.push(JSON.stringify(parsed));
-        } catch {
-          values.push(part);
-          params.push(part);
-        }
+        value = part;
+      }
+
+      try {
+        const parsed = JSON.parse(value);
+        values.push(parsed);
+        params.push(JSON.stringify(parsed));
+      } catch {
+        // If JSON parse fails, treat as string literal
+        values.push(value);
+        params.push(`"${value}"`);
       }
     }
 
@@ -214,6 +235,7 @@ export function wrapCodeWithTestRunner(params: {
 
   // If no function name or test input, return user code as-is
   if (!functionName || !testInput) {
+    console.warn('wrapCodeWithTestRunner: Missing functionName or testInput', { functionName, testInput: testInput ? 'present' : 'missing' });
     return userCode;
   }
 
@@ -230,12 +252,20 @@ export function wrapCodeWithTestRunner(params: {
   // Generate function call
   const functionCall = generateFunctionCall(functionName, functionParams, language);
 
-  // Replace placeholders
+  // Replace placeholders in order
   let wrappedCode = template
-    .replace('{{USER_CODE}}', userCode)
-    .replace('{{FUNCTION_NAME}}', functionName)
-    .replace('{{FUNCTION_CALL}}', functionCall)
-    .replace('{{TEST_INPUT}}', testInput);
+    .replace(/\{\{USER_CODE\}\}/g, userCode)
+    .replace(/\{\{FUNCTION_NAME\}\}/g, functionName)
+    .replace(/\{\{FUNCTION_CALL\}\}/g, functionCall)
+    .replace(/\{\{TEST_INPUT\}\}/g, testInput);
+
+  console.log('✅ Code wrapped successfully', {
+    language,
+    functionName,
+    testInputLength: testInput.length,
+    hasUserCode: !!userCode,
+    wrappedCodeLength: wrappedCode.length,
+  });
 
   return wrappedCode;
 }

@@ -146,7 +146,7 @@ const ContestDetails: React.FC = () => {
     return (
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
             {/* Navigation Header */}
-            <div style={{ marginBottom: '24px' }}>
+            <div style={{ marginBottom: '12px' }}>
                 <button
                     onClick={() => navigate('/admin/contests')}
                     style={{
@@ -172,7 +172,7 @@ const ContestDetails: React.FC = () => {
             <div style={{
                 display: 'flex',
                 gap: '4px',
-                marginBottom: '32px',
+                marginBottom: '12px',
                 borderBottom: '1px solid #27272a',
                 paddingBottom: '0'
             }}>

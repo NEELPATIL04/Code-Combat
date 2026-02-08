@@ -39,6 +39,11 @@ const CodeConfiguration: React.FC<CodeConfigurationProps> = ({
         setUsageDescription(description || '');
     }, [description]);
 
+    // Debug log
+    React.useEffect(() => {
+        console.log('🎨 CodeConfiguration rendered - readOnly:', readOnly, 'allowedLanguages:', allowedLanguages);
+    }, [readOnly, allowedLanguages]);
+
     if (allowedLanguages.length === 0) return null;
 
     const handleGenerate = async () => {
@@ -91,12 +96,17 @@ const CodeConfiguration: React.FC<CodeConfigurationProps> = ({
                 background: 'rgba(0, 0, 0, 0.2)',
                 borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
                 padding: '0 8px',
-                overflowX: 'auto',
-                scrollbarWidth: 'none',
                 alignItems: 'center',
-                justifyContent: 'space-between'
+                justifyContent: 'space-between',
+                gap: '12px'
             }}>
-                <div style={{ display: 'flex', overflowX: 'auto', scrollbarWidth: 'none' }}>
+                <div style={{
+                    display: 'flex',
+                    overflowX: 'auto',
+                    scrollbarWidth: 'none',
+                    flex: 1,
+                    minWidth: 0
+                }}>
                     {allowedLanguages.map(lang => (
                         <button
                             key={lang}
@@ -123,12 +133,18 @@ const CodeConfiguration: React.FC<CodeConfigurationProps> = ({
                 </div>
                 {!readOnly && (
                     <button
-                        onClick={() => setShowGenerateModal(true)}
+                        type="button"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('🔮 AI Generate button clicked');
+                            setShowGenerateModal(true);
+                        }}
                         style={{
                             display: 'flex',
                             alignItems: 'center',
                             gap: '6px',
-                            padding: '6px 12px',
+                            padding: '8px 14px',
                             background: 'rgba(139, 92, 246, 0.2)',
                             border: '1px solid rgba(139, 92, 246, 0.4)',
                             borderRadius: '6px',
@@ -136,8 +152,9 @@ const CodeConfiguration: React.FC<CodeConfigurationProps> = ({
                             fontSize: '0.8rem',
                             fontWeight: 600,
                             cursor: 'pointer',
-                            marginRight: '8px',
-                            whiteSpace: 'nowrap'
+                            whiteSpace: 'nowrap',
+                            pointerEvents: 'auto',
+                            flexShrink: 0
                         }}
                     >
                         <Wand2 size={14} color="#a78bfa" />

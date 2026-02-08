@@ -71,8 +71,8 @@ const AdminLayout: React.FC = () => {
 
                 {/* Sidebar Header */}
                 <div style={{
-                    height: '56px',
-                    padding: collapsed ? '0' : '0 16px',
+                    height: '48px',
+                    padding: collapsed ? '0' : '0 12px',
                     borderBottom: '1px solid #27272a',
                     display: 'flex',
                     alignItems: 'center',
@@ -128,10 +128,10 @@ const AdminLayout: React.FC = () => {
                 {/* Navigation */}
                 <nav style={{
                     flex: 1,
-                    padding: '16px 12px',
+                    padding: '10px 8px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '4px',
+                    gap: '2px',
                     overflowY: 'auto',
                     overflowX: 'hidden'
                 }}>
@@ -194,7 +194,7 @@ const AdminLayout: React.FC = () => {
 
                 {/* Sidebar Footer - Logout */}
                 <div style={{
-                    padding: '16px 12px',
+                    padding: '10px 8px',
                     borderTop: '1px solid #27272a',
                     marginTop: 'auto'
                 }}>
@@ -237,7 +237,7 @@ const AdminLayout: React.FC = () => {
                     flex: 1,
                     minHeight: '100vh',
                     marginLeft: `${sidebarWidth}px`,
-                    padding: '32px 40px',
+                    padding: '16px 20px',
                     transition: 'margin-left 0.2s ease'
                 }}
             >

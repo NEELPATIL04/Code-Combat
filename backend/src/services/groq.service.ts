@@ -10,9 +10,22 @@ class GroqService {
   private groq: Groq;
 
   constructor() {
+    if (!GROQ_API_KEY) {
+      console.warn('⚠️ GROQ_API_KEY not set! AI features will not work properly. Set GROQ_API_KEY in .env file.');
+    }
+    
     this.groq = new Groq({
-      apiKey: GROQ_API_KEY,
+      apiKey: GROQ_API_KEY || 'placeholder',
     });
+  }
+
+  /**
+   * Check if Groq AI is properly configured
+   */
+  private validateApiKey(): void {
+    if (!GROQ_API_KEY) {
+      throw new Error('GROQ_API_KEY is not configured. Please set GROQ_API_KEY in your .env file.');
+    }
   }
 
   /**
@@ -31,9 +44,14 @@ class GroqService {
     explanation?: string;
   }>> {
     try {
+      this.validateApiKey();
+      
       const prompt = this.buildPrompt(params);
 
       console.log('🤖 Generating test cases with Groq AI...');
+      console.log('   Function: ' + params.functionName);
+      console.log('   Language: ' + params.language);
+      console.log('   Count: ' + params.numberOfTestCases);
 
       const chatCompletion = await this.groq.chat.completions.create({
         messages: [
@@ -53,7 +71,7 @@ class GroqService {
       });
 
       const responseText = chatCompletion.choices[0]?.message?.content || '{}';
-      console.log('📝 Groq AI Response:', responseText.substring(0, 200) + '...');
+      console.log('📝 Groq AI Response received:', responseText.substring(0, 100) + '...');
 
       // Log usage
       await this.logUsage(
