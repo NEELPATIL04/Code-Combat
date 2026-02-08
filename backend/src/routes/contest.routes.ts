@@ -10,6 +10,7 @@ import {
   startContest,
   getMyContests,
   getContestTasks,
+  completeContest,
 } from '../controllers/contest.controller';
 import {
   getContestSettings,
@@ -81,6 +82,13 @@ router.delete('/:id/participants/:userId', authenticate, requireRole(['admin', '
  * Requires: Authentication + Admin role
  */
 router.post('/:id/start', authenticate, requireRole(['admin', 'super_admin']), startContest);
+
+/**
+ * POST /api/contests/:id/complete
+ * Mark contest as completed for user
+ * Requires: Authentication
+ */
+router.post('/:id/complete', authenticate, completeContest);
 
 /**
  * GET /api/contests/:id/settings

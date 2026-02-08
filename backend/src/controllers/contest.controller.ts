@@ -19,7 +19,7 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
     console.log('Query:', req.query);
     console.log('Body keys:', Object.keys(req.body));
 
-    const { title, description, difficulty, duration, startPassword, contestTasks, tasks: tasksFromBody, participantIds, fullScreenMode, scheduledStartTime, endTime } = req.body;
+    const { title, description, difficulty, duration, startPassword, contestTasks, tasks: tasksFromBody, participantIds, participants, fullScreenMode, scheduledStartTime, endTime } = req.body;
 
     // Support both 'tasks' and 'contestTasks' parameter names
     const tasksList = contestTasks || tasksFromBody;
@@ -99,11 +99,12 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
     }
 
     // Add participants if provided
-    const newParticipantsRaw = participantIds || req.body.participants;
+    // Prioritize participants from body which matches frontend
+    const newParticipantsRaw = participants || participantIds || req.body.participants;
 
     console.log('DEBUG: createContest payload participants:', {
       participantIds,
-      bodyParticipants: req.body.participants,
+      participants,
       merged: newParticipantsRaw
     });
 
@@ -537,6 +538,7 @@ export const getMyContests = async (req: Request, res: Response, next: NextFunct
         contestId: contestParticipants.contestId,
         hasStarted: contestParticipants.hasStarted,
         startedAt: contestParticipants.startedAt,
+        completedAt: contestParticipants.completedAt,
         score: contestParticipants.score,
       })
       .from(contestParticipants)
@@ -556,15 +558,64 @@ export const getMyContests = async (req: Request, res: Response, next: NextFunct
     // Combine contest details with participant info
     const myContests = contestDetails.map(contest => {
       const participantInfo = assignedContests.find(ac => ac.contestId === contest.id);
+
+      // Determine effective status for the user
+      let effectiveStatus = contest.status;
+      if (participantInfo?.completedAt) {
+        effectiveStatus = 'completed';
+      }
+
       return {
         ...contest,
+        status: effectiveStatus, // Override status for the user
         hasStarted: participantInfo?.hasStarted || false,
         startedAt: participantInfo?.startedAt,
+        completedAt: participantInfo?.completedAt,
         score: participantInfo?.score || 0,
       };
     });
 
     return res.status(200).json({ contests: myContests });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * Complete a contest for a participant
+ * POST /api/contests/:id/complete
+ */
+export const completeContest = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const contestId = parseInt(req.params.id as string);
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    // Update participant record
+    const [updatedParticipant] = await db
+      .update(contestParticipants)
+      .set({
+        completedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(contestParticipants.contestId, contestId),
+          eq(contestParticipants.userId, userId)
+        )
+      )
+      .returning();
+
+    if (!updatedParticipant) {
+      return res.status(404).json({ message: 'Contest participant not found' });
+    }
+
+    return res.status(200).json({
+      message: 'Contest completed successfully',
+      participant: updatedParticipant
+    });
   } catch (error) {
     return next(error);
   }

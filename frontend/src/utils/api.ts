@@ -101,6 +101,34 @@ export const contestAPI = {
     return handleResponse(response);
   },
 
+  // Complete contest
+  completeContest: async (id: number) => {
+    const response = await fetch(`${API_BASE_URL}/contests/${id}/complete`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  // Log activity
+  logActivity: async (contestId: number, type: string, data?: any) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/contests/${contestId}/activity`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          activityType: type,
+          activityData: data || {}
+        }),
+      });
+      // We generally don't await response for logs to avoid blocking UI, but return promise
+      return response.ok;
+    } catch (e) {
+      console.error("Failed to log activity:", e);
+      return false;
+    }
+  },
+
   // Remove participant
   removeParticipant: async (contestId: number, userId: number) => {
     const response = await fetch(`${API_BASE_URL}/contests/${contestId}/participants/${userId}`, {

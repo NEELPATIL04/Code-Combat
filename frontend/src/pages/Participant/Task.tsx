@@ -5,7 +5,7 @@ import Editor from '@monaco-editor/react';
 import MediaCheckHelper from '../../components/MediaCheckHelper';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../hooks/useAuth';
-import { submissionAPI, aiAPI } from '../../utils/api';
+import { submissionAPI, aiAPI, contestAPI } from '../../utils/api';
 
 
 interface Task {
@@ -825,64 +825,84 @@ const TaskPage: React.FC = () => {
         }
     }, []);
 
-    // Effect for keyboard shortcuts and navigation lockdown
+    // Activity Logging Helper
+    const logUserActivity = useCallback(async (type: string, data?: any) => {
+        if (!contestId || !contestSettings?.enableActivityLogs) return;
+
+        await contestAPI.logActivity(parseInt(contestId), type, data);
+    }, [contestId, contestSettings]);
+
+    // Effect for keyboard shortcuts, navigation lockdown, and activity logging
     useEffect(() => {
         // Only enable fullscreen lockdown if contest requires it
-        const isFullScreenEnabled = contestSettings?.fullScreenModeEnabled; // Use contestSettings
-        if (!isFullScreenEnabled) {
-            // If previously locked and now unlocked, ensure we clean up (though listeners are removed on unmount/re-run)
-            return;
-        }
+        const isFullScreenEnabled = contestSettings?.fullScreenModeEnabled;
 
         const handleKeyDown = (e: KeyboardEvent) => {
             // Disable F5, Ctrl+R, Command+R (Reload) and Escape
-            if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key === 'r') || e.key === 'Escape') {
-                e.preventDefault();
-                return false;
-            }
+            if (isFullScreenEnabled) {
+                if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key === 'r') || e.key === 'Escape') {
+                    e.preventDefault();
+                    return false;
+                }
 
-            // Disable F12, Ctrl+Shift+I, Command+Option+I (DevTools)
-            if (e.key === 'F12' || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'i') || (e.metaKey && e.altKey && e.key === 'i')) {
-                e.preventDefault();
-                return false;
-            }
+                // Disable F12, Ctrl+Shift+I, Command+Option+I (DevTools)
+                if (e.key === 'F12' || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'i') || (e.metaKey && e.altKey && e.key === 'i')) {
+                    e.preventDefault();
+                    return false;
+                }
 
-            // Disable Alt+ArrowKeys, Ctrl+W, Command+W (Navigation/Closing)
-            if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
-                e.preventDefault();
-                return false;
+                // Disable Alt+ArrowKeys, Ctrl+W, Command+W (Navigation/Closing)
+                if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+                    e.preventDefault();
+                    return false;
+                }
             }
         };
 
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
             if (hasExited.current) return;
             e.preventDefault();
-            e.returnValue = ''; // Standard way to show "Are you sure?" prompt
+            e.returnValue = '';
         };
 
         const handleFullscreenChange = () => {
             const isFull = !!document.fullscreenElement;
             setIsFullscreen(isFull);
             if (!isFull) {
-                setShowLockout(true);
+                if (isFullScreenEnabled) {
+                    setShowLockout(true);
+                    logUserActivity('exit_fullscreen', { timestamp: new Date().toISOString() });
+                }
             } else {
                 setShowLockout(false);
+                // Optional: log enter fullscreen
+                // logUserActivity('enter_fullscreen');
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                logUserActivity('tab_switch', { timestamp: new Date().toISOString() });
+            } else {
+                logUserActivity('tab_focus', { timestamp: new Date().toISOString() });
             }
         };
 
         const handleContextMenu = (e: MouseEvent) => {
-            e.preventDefault();
+            if (isFullScreenEnabled) {
+                e.preventDefault();
+            }
         };
 
-        // Add listeners with capture: true for keydown to catch it before other handlers
+        // Add listeners
         window.addEventListener('keydown', handleKeyDown, { capture: true });
         window.addEventListener('beforeunload', handleBeforeUnload);
         document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
         document.addEventListener('contextmenu', handleContextMenu);
 
-        // Attempt initial fullscreen entry (silent - no alert)
-        // Only request if we are NOT already in fullscreen (to avoid redundant calls/errors)
-        if (!document.fullscreenElement) {
+        // Attempt initial fullscreen entry if enabled
+        if (isFullScreenEnabled && !document.fullscreenElement) {
             requestFullscreen(false);
         }
 
@@ -890,6 +910,7 @@ const TaskPage: React.FC = () => {
             window.removeEventListener('keydown', handleKeyDown, { capture: true });
             window.removeEventListener('beforeunload', handleBeforeUnload);
             document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
             document.removeEventListener('contextmenu', handleContextMenu);
 
             // Unlock keyboard if API exists
@@ -897,7 +918,7 @@ const TaskPage: React.FC = () => {
                 (navigator as any).keyboard.unlock();
             }
         };
-    }, [requestFullscreen, contestSettings]); // Depend on contestSettings
+    }, [requestFullscreen, contestSettings, logUserActivity]);
 
     // Test execution state
     const [showTestCases, setShowTestCases] = useState<boolean>(false);
@@ -1480,17 +1501,22 @@ const TaskPage: React.FC = () => {
                         <span style={{ fontSize: 12, fontWeight: 600, color: '#FDE68A', fontFamily: 'monospace' }}>{formatTime(time)}</span>
                     </div>
                     <button
-                        onClick={() => {
-                            hasExited.current = true;
-                            if (document.fullscreenElement) {
-                                document.exitFullscreen().catch(() => { });
+                        onClick={async () => {
+                            if (window.confirm('Are you sure you want to finish the contest? This will mark it as completed.')) {
+                                hasExited.current = true;
+                                if (document.fullscreenElement) {
+                                    document.exitFullscreen().catch(() => { });
+                                }
+                                if (contestId) {
+                                    await contestAPI.completeContest(parseInt(contestId));
+                                }
+                                navigate('/player');
                             }
-                            navigate('/player');
                         }}
                         style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 6, color: '#f87171', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
                     >
                         <XCircle size={12} />
-                        Exit
+                        Finish & Exit
                     </button>
                 </div>
             </nav>
