@@ -104,6 +104,20 @@ router.put('/:id/settings', authenticate, requireRole(['admin', 'super_admin']),
 router.delete('/:id/settings', authenticate, requireRole(['admin', 'super_admin']), deleteContestSettings);
 
 /**
+ * GET /api/contests/:id/settings
+ * Get contest settings
+ * Requires: Authentication
+ */
+router.get('/:id/settings', authenticate, getContestSettings);
+
+/**
+ * PUT /api/contests/:id/settings
+ * Update contest settings
+ * Requires: Authentication + Admin role
+ */
+router.put('/:id/settings', authenticate, requireRole(['admin', 'super_admin']), updateContestSettings);
+
+/**
  * POST /api/contests/:id/activity
  * Log user activity
  * Requires: Authentication
