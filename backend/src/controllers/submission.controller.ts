@@ -53,6 +53,16 @@ export const runCode = async (req: Request, res: Response, next: NextFunction) =
     // Get test runner template for this language
     const testRunnerTemplate = task.testRunnerTemplate?.[language];
 
+    // Log for debugging
+    console.log('📋 Task Details (Run):', {
+      taskId: task.id,
+      functionName: task.functionName,
+      language,
+      hasTestRunnerTemplate: !!testRunnerTemplate,
+      availableLanguages: task.testRunnerTemplate ? Object.keys(task.testRunnerTemplate) : [],
+      testCaseCount: taskTestCases.length,
+    });
+
     // Execute code against test cases
     const results = await judge0Service.executeTestCases({
       sourceCode: code,
@@ -156,6 +166,17 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
 
     // Get test runner template for this language
     const testRunnerTemplate = task.testRunnerTemplate?.[language];
+
+    // Log for debugging
+    console.log('📋 Task Details (Submit):', {
+      taskId: task.id,
+      userId,
+      functionName: task.functionName,
+      language,
+      hasTestRunnerTemplate: !!testRunnerTemplate,
+      availableLanguages: task.testRunnerTemplate ? Object.keys(task.testRunnerTemplate) : [],
+      testCaseCount: taskTestCases.length,
+    });
 
     // Execute code against test cases
     const results = await judge0Service.executeTestCases({

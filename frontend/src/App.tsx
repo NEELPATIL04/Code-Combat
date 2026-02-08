@@ -4,6 +4,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './components/routes/ProtectedRoute';
 import { PrivateRoute } from './components/routes/PrivateRoute';
 
+// Providers
+import { ToastProvider } from './components/Toast/ToastProvider';
+
 // Layouts
 import AdminLayout from './components/layout/AdminLayout';
 import ParticipantLayout from './components/layout/ParticipantLayout';
@@ -33,70 +36,72 @@ import ProblemsPage from './pages/Participant/Problems';
 
 const App: React.FC = () => {
     return (
-        <BrowserRouter>
-            <Routes>
-                {/* Public Routes */}
-                <Route path="/" element={<Hero />} />
-                <Route
-                    path="/login"
-                    element={
-                        <ProtectedRoute>
-                            <Login />
-                        </ProtectedRoute>
-                    }
-                />
+        <ToastProvider>
+            <BrowserRouter>
+                <Routes>
+                    {/* Public Routes */}
+                    <Route path="/" element={<Hero />} />
+                    <Route
+                        path="/login"
+                        element={
+                            <ProtectedRoute>
+                                <Login />
+                            </ProtectedRoute>
+                        }
+                    />
 
-                {/* Admin Routes - Protected for admin and super_admin only */}
-                <Route element={
-                    <PrivateRoute allowedRoles={['admin', 'super_admin']}>
-                        <AdminLayout />
-                    </PrivateRoute>
-                }>
-                    <Route path="/admin" element={<Dashboard />} />
-                    <Route path="/admin/participants" element={<Participants />} />
-                    <Route path="/admin/participants/:id" element={<ParticipantProfile />} />
-                    <Route path="/admin/participants/:id/contest/:contestId" element={<Submissions />} />
-                    <Route path="/admin/contests" element={<Contests />} />
-                    <Route path="/admin/contests/:id" element={<ContestDetails />} />
-                    <Route path="/admin/problems" element={<Problems />} />
-                    <Route path="/admin/manage-users" element={<ManageUsers />} />
-                    <Route path="/admin/settings" element={<Settings />} />
-                    <Route path="/admin/ai-usage" element={<AiUsagePage />} />
+                    {/* Admin Routes - Protected for admin and super_admin only */}
+                    <Route element={
+                        <PrivateRoute allowedRoles={['admin', 'super_admin']}>
+                            <AdminLayout />
+                        </PrivateRoute>
+                    }>
+                        <Route path="/admin" element={<Dashboard />} />
+                        <Route path="/admin/participants" element={<Participants />} />
+                        <Route path="/admin/participants/:id" element={<ParticipantProfile />} />
+                        <Route path="/admin/participants/:id/contest/:contestId" element={<Submissions />} />
+                        <Route path="/admin/contests" element={<Contests />} />
+                        <Route path="/admin/contests/:id" element={<ContestDetails />} />
+                        <Route path="/admin/problems" element={<Problems />} />
+                        <Route path="/admin/manage-users" element={<ManageUsers />} />
+                        <Route path="/admin/settings" element={<Settings />} />
+                        <Route path="/admin/ai-usage" element={<AiUsagePage />} />
 
-                    {/* Legacy/Redirects */}
-                    <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
-                    <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
-                    <Route path="/admin/users" element={<Navigate to="/admin/participants" replace />} />
-                </Route>
+                        {/* Legacy/Redirects */}
+                        <Route path="/admin/dashboard" element={<Navigate to="/admin" replace />} />
+                        <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
+                        <Route path="/admin/users" element={<Navigate to="/admin/participants" replace />} />
+                    </Route>
 
-                {/* Participant Routes - Protected for player role only */}
-                <Route element={
-                    <PrivateRoute allowedRoles={['player']}>
-                        <ParticipantLayout />
-                    </PrivateRoute>
-                }>
-                    <Route path="/player" element={<ParticipantDashboard />} />
-                    <Route path="/player/problems" element={<ProblemsPage />} />
-                    <Route path="/profile" element={<ProfilePage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
-                </Route>
+                    {/* Participant Routes - Protected for player role only */}
+                    <Route element={
+                        <PrivateRoute allowedRoles={['player']}>
+                            <ParticipantLayout />
+                        </PrivateRoute>
+                    }>
+                        <Route path="/player" element={<ParticipantDashboard />} />
+                        <Route path="/player/problems" element={<ProblemsPage />} />
+                        <Route path="/profile" element={<ProfilePage />} />
+                        <Route path="/settings" element={<SettingsPage />} />
+                    </Route>
 
-                {/* Task Page - Standalone without ParticipantLayout navbar */}
-                <Route path="/contest/:id" element={
-                    <PrivateRoute allowedRoles={['player']}>
-                        <TaskPage />
-                    </PrivateRoute>
-                } />
-                <Route path="/task" element={
-                    <PrivateRoute allowedRoles={['player']}>
-                        <TaskPage />
-                    </PrivateRoute>
-                } />
+                    {/* Task Page - Standalone without ParticipantLayout navbar */}
+                    <Route path="/contest/:id" element={
+                        <PrivateRoute allowedRoles={['player']}>
+                            <TaskPage />
+                        </PrivateRoute>
+                    } />
+                    <Route path="/task" element={
+                        <PrivateRoute allowedRoles={['player']}>
+                            <TaskPage />
+                        </PrivateRoute>
+                    } />
 
-                {/* Catch all */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-        </BrowserRouter>
+                    {/* Catch all */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+            </BrowserRouter>
+        </ToastProvider>
     );
 };
 

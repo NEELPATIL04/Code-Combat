@@ -27,6 +27,9 @@ interface SettingsData {
     // Submission Limits
     maxSubmissionsAllowed: number | null;
     autoSubmitOnTimeout: boolean;
+    // Task Navigation Settings
+    allowTaskShift: boolean;
+    preventBackwardShiftAfterSubmission: boolean;
     additionalSettings: any;
 }
 
@@ -53,6 +56,9 @@ const ContestSettings: React.FC<ContestSettingsProps> = ({ contestId }) => {
         // Submission Limits
         maxSubmissionsAllowed: 0,
         autoSubmitOnTimeout: true,
+        // Task Navigation Settings
+        allowTaskShift: false,
+        preventBackwardShiftAfterSubmission: true,
         additionalSettings: {},
     });
     const [loading, setLoading] = useState(true);
@@ -162,12 +168,12 @@ const ContestSettings: React.FC<ContestSettingsProps> = ({ contestId }) => {
     return (
         <div style={{ maxWidth: '900px' }}>
             {/* Header */}
-            <div style={{ marginBottom: '32px' }}>
+            <div style={{ marginBottom: '16px' }}>
                 <h2 style={{
                     fontSize: '1.5rem',
                     fontWeight: 600,
                     color: '#fafafa',
-                    margin: '0 0 8px 0',
+                    margin: '0 0 4px 0',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px'
@@ -182,9 +188,9 @@ const ContestSettings: React.FC<ContestSettingsProps> = ({ contestId }) => {
             {/* Message Banner */}
             {message && (
                 <div style={{
-                    padding: '12px 16px',
+                    padding: '10px 12px',
                     borderRadius: '8px',
-                    marginBottom: '24px',
+                    marginBottom: '12px',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
@@ -202,14 +208,14 @@ const ContestSettings: React.FC<ContestSettingsProps> = ({ contestId }) => {
                 background: '#09090b',
                 border: '1px solid #27272a',
                 borderRadius: '12px',
-                padding: '24px',
-                marginBottom: '20px'
+                padding: '12px 16px',
+                marginBottom: '12px'
             }}>
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    marginBottom: '20px'
+                    marginBottom: '12px'
                 }}>
                     <Clock size={20} color="#3b82f6" />
                     <h3 style={{ margin: 0, color: '#fafafa', fontSize: '1.125rem', fontWeight: 600 }}>
@@ -276,19 +282,71 @@ const ContestSettings: React.FC<ContestSettingsProps> = ({ contestId }) => {
                 </div>
             </div>
 
-            {/* Test Mode Settings */}
+            {/* Task Navigation Settings */}
             <div style={{
                 background: '#09090b',
                 border: '1px solid #27272a',
                 borderRadius: '12px',
-                padding: '24px',
-                marginBottom: '20px'
+                padding: '12px 16px',
+                marginBottom: '12px'
             }}>
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    marginBottom: '20px'
+                    marginBottom: '12px'
+                }}>
+                    <Monitor size={20} color="#8b5cf6" />
+                    <h3 style={{ margin: 0, color: '#fafafa', fontSize: '1.125rem', fontWeight: 600 }}>
+                        Task Navigation Settings
+                    </h3>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <ToggleSwitch
+                        label="Allow Task Shift"
+                        description="Allow users to move to next task even if current task is not completed"
+                        checked={settings.allowTaskShift}
+                        onChange={(checked) => setSettings({ ...settings, allowTaskShift: checked })}
+                    />
+
+                    {settings.allowTaskShift && (
+                        <ToggleSwitch
+                            label="Prevent Backward Shift After Submission"
+                            description="Once a task is submitted, users cannot go back to previous tasks. They will see their last submission."
+                            checked={settings.preventBackwardShiftAfterSubmission}
+                            onChange={(checked) => setSettings({ ...settings, preventBackwardShiftAfterSubmission: checked })}
+                        />
+                    )}
+
+                    {settings.allowTaskShift && (
+                        <div style={{
+                            padding: '12px',
+                            background: 'rgba(139, 92, 246, 0.1)',
+                            border: '1px solid rgba(139, 92, 246, 0.2)',
+                            borderRadius: '8px',
+                            fontSize: '0.875rem',
+                            color: '#c4b5fd'
+                        }}>
+                            📌 <strong>Note:</strong> When users shift to the next task without completing the current one, a popup warning will inform them that they cannot go back to previous tasks once they submit.
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Test Mode Settings */}
+            <div style={{
+                background: '#09090b',
+                border: '1px solid #27272a',
+                borderRadius: '12px',
+                padding: '12px 16px',
+                marginBottom: '12px'
+            }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    marginBottom: '12px'
                 }}>
                     <TestTube size={20} color="#eab308" />
                     <h3 style={{ margin: 0, color: '#fafafa', fontSize: '1.125rem', fontWeight: 600 }}>
@@ -296,7 +354,7 @@ const ContestSettings: React.FC<ContestSettingsProps> = ({ contestId }) => {
                     </h3>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <ToggleSwitch
                         label="Enable Test Mode"
                         description="Enable testing mode for this contest"
@@ -539,14 +597,14 @@ const ContestSettings: React.FC<ContestSettingsProps> = ({ contestId }) => {
                 background: '#09090b',
                 border: '1px solid #27272a',
                 borderRadius: '12px',
-                padding: '24px',
-                marginBottom: '20px'
+                padding: '12px 16px',
+                marginBottom: '12px'
             }}>
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    marginBottom: '20px'
+                    marginBottom: '12px'
                 }}>
                     <Monitor size={20} color="#ec4899" />
                     <h3 style={{ margin: 0, color: '#fafafa', fontSize: '1.125rem', fontWeight: 600 }}>
@@ -554,7 +612,7 @@ const ContestSettings: React.FC<ContestSettingsProps> = ({ contestId }) => {
                     </h3>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <ToggleSwitch
                         label="Require Camera"
                         description="Participants must enable their camera to enter the contest"
