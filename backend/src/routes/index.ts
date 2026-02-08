@@ -5,6 +5,8 @@ import contestRoutes from './contest.routes';
 import submissionRoutes from './submission.routes';
 import uploadRoutes from './upload.routes';
 import aiRoutes from './ai.routes';
+import adminRoutes from './admin.routes';
+import problemRoutes from './problem.routes';
 
 /**
  * Main Router
@@ -35,6 +37,12 @@ router.use('/upload', uploadRoutes);
 // AI routes: /api/ai
 router.use('/ai', aiRoutes);
 
+// Admin routes: /api/admin
+router.use('/admin', adminRoutes);
+
+// Problem routes: /api/problems
+router.use('/problems', problemRoutes);
+
 /**
  * Health Check Endpoint
  * GET /api/health
@@ -45,7 +53,7 @@ router.use('/ai', aiRoutes);
  * Response:
  *   { status: 'OK', timestamp: string, environment: string }
  */
-router.get('/health', (req, res) => {
+router.get('/health', (_req, res) => {
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),

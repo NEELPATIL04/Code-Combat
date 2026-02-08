@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, timestamp, pgEnum, text, integer, boolean, json } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, timestamp, pgEnum, text, integer, boolean, json, jsonb } from 'drizzle-orm/pg-core';
 
 /**
  * User Role Enum
@@ -175,6 +175,51 @@ export const tasks = pgTable('tasks', {
 });
 
 /**
+ * Contest Settings Table
+ * Specific configuration for each contest
+ */
+export const contestSettings = pgTable('contest_settings', {
+  id: serial('id').primaryKey(),
+
+  contestId: integer('contest_id').notNull().references(() => contests.id, { onDelete: 'cascade' }).unique(),
+
+  // Features
+  testModeEnabled: boolean('test_mode_enabled').default(false),
+  aiHintsEnabled: boolean('ai_hints_enabled').default(true),
+  aiModeEnabled: boolean('ai_mode_enabled').default(true),
+  fullScreenModeEnabled: boolean('full_screen_mode_enabled').default(true),
+  allowCopyPaste: boolean('allow_copy_paste').default(false),
+  enableActivityLogs: boolean('enable_activity_logs').default(false),
+
+  // Media Monitoring
+  requireCamera: boolean('require_camera').default(false),
+  requireMicrophone: boolean('require_microphone').default(false),
+  requireScreenShare: boolean('require_screen_share').default(false),
+
+  // Timing
+  perTaskTimeLimit: integer('per_task_time_limit'), // in minutes
+  enablePerTaskTimer: boolean('enable_per_task_timer').default(false),
+  autoStart: boolean('auto_start').default(false),
+  autoEnd: boolean('auto_end').default(true),
+
+  // AI Configuration
+  maxHintsAllowed: integer('max_hints_allowed').default(3),
+  hintUnlockAfterSubmissions: integer('hint_unlock_after_submissions').default(0),
+  hintUnlockAfterSeconds: integer('hint_unlock_after_seconds').default(0),
+  provideLastSubmissionContext: boolean('provide_last_submission_context').default(true),
+
+  // Submissions
+  maxSubmissionsAllowed: integer('max_submissions_allowed').default(0), // 0 = unlimited
+  autoSubmitOnTimeout: boolean('auto_submit_on_timeout').default(true),
+
+  // Extra
+  additionalSettings: json('additional_settings').$type<Record<string, any>>(),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+/**
  * Contest Participants Table
  * Maps users to contests they are assigned to
  */
@@ -271,17 +316,7 @@ export type NewUserTaskProgress = typeof userTaskProgress.$inferInsert;
  * AI Usage Logs Table
  * Tracks all AI requests for auditing and quota management
  */
-export const aiUsageLogs = pgTable('ai_usage_logs', {
-  id: serial('id').primaryKey(),
-  userId: integer('user_id'), // Optional, in case of system calls
-  contestId: integer('contest_id'), // Optional
-  taskId: integer('task_id'), // Optional
-  provider: varchar('provider', { length: 50 }).notNull(), // 'groq', 'gemini'
-  model: varchar('model', { length: 50 }),
-  purpose: varchar('purpose', { length: 50 }).notNull(), // 'hint', 'solution', 'generate_task', 'evaluation'
-  tokensUsed: integer('tokens_used'),
-  timestamp: timestamp('timestamp').defaultNow().notNull(),
-});
+
 
 /**
  * Submissions Table
@@ -352,6 +387,45 @@ export const submissions = pgTable('submissions', {
   processedAt: timestamp('processed_at'),
 });
 
+/**
+ * Activity Severity Enum
+ * Defines the severity level of user activities
+ */
+export const activitySeverityEnum = pgEnum('activity_severity', ['normal', 'warning', 'alert']);
+
+/**
+ * Activity Logs Table
+ * Stores real-time user activity during contests
+ */
+export const activityLogs = pgTable('activity_logs', {
+  // Primary key
+  id: serial('id').primaryKey(),
+
+  // Contest reference
+  contestId: integer('contest_id').notNull().references(() => contests.id, { onDelete: 'cascade' }),
+
+  // User reference
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Activity type (e.g., 'join', 'screen_shift', 'submit', 'hint_request', 'copy_attempt', 'complete')
+  activityType: varchar('activity_type', { length: 50 }).notNull(),
+
+  // Additional activity data as JSON
+  activityData: jsonb('activity_data'),
+
+  // Severity level
+  severity: activitySeverityEnum('severity').notNull().default('normal'),
+
+  // Timestamp when activity occurred
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+});
+
+/**
+ * Contest Settings Table
+ * Stores test mode and other settings for contests
+ */
+
+
 // TypeScript types inferred from the schema
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -370,3 +444,189 @@ export type NewTestCase = typeof testCases.$inferInsert;
 
 export type Submission = typeof submissions.$inferSelect;
 export type NewSubmission = typeof submissions.$inferInsert;
+
+export type ActivityLog = typeof activityLogs.$inferSelect;
+export type NewActivityLog = typeof activityLogs.$inferInsert;
+
+
+
+/**
+ * Problems Table
+ * Standalone coding problems similar to LeetCode
+ * Independent of contests - users can solve anytime
+ */
+export const problems = pgTable('problems', {
+  id: serial('id').primaryKey(),
+
+  // Problem details
+  title: varchar('title', { length: 255 }).notNull(),
+  slug: varchar('slug', { length: 255 }).notNull().unique(), // URL-friendly identifier
+  description: text('description').notNull(),
+  difficulty: contestDifficultyEnum('difficulty').notNull(),
+
+  // Problem metadata
+  tags: jsonb('tags'), // e.g., ["array", "dynamic-programming", "graphs"]
+  hints: jsonb('hints'), // Array of hints
+  companies: jsonb('companies'), // Companies that asked this problem
+
+  // Code template and configuration
+  starterCode: jsonb('starter_code'), // { javascript: "...", python: "...", java: "..." }
+  functionSignature: jsonb('function_signature'), // Function name, params, return type
+
+  // AI Hints Configuration (same as contest settings)
+  maxHintsAllowed: integer('max_hints_allowed').default(3),
+  hintUnlockAfterSubmissions: integer('hint_unlock_after_submissions').default(0),
+  hintUnlockAfterSeconds: integer('hint_unlock_after_seconds').default(0),
+  provideLastSubmissionContext: boolean('provide_last_submission_context').notNull().default(true),
+  aiHintsEnabled: boolean('ai_hints_enabled').notNull().default(true),
+
+  // Submission limits
+  maxSubmissionsAllowed: integer('max_submissions_allowed').default(0), // 0 = unlimited
+  autoSubmitOnTimeout: boolean('auto_submit_on_timeout').notNull().default(true),
+
+  // Test cases stored as JSONB
+  testCases: jsonb('test_cases').notNull(), // Public + hidden test cases
+
+  // Statistics
+  totalSubmissions: integer('total_submissions').notNull().default(0),
+  acceptedSubmissions: integer('accepted_submissions').notNull().default(0),
+
+  // Problem status
+  isActive: boolean('is_active').notNull().default(true),
+  isPremium: boolean('is_premium').notNull().default(false),
+
+  // Timestamps
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+
+  // Created by admin
+  createdBy: integer('created_by').references(() => users.id),
+});
+
+/**
+ * Problem Submissions Table
+ * Tracks all user submissions for standalone problems
+ */
+export const problemSubmissions = pgTable('problem_submissions', {
+  id: serial('id').primaryKey(),
+
+  // Foreign keys
+  problemId: integer('problem_id').notNull().references(() => problems.id, { onDelete: 'cascade' }),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Submission details
+  code: text('code').notNull(),
+  language: varchar('language', { length: 50 }).notNull(),
+
+  // Results
+  status: varchar('status', { length: 50 }).notNull(), // 'accepted', 'wrong_answer', 'runtime_error', etc.
+  testCasesPassed: integer('test_cases_passed').notNull().default(0),
+  totalTestCases: integer('total_test_cases').notNull(),
+
+  // Performance metrics
+  executionTime: integer('execution_time'), // in milliseconds
+  memoryUsed: integer('memory_used'), // in KB
+
+  // Time tracking (how long user took to solve)
+  timeSpent: integer('time_spent'), // in seconds (from timer)
+
+  // Error details if any
+  errorMessage: text('error_message'),
+
+  // Submission timestamp
+  submittedAt: timestamp('submitted_at').defaultNow().notNull(),
+});
+
+/**
+ * User Problem Progress Table
+ * Tracks which problems a user has attempted/solved
+ */
+export const userProblemProgress = pgTable('user_problem_progress', {
+  id: serial('id').primaryKey(),
+
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  problemId: integer('problem_id').notNull().references(() => problems.id, { onDelete: 'cascade' }),
+
+  // Status
+  status: varchar('status', { length: 50 }).notNull().default('attempted'), // 'attempted', 'solved'
+
+  // Best submission metrics
+  bestTime: integer('best_time'), // fastest execution time
+  bestMemory: integer('best_memory'), // lowest memory usage
+
+  // Tracking
+  attempts: integer('attempts').notNull().default(0),
+  firstAttemptAt: timestamp('first_attempt_at').defaultNow().notNull(),
+  solvedAt: timestamp('solved_at'),
+  lastAttemptAt: timestamp('last_attempt_at').defaultNow().notNull(),
+});
+
+export type Problem = typeof problems.$inferSelect;
+export type NewProblem = typeof problems.$inferInsert;
+
+export type ProblemSubmission = typeof problemSubmissions.$inferSelect;
+export type NewProblemSubmission = typeof problemSubmissions.$inferInsert;
+
+export type UserProblemProgress = typeof userProblemProgress.$inferSelect;
+export type NewUserProblemProgress = typeof userProblemProgress.$inferInsert;
+
+/**
+ * AI Hint Usage Tracking Table
+ * Tracks how many hints a user has requested for each task/problem
+ */
+export const aiHintUsage = pgTable('ai_hint_usage', {
+  id: serial('id').primaryKey(),
+
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Either taskId OR problemId (one will be null)
+  taskId: integer('task_id').references(() => tasks.id, { onDelete: 'cascade' }),
+  problemId: integer('problem_id').references(() => problems.id, { onDelete: 'cascade' }),
+  contestId: integer('contest_id').references(() => contests.id, { onDelete: 'cascade' }),
+
+  // Hint tracking
+  hintsRequested: integer('hints_requested').notNull().default(0),
+  lastHintAt: timestamp('last_hint_at'),
+
+  // Context for AI
+  lastSubmissionCode: text('last_submission_code'),
+  lastSubmissionLanguage: varchar('last_submission_language', { length: 50 }),
+  lastSubmissionStatus: varchar('last_submission_status', { length: 50 }),
+
+  // Timestamps
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export type AiHintUsage = typeof aiHintUsage.$inferSelect;
+export type NewAiHintUsage = typeof aiHintUsage.$inferInsert;
+
+/**
+ * AI Usage Logs Table
+ * Tracks token usage and AI requests for cost monitoring
+ */
+export const aiUsageLogs = pgTable('ai_usage_logs', {
+  id: serial('id').primaryKey(),
+
+  // Context
+  userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+  contestId: integer('contest_id').references(() => contests.id, { onDelete: 'set null' }),
+  taskId: integer('task_id').references(() => tasks.id, { onDelete: 'set null' }),
+
+  // AI Details
+  provider: varchar('provider', { length: 50 }).notNull(), // 'groq', 'gemini'
+  model: varchar('model', { length: 100 }).notNull(),
+  purpose: varchar('purpose', { length: 50 }).notNull(), // 'hint', 'solution', 'evaluation'
+
+  // Usage Stats
+  tokensUsed: integer('tokens_used').notNull().default(0),
+
+  // Timestamp
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+});
+
+export type AiUsageLog = typeof aiUsageLogs.$inferSelect;
+export type NewAiUsageLog = typeof aiUsageLogs.$inferInsert;
+
+export type ContestSettings = typeof contestSettings.$inferSelect;
+export type NewContestSettings = typeof contestSettings.$inferInsert;

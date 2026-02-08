@@ -15,6 +15,34 @@
       "when": 1770281142944,
       "tag": "0001_lame_wallop",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770510135517,
+      "tag": "0002_graceful_lady_ursula",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1770533721451,
+      "tag": "0003_glorious_gabe_jones",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1770536612484,
+      "tag": "0005_adorable_secret_warriors",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1770553364716,
+      "tag": "0006_daily_moira_mactaggert",
+      "breakpoints": true
     }
   ]
 }

@@ -22,12 +22,14 @@ import ContestDetails from './pages/Admin/Contests/Details';
 import ManageUsers from './pages/Admin/ManageUsers';
 import Settings from './pages/Admin/Settings';
 import AiUsagePage from './pages/Admin/AiUsage';
+import Problems from './pages/Admin/Problems';
 
 // Participant pages
 import TaskPage from './pages/Participant/Task';
 import ParticipantDashboard from './pages/Participant/Dashboard';
 import ProfilePage from './pages/Participant/Profile';
 import SettingsPage from './pages/Participant/Settings';
+import ProblemsPage from './pages/Participant/Problems';
 
 const App: React.FC = () => {
     return (
@@ -56,6 +58,7 @@ const App: React.FC = () => {
                     <Route path="/admin/participants/:id/contest/:contestId" element={<Submissions />} />
                     <Route path="/admin/contests" element={<Contests />} />
                     <Route path="/admin/contests/:id" element={<ContestDetails />} />
+                    <Route path="/admin/problems" element={<Problems />} />
                     <Route path="/admin/manage-users" element={<ManageUsers />} />
                     <Route path="/admin/settings" element={<Settings />} />
                     <Route path="/admin/ai-usage" element={<AiUsagePage />} />
@@ -73,6 +76,7 @@ const App: React.FC = () => {
                     </PrivateRoute>
                 }>
                     <Route path="/player" element={<ParticipantDashboard />} />
+                    <Route path="/player/problems" element={<ProblemsPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/settings" element={<SettingsPage />} />
                 </Route>

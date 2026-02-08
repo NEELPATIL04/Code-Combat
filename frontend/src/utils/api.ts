@@ -64,6 +64,7 @@ export const contestAPI = {
 
   // Create contest
   create: async (contestData: any) => {
+    console.log('API: Creating contest with data:', contestData);
     const response = await fetch(`${API_BASE_URL}/contests`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -101,6 +102,37 @@ export const contestAPI = {
     return handleResponse(response);
   },
 
+  // Complete contest
+  completeContest: async (id: number) => {
+    console.log(`API: Completing contest ${id}`);
+    const response = await fetch(`${API_BASE_URL}/contests/${id}/complete`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    const data = await handleResponse(response);
+    console.log('API: Complete contest response:', data);
+    return data;
+  },
+
+  // Log activity
+  logActivity: async (contestId: number, type: string, data?: any) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/contests/${contestId}/activity`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          activityType: type,
+          activityData: data || {}
+        }),
+      });
+      // We generally don't await response for logs to avoid blocking UI, but return promise
+      return response.ok;
+    } catch (e) {
+      console.error("Failed to log activity:", e);
+      return false;
+    }
+  },
+
   // Remove participant
   removeParticipant: async (contestId: number, userId: number) => {
     const response = await fetch(`${API_BASE_URL}/contests/${contestId}/participants/${userId}`, {
@@ -126,6 +158,58 @@ export const contestAPI = {
   // Get my contests (for players)
   getMyContests: async () => {
     const response = await fetch(`${API_BASE_URL}/contests/my-contests`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
+
+/**
+ * Problem API
+ * Manage standalone problems
+ */
+export const problemAPI = {
+  // Get all problems
+  getAll: async (difficulty?: string) => {
+    const url = difficulty ? `${API_BASE_URL}/problems?difficulty=${difficulty}` : `${API_BASE_URL}/problems`;
+    const response = await fetch(url, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  // Get single problem
+  getById: async (id: number) => {
+    const response = await fetch(`${API_BASE_URL}/problems/${id}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  // Create problem
+  create: async (problemData: any) => {
+    const response = await fetch(`${API_BASE_URL}/problems`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(problemData),
+    });
+    return handleResponse(response);
+  },
+
+  // Update problem
+  update: async (id: number, problemData: any) => {
+    const response = await fetch(`${API_BASE_URL}/problems/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(problemData),
+    });
+    return handleResponse(response);
+  },
+
+  // Delete problem
+  delete: async (id: number) => {
+    const response = await fetch(`${API_BASE_URL}/problems/${id}`, {
+      method: 'DELETE',
       headers: getAuthHeaders(),
     });
     return handleResponse(response);
@@ -364,6 +448,20 @@ export const adminAPI = {
 
   getAiUsageLogs: async (page = 1, limit = 50) => {
     const response = await fetch(`${API_BASE_URL}/admin/ai/logs?page=${page}&limit=${limit}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  getDashboardStats: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/dashboard`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  getParticipantProfile: async (id: number) => {
+    const response = await fetch(`${API_BASE_URL}/admin/participants/${id}`, {
       headers: getAuthHeaders(),
     });
     return handleResponse(response);

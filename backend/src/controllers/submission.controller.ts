@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../config/database';
-import { submissions, testCases, tasks, contestParticipants, userTaskProgress } from '../db/schema';
+import { submissions, testCases, tasks, contestParticipants, userTaskProgress, activityLogs } from '../db/schema';
 import { judge0Service } from '../services/judge0.service';
 import { getJudge0LanguageId } from '../utils/judge0.util';
-import { wrapCodeWithTestRunner } from '../utils/codeWrapper.util';
 import { eq, and, desc } from 'drizzle-orm';
+import { Server } from 'socket.io';
 
 /**
  * Run code against test cases (without saving as submission)
@@ -13,7 +13,7 @@ import { eq, and, desc } from 'drizzle-orm';
 export const runCode = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { taskId, code, language } = req.body;
-    const userId = (req as any).user?.userId;
+    // const userId = (req as any).user?.userId; // Unused in runCode
 
     if (!taskId || !code || !language) {
       return res.status(400).json({
@@ -68,7 +68,7 @@ export const runCode = async (req: Request, res: Response, next: NextFunction) =
     const passedCount = results.filter(r => r.passed).length;
     const totalCount = results.length;
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         passed: passedCount,
@@ -87,7 +87,7 @@ export const runCode = async (req: Request, res: Response, next: NextFunction) =
     });
   } catch (error: any) {
     console.error('Run code error:', error);
-    next(error);
+    return next(error);
   }
 };
 
@@ -234,7 +234,35 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
         );
     }
 
-    res.json({
+    // Log activity
+    const [activity] = await db.insert(activityLogs).values({
+      contestId,
+      userId,
+      activityType: 'task_submitted',
+      activityData: {
+        taskId,
+        submissionId: submission.id,
+        status,
+        passed: passedCount,
+        total: totalCount,
+        score
+      },
+      severity: allPassed ? 'normal' : 'warning'
+    }).returning();
+
+    // Emit real-time update to admins
+    const io = req.app.get('io') as Server;
+    if (io) {
+      io.to(`admin-contest-${contestId}`).emit('new-activity', {
+        activity: {
+          ...activity,
+          // We need to fetch user details to send complete info, or frontend can re-fetch
+          // For now, let's trigger a re-fetch on frontend
+        }
+      });
+    }
+
+    return res.json({
       success: true,
       message: allPassed ? 'All test cases passed!' : 'Some test cases failed',
       data: {
@@ -257,7 +285,7 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
     });
   } catch (error: any) {
     console.error('Submit code error:', error);
-    next(error);
+    return next(error);
   }
 };
 
@@ -275,14 +303,14 @@ export const getTaskSubmissions = async (req: Request, res: Response, next: Next
       .from(submissions)
       .where(
         and(
-          eq(submissions.taskId, parseInt(taskId)),
+          eq(submissions.taskId, parseInt(taskId as string)),
           eq(submissions.userId, userId)
         )
       )
       .orderBy(desc(submissions.submittedAt))
       .limit(10);
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         submissions: userSubmissions,
@@ -290,7 +318,64 @@ export const getTaskSubmissions = async (req: Request, res: Response, next: Next
     });
   } catch (error: any) {
     console.error('Get submissions error:', error);
-    next(error);
+    return next(error);
+  }
+};
+
+/**
+ * Reset user submissions for a specific task
+ * DELETE /api/submissions/task/:taskId/user/:userId/reset
+ * Admin only - resets all submissions and progress for a user on a task
+ */
+export const resetUserTaskSubmissions = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const taskId = parseInt(req.params.taskId);
+    const userId = parseInt(req.params.userId);
+
+    if (!taskId || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Task ID and User ID are required',
+      });
+    }
+
+    // Verify task exists
+    const [task] = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.id, taskId))
+      .limit(1);
+
+    if (!task) {
+      return res.status(404).json({
+        success: false,
+        message: 'Task not found',
+      });
+    }
+
+    // Delete all submissions for this user and task
+    await db
+      .delete(submissions)
+      .where(and(
+        eq(submissions.taskId, taskId),
+        eq(submissions.userId, userId)
+      ));
+
+    // Reset user task progress
+    await db
+      .delete(userTaskProgress)
+      .where(and(
+        eq(userTaskProgress.taskId, taskId),
+        eq(userTaskProgress.userId, userId)
+      ));
+
+    return res.status(200).json({
+      success: true,
+      message: 'User submissions reset successfully',
+    });
+  } catch (error: any) {
+    console.error('Reset submissions error:', error);
+    return next(error);
   }
 };
 
@@ -298,16 +383,16 @@ export const getTaskSubmissions = async (req: Request, res: Response, next: Next
  * Health check - verify Judge0 is running
  * GET /api/submissions/health
  */
-export const healthCheck = async (req: Request, res: Response, next: NextFunction) => {
+export const healthCheck = async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const isHealthy = await judge0Service.healthCheck();
 
-    res.json({
+    return res.json({
       success: true,
       judge0: isHealthy ? 'online' : 'offline',
     });
   } catch (error: any) {
     console.error('Health check error:', error);
-    next(error);
+    return next(error);
   }
 };

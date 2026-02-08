@@ -8,23 +8,18 @@ interface Step1Props {
     readOnly?: boolean;
 }
 
-const labelStyle = { display: 'block', marginBottom: '8px', color: '#fafafa', fontSize: '0.875rem', fontWeight: 500 };
-const inputStyle = { width: '100%', padding: '10px 14px', background: '#09090b', border: '1px solid #27272a', borderRadius: '6px', color: '#fafafa', fontSize: '0.875rem', outline: 'none' };
+const labelStyle = { display: 'block', marginBottom: '8px', color: '#fafafa', fontSize: '1.05rem', fontWeight: 500 };
+const inputStyle = { width: '100%', padding: '14px 16px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', color: '#fafafa', fontSize: '1.05rem', outline: 'none' };
 
 const Step1: React.FC<Step1Props> = ({ formData, handleChange, setFormData, readOnly = false }) => {
     return (
-        <>
-            <div style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '32px' }}>
+            <div>
                 <label style={labelStyle}>Title *</label>
                 <input name="title" value={formData.title} onChange={handleChange} placeholder="Contest title..." required style={inputStyle} disabled={readOnly} />
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-                <label style={labelStyle}>Description</label>
-                <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Contest description..." rows={3} style={{ ...inputStyle, resize: 'vertical', minHeight: '80px' }} disabled={readOnly} />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
                 <div>
                     <label style={labelStyle}>Difficulty</label>
                     <select name="difficulty" value={formData.difficulty} onChange={handleChange} style={{ ...inputStyle, cursor: readOnly ? 'default' : 'pointer' }} disabled={readOnly}>
@@ -37,11 +32,15 @@ const Step1: React.FC<Step1Props> = ({ formData, handleChange, setFormData, read
                     <label style={labelStyle}>Duration (min) *</label>
                     <input type="number" name="duration" value={formData.duration} onChange={handleChange} min="1" required style={inputStyle} disabled={readOnly} />
                 </div>
+                <div>
+                    <label style={labelStyle}>Start Password</label>
+                    <input type="password" name="startPassword" value={formData.startPassword} onChange={handleChange} placeholder="Optional..." style={inputStyle} disabled={readOnly} />
+                </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', alignItems: 'end' }}>
                 <div>
-                    <label style={labelStyle}>Scheduled Start Time</label>
+                    <label style={labelStyle}>Scheduled Start</label>
                     <input
                         type="datetime-local"
                         name="scheduledStartTime"
@@ -62,23 +61,29 @@ const Step1: React.FC<Step1Props> = ({ formData, handleChange, setFormData, read
                         disabled={readOnly}
                     />
                 </div>
+                <div>
+                    <label
+                        style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: readOnly ? 'default' : 'pointer', userSelect: 'none', height: '100%', paddingBottom: '12px' }}
+                        title="Participants will be locked in full-screen mode and cannot leave the tabs during the contest."
+                    >
+                        <input type="checkbox" checked={formData.fullScreenMode} onChange={(e) => setFormData(prev => ({ ...prev, fullScreenMode: e.target.checked }))} style={{ width: '20px', height: '20px', cursor: readOnly ? 'default' : 'pointer', accentColor: '#fafafa' }} disabled={readOnly} />
+                        <span style={{ color: '#fafafa', fontSize: '1rem', fontWeight: 500 }}>Enable Full Screen Mode</span>
+                    </label>
+                </div>
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-                <label style={labelStyle}>Start Password (optional)</label>
-                <input type="password" name="startPassword" value={formData.startPassword} onChange={handleChange} placeholder="Password to start contest..." style={inputStyle} disabled={readOnly} />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    placeholder="Contest description..."
+                    title="Contest Description"
+                    style={{ ...inputStyle, flex: 1, resize: 'none', minHeight: '60px', lineHeight: '1.6' }}
+                    disabled={readOnly}
+                />
             </div>
-
-            <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: readOnly ? 'default' : 'pointer', userSelect: 'none' }}>
-                    <input type="checkbox" checked={formData.fullScreenMode} onChange={(e) => setFormData(prev => ({ ...prev, fullScreenMode: e.target.checked }))} style={{ width: '18px', height: '18px', cursor: readOnly ? 'default' : 'pointer', accentColor: '#fafafa' }} disabled={readOnly} />
-                    <div>
-                        <span style={{ color: '#fafafa', fontSize: '0.875rem', fontWeight: 500, display: 'block', marginBottom: '2px' }}>Enable Full Screen Mode</span>
-                        <span style={{ color: '#71717a', fontSize: '0.75rem' }}>Participants will be locked in full-screen mode during the contest</span>
-                    </div>
-                </label>
-            </div>
-        </>
+        </div>
     );
 };
 

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getJudge0LanguageId, mapJudge0Status, Judge0Submission, Judge0Result } from '../utils/judge0.util';
+import { getJudge0LanguageId, Judge0Submission, Judge0Result } from '../utils/judge0.util';
 import { wrapCodeWithTestRunner } from '../utils/codeWrapper.util';
 
 const JUDGE0_URL = process.env.JUDGE0_URL || 'http://localhost:2358';

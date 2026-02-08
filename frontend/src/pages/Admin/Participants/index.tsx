@@ -326,17 +326,17 @@ const Participants: React.FC = () => {
 
                                 {/* Contests Cell */}
                                 <span style={{ textAlign: 'center', color: '#fafafa', fontSize: '0.875rem' }}>
-                                    {participant.contestCount ?? Math.floor(Math.random() * 20)}
+                                    {participant.contestCount ?? 0}
                                 </span>
 
                                 {/* Submissions Cell */}
                                 <span style={{ textAlign: 'center', color: '#fafafa', fontSize: '0.875rem' }}>
-                                    {participant.submissionCount ?? Math.floor(Math.random() * 100)}
+                                    {participant.submissionCount ?? 0}
                                 </span>
 
                                 {/* Success Rate Cell */}
                                 <span style={{ textAlign: 'center', color: '#22c55e', fontWeight: 500, fontSize: '0.875rem' }}>
-                                    {participant.successRate ?? Math.floor(Math.random() * 40 + 60)}%
+                                    {participant.successRate ?? 0}%
                                 </span>
 
                                 {/* Date Cell */}

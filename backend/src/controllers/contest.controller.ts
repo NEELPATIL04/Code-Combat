@@ -19,9 +19,12 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
     console.log('Query:', req.query);
     console.log('Body keys:', Object.keys(req.body));
 
-    const { title, description, difficulty, duration, startPassword, contestTasks, participantIds, fullScreenMode, scheduledStartTime, endTime } = req.body;
+    const { title, description, difficulty, duration, startPassword, contestTasks, tasks: tasksFromBody, participantIds, participants, fullScreenMode, scheduledStartTime, endTime } = req.body;
 
-    console.log(`Title: ${title}, Duration: ${duration}, Tasks: ${contestTasks?.length || 0}, Full Screen: ${fullScreenMode}`);
+    // Support both 'tasks' and 'contestTasks' parameter names
+    const tasksList = contestTasks || tasksFromBody;
+
+    console.log(`Title: ${title}, Duration: ${duration}, Tasks: ${tasksList?.length || 0}, Full Screen: ${fullScreenMode}`);
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -54,10 +57,14 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
     }).returning();
 
     // Create tasks if provided
-    if (contestTasks && Array.isArray(contestTasks) && contestTasks.length > 0) {
-      const taskValues = contestTasks.map((task: any, index: number) => {
-        console.log(`Task ${index}: ${task.title} - Allowed Languages:`, task.allowedLanguages);
-        return {
+    if (tasksList && Array.isArray(tasksList) && tasksList.length > 0) {
+      console.log(`Processing ${tasksList.length} tasks...`);
+
+      for (const [index, task] of tasksList.entries()) {
+        console.log(`Creating Task ${index}: ${task.title}`);
+
+        // Insert task
+        const [newTask] = await db.insert(tasks).values({
           contestId: contest.id,
           title: task.title,
           description: task.description,
@@ -65,29 +72,64 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
           maxPoints: task.maxPoints || 100,
           allowedLanguages: task.allowedLanguages || [],
           orderIndex: index,
-        };
-      });
-      await db.insert(tasks).values(taskValues);
-      console.log('Tasks inserted successfully');
+          // New fields
+          functionName: task.functionName,
+          boilerplateCode: task.boilerplateCode,
+          testRunnerTemplate: task.testRunnerTemplate, // This maps to wrapperCode from frontend
+          aiConfig: task.aiConfig
+        }).returning();
+
+        // Insert test cases if provided
+        if (task.testCases && Array.isArray(task.testCases) && task.testCases.length > 0) {
+          const testCaseValues = task.testCases.map((tc: any, tcIndex: number) => ({
+            taskId: newTask.id,
+            input: tc.input,
+            expectedOutput: tc.expectedOutput,
+            isHidden: tc.isHidden || false,
+            orderIndex: tcIndex
+          }));
+
+          await db.insert(testCases).values(testCaseValues);
+          console.log(`Inserted ${testCaseValues.length} test cases for task ${newTask.id}`);
+        }
+      }
+      console.log('All tasks and test cases created successfully');
     } else {
       console.log('No tasks provided for creation');
     }
 
     // Add participants if provided
-    if (participantIds && Array.isArray(participantIds) && participantIds.length > 0) {
-      const participantValues = participantIds.map((userId: number) => ({
+    // Prioritize participants from body which matches frontend
+    const newParticipantsRaw = participants || participantIds || req.body.participants;
+
+    console.log('DEBUG: createContest payload:', {
+      hasParticipantIds: !!participantIds,
+      hasParticipants: !!participants,
+      hasBodyParticipants: !!req.body.participants,
+      participantIdsValue: participantIds,
+      participantsValue: participants,
+      bodyParticipantsValue: req.body.participants,
+      merged: newParticipantsRaw
+    });
+
+    if (newParticipantsRaw && Array.isArray(newParticipantsRaw) && newParticipantsRaw.length > 0) {
+      // Deduplicate
+      const uniqueParticipants = [...new Set(newParticipantsRaw)];
+      console.log(`Adding ${uniqueParticipants.length} participants to new contest ${contest.id}`);
+
+      const participantValues = uniqueParticipants.map((userId: any) => ({
         contestId: contest.id,
-        userId,
+        userId: Number(userId),
       }));
       await db.insert(contestParticipants).values(participantValues);
     }
 
-    res.status(201).json({
+    return res.status(201).json({
       message: 'Contest created successfully',
       contest,
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -127,12 +169,12 @@ export const getAllContests = async (req: Request, res: Response, next: NextFunc
       })
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       count: contestsWithCounts.length,
       contests: contestsWithCounts,
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -142,7 +184,7 @@ export const getAllContests = async (req: Request, res: Response, next: NextFunc
  */
 export const getContestById = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const contestId = parseInt(req.params.id);
+    const contestId = parseInt(req.params.id as string);
 
     const [contest] = await db
       .select()
@@ -179,7 +221,7 @@ export const getContestById = async (req: Request, res: Response, next: NextFunc
       .leftJoin(users, eq(contestParticipants.userId, users.id))
       .where(eq(contestParticipants.contestId, contestId));
 
-    res.status(200).json({
+    return res.status(200).json({
       contest: {
         ...contest,
         tasks: await Promise.all(contestTasks.map(async (task) => {
@@ -193,7 +235,7 @@ export const getContestById = async (req: Request, res: Response, next: NextFunc
       },
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -203,8 +245,11 @@ export const getContestById = async (req: Request, res: Response, next: NextFunc
  */
 export const updateContest = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const contestId = parseInt(req.params.id);
-    const { title, description, difficulty, duration, status, startPassword, contestTasks, fullScreenMode, scheduledStartTime, endTime } = req.body;
+    const contestId = parseInt(req.params.id as string);
+    const { title, description, difficulty, duration, status, startPassword, contestTasks, tasks: tasksFromBody, fullScreenMode, scheduledStartTime, endTime } = req.body;
+
+    // Support both 'tasks' and 'contestTasks' parameter names
+    const tasksList = contestTasks || tasksFromBody;
 
     const [existingContest] = await db
       .select()
@@ -243,16 +288,26 @@ export const updateContest = async (req: Request, res: Response, next: NextFunct
       .returning();
 
     // Update tasks if provided
-    if (contestTasks && Array.isArray(contestTasks)) {
-      console.log('Updating tasks for contest:', contestId, 'Count:', contestTasks.length);
+    if (tasksList && Array.isArray(tasksList)) {
+      console.log('Updating tasks for contest:', contestId, 'Count:', tasksList.length);
+
+      // Get existing task IDs to delete their test cases first (if no cascade)
+      const existingTasks = await db.select({ id: tasks.id }).from(tasks).where(eq(tasks.contestId, contestId));
+      if (existingTasks.length > 0) {
+        const taskIds = existingTasks.map(t => t.id);
+        await db.delete(testCases).where(inArray(testCases.taskId, taskIds));
+      }
+
       // Delete existing tasks
       await db.delete(tasks).where(eq(tasks.contestId, contestId));
 
       // Insert new tasks
-      if (contestTasks.length > 0) {
-        const taskValues = contestTasks.map((task: any, index: number) => {
-          console.log(`Updating Task ${index}: ${task.title} - Allowed Languages:`, task.allowedLanguages);
-          return {
+      if (tasksList.length > 0) {
+        for (const [index, task] of tasksList.entries()) {
+          console.log(`Creating Task ${index}: ${task.title}`);
+
+          // Insert task
+          const [newTask] = await db.insert(tasks).values({
             contestId: contestId,
             title: task.title,
             description: task.description,
@@ -260,18 +315,38 @@ export const updateContest = async (req: Request, res: Response, next: NextFunct
             maxPoints: task.maxPoints || 100,
             allowedLanguages: task.allowedLanguages || [],
             orderIndex: index,
-          };
-        });
-        await db.insert(tasks).values(taskValues);
-        console.log('Tasks replaced successfully');
+            // New fields
+            functionName: task.functionName,
+            boilerplateCode: task.boilerplateCode,
+            testRunnerTemplate: task.testRunnerTemplate,
+            aiConfig: task.aiConfig
+          }).returning();
+
+          // Insert test cases if provided
+          if (task.testCases && Array.isArray(task.testCases) && task.testCases.length > 0) {
+            const testCaseValues = task.testCases.map((tc: any, tcIndex: number) => ({
+              taskId: newTask.id,
+              input: tc.input,
+              expectedOutput: tc.expectedOutput,
+              isHidden: tc.isHidden || false,
+              orderIndex: tcIndex
+            }));
+
+            await db.insert(testCases).values(testCaseValues);
+            console.log(`Inserted ${testCaseValues.length} test cases for task ${newTask.id}`);
+          }
+        }
+        console.log('Tasks and test cases replaced successfully');
       }
     }
 
     // Update participants if provided
     // Check for both 'participants' (from frontend FormData) and 'participantIds' (consistency)
-    const newParticipants = req.body.participants || req.body.participantIds;
+    const newParticipantsRaw = req.body.participants || req.body.participantIds;
 
-    if (newParticipants && Array.isArray(newParticipants)) {
+    if (newParticipantsRaw && Array.isArray(newParticipantsRaw)) {
+      // Deduplicate participants
+      const newParticipants = [...new Set(newParticipantsRaw)];
       console.log('Updating participants for contest:', contestId, 'Count:', newParticipants.length);
 
       // Delete existing participants
@@ -279,21 +354,21 @@ export const updateContest = async (req: Request, res: Response, next: NextFunct
 
       // Insert new participants
       if (newParticipants.length > 0) {
-        const participantValues = newParticipants.map((userId: number) => ({
+        const participantValues = newParticipants.map((userId: any) => ({
           contestId,
-          userId,
+          userId: Number(userId),
         }));
         await db.insert(contestParticipants).values(participantValues);
         console.log('Participants updated successfully');
       }
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       message: 'Contest updated successfully',
       contest: updatedContest,
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -303,7 +378,7 @@ export const updateContest = async (req: Request, res: Response, next: NextFunct
  */
 export const deleteContest = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const contestId = parseInt(req.params.id);
+    const contestId = parseInt(req.params.id as string);
 
     const [existingContest] = await db
       .select()
@@ -323,9 +398,9 @@ export const deleteContest = async (req: Request, res: Response, next: NextFunct
     // Delete contest
     await db.delete(contests).where(eq(contests.id, contestId));
 
-    res.status(200).json({ message: 'Contest deleted successfully' });
+    return res.status(200).json({ message: 'Contest deleted successfully' });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -335,12 +410,15 @@ export const deleteContest = async (req: Request, res: Response, next: NextFunct
  */
 export const addParticipants = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const contestId = parseInt(req.params.id);
-    const { userIds } = req.body;
+    const contestId = parseInt(req.params.id as string);
+    const { userIds: userIdsRaw } = req.body;
 
-    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+    if (!userIdsRaw || !Array.isArray(userIdsRaw) || userIdsRaw.length === 0) {
       return res.status(400).json({ message: 'User IDs are required' });
     }
+
+    // Deduplicate input user IDs
+    const userIds = [...new Set(userIdsRaw.map((id: any) => Number(id)))];
 
     const [contest] = await db
       .select()
@@ -373,11 +451,11 @@ export const addParticipants = async (req: Request, res: Response, next: NextFun
     }));
     await db.insert(contestParticipants).values(participantValues);
 
-    res.status(200).json({
+    return res.status(200).json({
       message: `${newUserIds.length} participant(s) added successfully`,
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -387,8 +465,8 @@ export const addParticipants = async (req: Request, res: Response, next: NextFun
  */
 export const removeParticipant = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const contestId = parseInt(req.params.id);
-    const userId = parseInt(req.params.userId);
+    const contestId = parseInt(req.params.id as string);
+    const userId = parseInt(req.params.userId as string);
 
     await db
       .delete(contestParticipants)
@@ -399,9 +477,9 @@ export const removeParticipant = async (req: Request, res: Response, next: NextF
         )
       );
 
-    res.status(200).json({ message: 'Participant removed successfully' });
+    return res.status(200).json({ message: 'Participant removed successfully' });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -411,7 +489,7 @@ export const removeParticipant = async (req: Request, res: Response, next: NextF
  */
 export const startContest = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const contestId = parseInt(req.params.id);
+    const contestId = parseInt(req.params.id as string);
 
     const [contest] = await db
       .select()
@@ -437,12 +515,12 @@ export const startContest = async (req: Request, res: Response, next: NextFuncti
       .where(eq(contests.id, contestId))
       .returning();
 
-    res.status(200).json({
+    return res.status(200).json({
       message: 'Contest started successfully',
       contest: updatedContest,
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -464,6 +542,7 @@ export const getMyContests = async (req: Request, res: Response, next: NextFunct
         contestId: contestParticipants.contestId,
         hasStarted: contestParticipants.hasStarted,
         startedAt: contestParticipants.startedAt,
+        completedAt: contestParticipants.completedAt,
         score: contestParticipants.score,
       })
       .from(contestParticipants)
@@ -483,17 +562,70 @@ export const getMyContests = async (req: Request, res: Response, next: NextFunct
     // Combine contest details with participant info
     const myContests = contestDetails.map(contest => {
       const participantInfo = assignedContests.find(ac => ac.contestId === contest.id);
+
+      // Determine effective status for the user
+      let effectiveStatus = contest.status;
+      if (participantInfo?.completedAt) {
+        effectiveStatus = 'completed';
+      }
+
+      // console.log(`Contest ${contest.id} status for user: ${effectiveStatus} (Original: ${contest.status}, CompletedAt: ${participantInfo?.completedAt})`);
+
       return {
         ...contest,
+        status: effectiveStatus, // Override status for the user
         hasStarted: participantInfo?.hasStarted || false,
         startedAt: participantInfo?.startedAt,
+        completedAt: participantInfo?.completedAt,
         score: participantInfo?.score || 0,
       };
     });
 
-    res.status(200).json({ contests: myContests });
+    return res.status(200).json({ contests: myContests });
   } catch (error) {
-    next(error);
+    return next(error);
+  }
+};
+
+/**
+ * Complete a contest for a participant
+ * POST /api/contests/:id/complete
+ */
+export const completeContest = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const contestId = parseInt(req.params.id as string);
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    // Update participant record
+    const [updatedParticipant] = await db
+      .update(contestParticipants)
+      .set({
+        completedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(contestParticipants.contestId, contestId),
+          eq(contestParticipants.userId, userId)
+        )
+      )
+      .returning();
+
+    console.log(`User ${userId} completed contest ${contestId}. Updated:`, updatedParticipant);
+
+    if (!updatedParticipant) {
+      return res.status(404).json({ message: 'Contest participant not found' });
+    }
+
+    return res.status(200).json({
+      message: 'Contest completed successfully',
+      participant: updatedParticipant
+    });
+  } catch (error) {
+    return next(error);
   }
 };
 
@@ -501,7 +633,7 @@ export const getMyContests = async (req: Request, res: Response, next: NextFunct
  * Get tasks for a specific contest
  * GET /api/contests/:id/tasks
  */
-export const getContestTasks = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getContestTasks = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const contestId = parseInt(req.params.id as string);
 
@@ -511,21 +643,57 @@ export const getContestTasks = async (req: Request, res: Response, next: NextFun
       .where(eq(contests.id, contestId));
 
     if (!contest) {
-      res.status(404).json({ message: 'Contest not found' });
-      return;
+      return res.status(404).json({ message: 'Contest not found' });
     }
 
     // Get all tasks for this contest
     const contestTasks = await db
-      .select()
+      .select({
+        id: tasks.id,
+        contestId: tasks.contestId,
+        title: tasks.title,
+        description: tasks.description,
+        difficulty: tasks.difficulty,
+        maxPoints: tasks.maxPoints,
+        orderIndex: tasks.orderIndex,
+        allowedLanguages: tasks.allowedLanguages,
+        functionName: tasks.functionName,
+        boilerplateCode: tasks.boilerplateCode,
+        testRunnerTemplate: tasks.testRunnerTemplate,
+        aiConfig: tasks.aiConfig,
+      })
       .from(tasks)
       .where(eq(tasks.contestId, contestId))
       .orderBy(tasks.orderIndex);
 
-    res.status(200).json({
+    // Fetch test cases for all tasks
+    if (contestTasks.length > 0) {
+      const taskIds = contestTasks.map(t => t.id);
+      const allTestCases = await db
+        .select({
+          id: testCases.id,
+          taskId: testCases.taskId,
+          input: testCases.input,
+          expectedOutput: testCases.expectedOutput,
+          isHidden: testCases.isHidden,
+          orderIndex: testCases.orderIndex,
+        })
+        .from(testCases)
+        .where(inArray(testCases.taskId, taskIds))
+        .orderBy(testCases.orderIndex);
+
+      // Attach test cases to tasks
+      for (const task of contestTasks) {
+        // @ts-ignore
+        task.testCases = allTestCases.filter(tc => tc.taskId === task.id);
+      }
+    }
+
+    return res.status(200).json({
       contest: {
         id: contest.id,
         title: contest.title,
+        description: contest.description,
         difficulty: contest.difficulty,
         duration: contest.duration,
         status: contest.status,
@@ -534,7 +702,7 @@ export const getContestTasks = async (req: Request, res: Response, next: NextFun
       tasks: contestTasks,
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
@@ -542,7 +710,7 @@ export const getContestTasks = async (req: Request, res: Response, next: NextFun
  * Get single task by ID
  * GET /api/tasks/:id
  */
-export const getTaskById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getTaskById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const taskId = parseInt(req.params.id as string);
 
@@ -552,8 +720,7 @@ export const getTaskById = async (req: Request, res: Response, next: NextFunctio
       .where(eq(tasks.id, taskId));
 
     if (!task) {
-      res.status(404).json({ message: 'Task not found' });
-      return;
+      return res.status(404).json({ message: 'Task not found' });
     }
 
     // Get contest info
@@ -562,7 +729,7 @@ export const getTaskById = async (req: Request, res: Response, next: NextFunctio
       .from(contests)
       .where(eq(contests.id, task.contestId));
 
-    res.status(200).json({
+    return res.status(200).json({
       task,
       contest: contest ? {
         id: contest.id,
@@ -572,6 +739,6 @@ export const getTaskById = async (req: Request, res: Response, next: NextFunctio
       } : null,
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };

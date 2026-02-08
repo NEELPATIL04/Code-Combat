@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 import { Play, Send, XCircle, Clock, ChevronRight, Check, X, GripHorizontal, Minimize2, Lightbulb, Brain, Unlock, MessageSquare } from 'lucide-react';
 import Editor from '@monaco-editor/react';
-import { submissionAPI, aiAPI } from '../../utils/api';
-// import { Lightbulb } from 'lucide-react'; // Will replace this in next step with actual icon import
+import MediaCheckHelper from '../../components/MediaCheckHelper';
+import { useSocket } from '../../context/SocketContext';
+import { useAuth } from '../../hooks/useAuth';
+import { submissionAPI, aiAPI, contestAPI } from '../../utils/api';
 
 
 interface Task {
@@ -15,6 +17,8 @@ interface Task {
     maxPoints: number;
     orderIndex: number;
     allowedLanguages: string[];
+    boilerplateCode?: Record<string, string>;
+    testCases?: TestCase[];
     aiConfig?: {
         hintsEnabled: boolean;
         hintThreshold: number;
@@ -168,7 +172,11 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
             <div style={{ padding: '8px 12px', borderTop: '1px solid rgba(255, 255, 255, 0.06)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                 {aiConfig?.hintsEnabled && (
                     <button
-                        onClick={onGetHint}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onGetHint();
+                        }}
                         disabled={isGeneratingHint || isRunning}
                         style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'rgba(234, 179, 8, 0.15)', border: '1px solid rgba(234, 179, 8, 0.3)', borderRadius: 6, color: '#fbbf24', fontSize: 13, cursor: (isGeneratingHint || isRunning) ? 'not-allowed' : 'pointer', opacity: (isGeneratingHint || isRunning) ? 0.6 : 1 }}
                     >
@@ -178,7 +186,11 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
                 )}
                 {aiConfig?.hintsEnabled && (
                     <button
-                        onClick={onGetSolution}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onGetSolution();
+                        }}
                         disabled={isGeneratingSolution || isRunning}
                         style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 6, color: '#f87171', fontSize: 13, cursor: (isGeneratingSolution || isRunning) ? 'not-allowed' : 'pointer', opacity: (isGeneratingSolution || isRunning) ? 0.6 : 1 }}
                     >
@@ -188,7 +200,11 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
                 )}
                 {aiConfig?.hintsEnabled && (
                     <button
-                        onClick={onAnalyze}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onAnalyze();
+                        }}
                         disabled={isAnalyzing || isRunning}
                         style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: 6, color: '#60a5fa', fontSize: 13, cursor: (isAnalyzing || isRunning) ? 'not-allowed' : 'pointer', opacity: (isAnalyzing || isRunning) ? 0.6 : 1 }}
                     >
@@ -524,8 +540,22 @@ const TaskPage: React.FC = () => {
     const [time, setTime] = useState<number>(45 * 60);
 
     // Editor state
-    const [language, setLanguage] = useState<string>('javascript');
-    const [code, setCode] = useState<string>(LANGUAGE_BOILERPLATES['javascript']);
+    const [language, setLanguage] = useState<string>(() => {
+        // Try to restore language from localStorage
+        if (contestId) {
+            const savedLang = localStorage.getItem(`task_${contestId}_language`);
+            if (savedLang) return savedLang;
+        }
+        return 'javascript';
+    });
+    const [code, setCode] = useState<string>(() => {
+        // Try to restore code from localStorage
+        if (contestId) {
+            const savedCode = localStorage.getItem(`task_${contestId}_code`);
+            if (savedCode) return savedCode;
+        }
+        return LANGUAGE_BOILERPLATES['javascript'];
+    });
     const codeRef = useRef<string>(code);
     const debounceTimer = useRef<any>(null);
 
@@ -587,6 +617,132 @@ const TaskPage: React.FC = () => {
     const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
     const [showEvaluationModal, setShowEvaluationModal] = useState<boolean>(false);
 
+    // Media & Socket State
+    const { user } = useAuth();
+    const { socket } = useSocket();
+    const [mediaVerified, setMediaVerified] = useState(false);
+    const [localStreams, setLocalStreams] = useState<{ camera: MediaStream | null, screen: MediaStream | null } | null>(null);
+    const [contestSettings, setContestSettings] = useState<any>(null); // Store contest settings
+    const [settingsError, setSettingsError] = useState<string | null>(null);
+    const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            if (!contestId) return;
+            try {
+                const token = sessionStorage.getItem('token');
+                const response = await fetch(`/api/contests/${contestId}/settings`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.settings) {
+                        setContestSettings(data.settings);
+
+                        // If no media is required, auto-verify
+                        const { requireCamera, requireMicrophone, requireScreenShare } = data.settings;
+                        if (!requireCamera && !requireMicrophone && !requireScreenShare) {
+                            setMediaVerified(true);
+                        }
+                        setLoading(false); // <--- Added this
+                        return;
+                    }
+                }
+
+                // If response not ok or data invalid, throw to catch block
+                throw new Error('Failed to load settings');
+            } catch (error) {
+                console.error("Failed to fetch contest settings, using defaults:", error);
+
+                // Fallback to default settings so user is not stuck
+                const defaultSettings = {
+                    testModeEnabled: false,
+                    aiHintsEnabled: true,
+                    fullScreenModeEnabled: false, // Default to false to avoid lockout issues on error
+                    requireCamera: false,
+                    requireMicrophone: false,
+                    requireScreenShare: false
+                };
+
+                setContestSettings(defaultSettings);
+                setMediaVerified(true); // Auto-verify if we can't load strict settings
+                setSettingsError(null); // Clear error since we are recovering
+                setLoading(false); // <--- Added this
+            }
+        };
+        fetchSettings();
+    }, [contestId]);
+
+    useEffect(() => {
+        if (!socket || !mediaVerified || !localStreams || !user || !contestId) return;
+
+        socket.emit('join-contest', { contestId, userId: user.id });
+
+        const handleOffer = async ({ sender, payload }: { sender: string, payload: RTCSessionDescriptionInit }) => {
+            try {
+                const pc = new RTCPeerConnection({
+                    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] // Use public STUN
+                });
+
+                peerConnections.current.set(sender, pc);
+
+                // Add tracks
+                if (localStreams.camera) {
+                    const cameraTracks = localStreams.camera.getTracks();
+                    if (cameraTracks.length > 0) {
+                        cameraTracks.forEach(track => {
+                            if (localStreams.camera) pc.addTrack(track, localStreams.camera);
+                        });
+                    }
+                }
+                if (localStreams.screen) {
+                    const screenTracks = localStreams.screen.getTracks();
+                    if (screenTracks.length > 0) {
+                        screenTracks.forEach(track => {
+                            if (localStreams.screen) pc.addTrack(track, localStreams.screen);
+                        });
+                    }
+                }
+
+                pc.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        socket.emit('ice-candidate', { target: sender, candidate: event.candidate });
+                    }
+                };
+
+                await pc.setRemoteDescription(new RTCSessionDescription(payload));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+
+                socket.emit('answer', { target: sender, payload: answer });
+            } catch (err) {
+                console.error("Error handling offer:", err);
+            }
+        };
+
+        const handleIceCandidate = async ({ sender, candidate }: { sender: string, candidate: RTCIceCandidateInit }) => {
+            const pc = peerConnections.current.get(sender);
+            if (pc) {
+                try {
+                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (err) {
+                    console.error("Error adding ice candidate:", err);
+                }
+            }
+        };
+
+        socket.on('offer', handleOffer);
+        socket.on('ice-candidate', handleIceCandidate);
+
+        return () => {
+            socket.off('offer', handleOffer);
+            socket.off('ice-candidate', handleIceCandidate);
+            peerConnections.current.forEach(pc => pc.close());
+            peerConnections.current.clear();
+        };
+    }, [socket, mediaVerified, localStreams, user, contestId]);
+
     const handleGetHint = useCallback(async () => {
         if (!task) return;
         setIsGeneratingHint(true);
@@ -641,7 +797,7 @@ const TaskPage: React.FC = () => {
     }, [task, code, language]);
 
     // Function to request fullscreen
-    const requestFullscreen = useCallback(() => {
+    const requestFullscreen = useCallback((showAlert = false) => {
         const element = document.documentElement;
         if (element.requestFullscreen) {
             element.requestFullscreen()
@@ -651,7 +807,10 @@ const TaskPage: React.FC = () => {
                 })
                 .catch(err => {
                     console.error(`Error attempting to enable full-screen mode: ${err.message}`);
-                    alert(`Could not enter full-screen mode: ${err.message}. Please check your browser permissions.`);
+                    // Only show alert if explicitly requested (user-initiated action)
+                    if (showAlert) {
+                        alert(`Could not enter full-screen mode: ${err.message}. Please check your browser permissions.`);
+                    }
                 });
 
             // Try to lock the keyboard (Experimental API, mainly Chrome)
@@ -662,71 +821,98 @@ const TaskPage: React.FC = () => {
             }
         } else {
             // Fallback for older browsers or if API is missing
-            alert('Full-screen API is not supported in this browser.');
+            if (showAlert) {
+                alert('Full-screen API is not supported in this browser.');
+            }
         }
     }, []);
 
-    // Effect for keyboard shortcuts and navigation lockdown
+    // Activity Logging Helper
+    const logUserActivity = useCallback(async (type: string, data?: any) => {
+        if (!contestId || !contestSettings?.enableActivityLogs) return;
+
+        await contestAPI.logActivity(parseInt(contestId), type, data);
+    }, [contestId, contestSettings]);
+
+    // Effect for keyboard shortcuts, navigation lockdown, and activity logging
     useEffect(() => {
         // Only enable fullscreen lockdown if contest requires it
-        if (!contest?.fullScreenMode) {
-            return;
-        }
+        const isFullScreenEnabled = contestSettings?.fullScreenModeEnabled;
 
         const handleKeyDown = (e: KeyboardEvent) => {
             // Disable F5, Ctrl+R, Command+R (Reload) and Escape
-            if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key === 'r') || e.key === 'Escape') {
-                e.preventDefault();
-                return false;
-            }
+            if (isFullScreenEnabled) {
+                if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key === 'r') || e.key === 'Escape') {
+                    e.preventDefault();
+                    return false;
+                }
 
-            // Disable F12, Ctrl+Shift+I, Command+Option+I (DevTools)
-            if (e.key === 'F12' || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'i') || (e.metaKey && e.altKey && e.key === 'i')) {
-                e.preventDefault();
-                return false;
-            }
+                // Disable F12, Ctrl+Shift+I, Command+Option+I (DevTools)
+                if (e.key === 'F12' || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'i') || (e.metaKey && e.altKey && e.key === 'i')) {
+                    e.preventDefault();
+                    return false;
+                }
 
-            // Disable Alt+ArrowKeys, Ctrl+W, Command+W (Navigation/Closing)
-            if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
-                e.preventDefault();
-                return false;
+                // Disable Alt+ArrowKeys, Ctrl+W, Command+W (Navigation/Closing)
+                if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+                    e.preventDefault();
+                    return false;
+                }
             }
         };
 
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
             if (hasExited.current) return;
             e.preventDefault();
-            e.returnValue = ''; // Standard way to show "Are you sure?" prompt
+            e.returnValue = '';
         };
 
         const handleFullscreenChange = () => {
             const isFull = !!document.fullscreenElement;
             setIsFullscreen(isFull);
             if (!isFull) {
-                setShowLockout(true);
+                if (isFullScreenEnabled) {
+                    setShowLockout(true);
+                    logUserActivity('exit_fullscreen', { timestamp: new Date().toISOString() });
+                }
             } else {
                 setShowLockout(false);
+                // Optional: log enter fullscreen
+                // logUserActivity('enter_fullscreen');
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                logUserActivity('tab_switch', { timestamp: new Date().toISOString() });
+            } else {
+                logUserActivity('tab_focus', { timestamp: new Date().toISOString() });
             }
         };
 
         const handleContextMenu = (e: MouseEvent) => {
-            e.preventDefault();
+            if (isFullScreenEnabled) {
+                e.preventDefault();
+            }
         };
 
-        // Add listeners with capture: true for keydown to catch it before other handlers
+        // Add listeners
         window.addEventListener('keydown', handleKeyDown, { capture: true });
         window.addEventListener('beforeunload', handleBeforeUnload);
         document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
         document.addEventListener('contextmenu', handleContextMenu);
 
-        // Attempt initial fullscreen entry
-        // Note: Browsers usually require a user gesture, so this might fail until the first click
-        requestFullscreen();
+        // Attempt initial fullscreen entry if enabled
+        if (isFullScreenEnabled && !document.fullscreenElement) {
+            requestFullscreen(false);
+        }
 
         return () => {
             window.removeEventListener('keydown', handleKeyDown, { capture: true });
             window.removeEventListener('beforeunload', handleBeforeUnload);
             document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
             document.removeEventListener('contextmenu', handleContextMenu);
 
             // Unlock keyboard if API exists
@@ -734,7 +920,7 @@ const TaskPage: React.FC = () => {
                 (navigator as any).keyboard.unlock();
             }
         };
-    }, [requestFullscreen, contest]);
+    }, [requestFullscreen, contestSettings, logUserActivity]);
 
     // Test execution state
     const [showTestCases, setShowTestCases] = useState<boolean>(false);
@@ -813,6 +999,45 @@ const TaskPage: React.FC = () => {
         setDragOverPosition(null);
     }, []);
 
+    // Fetch submission history function (reusable)
+    const fetchSubmissionHistory = useCallback(async (taskId: number) => {
+        try {
+            const token = sessionStorage.getItem('token');
+            if (!token) return;
+
+            const response = await fetch(`/api/submissions/task/${taskId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.data?.submissions) {
+                    // Convert backend submissions to frontend format
+                    const formattedSubmissions = data.data.submissions.map((sub: any) => ({
+                        id: sub.id,
+                        timestamp: new Date(sub.submittedAt).toLocaleTimeString(),
+                        status: sub.status === 'accepted' ? 'Accepted' :
+                            sub.status === 'wrong_answer' ? 'Wrong Answer' :
+                                sub.status === 'runtime_error' ? 'Runtime Error' :
+                                    sub.status === 'time_limit_exceeded' ? 'Time Limit Exceeded' : 'Error',
+                        testsPassed: sub.passedTests || 0,
+                        totalTests: sub.totalTests || 0,
+                        executionTime: sub.executionTime ? `${sub.executionTime}ms` : '-',
+                        memory: sub.memoryUsed ? `${(sub.memoryUsed / 1024).toFixed(2)} MB` : '-',
+                        language: sub.language || 'Unknown',
+                        runtime: sub.executionTime ? `${sub.executionTime}ms` : 'N/A',
+                    }));
+                    setSubmissions(formattedSubmissions);
+                }
+            }
+        } catch (err) {
+            console.error('Failed to fetch submission history:', err);
+        }
+    }, []);
+
     // Fetch task data
     useEffect(() => {
         const fetchTaskData = async () => {
@@ -836,12 +1061,34 @@ const TaskPage: React.FC = () => {
                 if (data.tasks && data.tasks.length > 0) {
                     setTask(data.tasks[0]);
                     setContest(data.contest);
-                    if (data.tasks[0].allowedLanguages?.length > 0) {
+
+                    // Check if we have saved code/language in localStorage
+                    const savedLang = localStorage.getItem(`task_${contestId}_language`);
+                    const savedCode = localStorage.getItem(`task_${contestId}_code`);
+
+                    // Only set initial language/code if nothing is saved
+                    if (!savedLang && !savedCode && data.tasks[0].allowedLanguages?.length > 0) {
                         const initialLang = data.tasks[0].allowedLanguages[0];
                         setLanguage(initialLang);
-                        setCode(LANGUAGE_BOILERPLATES[initialLang] || LANGUAGE_BOILERPLATES['javascript']);
+                        const dbBoilerplate = data.tasks[0].boilerplateCode?.[initialLang];
+                        setCode(dbBoilerplate || LANGUAGE_BOILERPLATES[initialLang] || LANGUAGE_BOILERPLATES['javascript']);
+                    } else if (savedLang && !data.tasks[0].allowedLanguages?.includes(savedLang)) {
+                        // If saved language is not in allowed languages, reset
+                        const initialLang = data.tasks[0].allowedLanguages[0];
+                        setLanguage(initialLang);
+                        const dbBoilerplate = data.tasks[0].boilerplateCode?.[initialLang];
+                        setCode(dbBoilerplate || LANGUAGE_BOILERPLATES[initialLang] || LANGUAGE_BOILERPLATES['javascript']);
+                        localStorage.removeItem(`task_${contestId}_language`);
+                        localStorage.removeItem(`task_${contestId}_code`);
                     }
+                    // If savedLang and savedCode exist, they're already loaded in useState initializer
+
                     if (data.contest?.duration) setTime(data.contest.duration * 60);
+
+                    // Fetch submission history for this task
+                    if (data.tasks[0].id) {
+                        fetchSubmissionHistory(data.tasks[0].id);
+                    }
                 } else {
                     setError('No tasks found');
                 }
@@ -854,13 +1101,26 @@ const TaskPage: React.FC = () => {
 
         if (contestId) fetchTaskData();
         else { setError('No contest ID'); setLoading(false); }
-    }, [contestId, navigate]);
+    }, [contestId, navigate, fetchSubmissionHistory]);
 
     // Timer countdown
     useEffect(() => {
         const interval = setInterval(() => setTime(prev => prev > 0 ? prev - 1 : 0), 1000);
         return () => clearInterval(interval);
     }, []);
+
+    // Auto-save code and language to localStorage
+    useEffect(() => {
+        if (contestId && code) {
+            localStorage.setItem(`task_${contestId}_code`, code);
+        }
+    }, [code, contestId]);
+
+    useEffect(() => {
+        if (contestId && language) {
+            localStorage.setItem(`task_${contestId}_language`, language);
+        }
+    }, [language, contestId]);
 
     // Horizontal resize handlers
     const handleHorizontalMouseDown = useCallback((e: React.MouseEvent) => {
@@ -935,12 +1195,14 @@ const TaskPage: React.FC = () => {
 
     const handleLanguageChange = useCallback((newLang: string) => {
         setLanguage((prevLang: string) => {
-            const currentBoilerplate = LANGUAGE_BOILERPLATES[prevLang];
+            const currentBoilerplate = (task?.boilerplateCode && task.boilerplateCode[prevLang]) || LANGUAGE_BOILERPLATES[prevLang];
             if (code !== currentBoilerplate && !window.confirm('Switching languages will reset your code. Continue?')) return prevLang;
-            setCode(LANGUAGE_BOILERPLATES[newLang] || LANGUAGE_BOILERPLATES['javascript']);
+
+            const newBoilerplate = (task?.boilerplateCode && task.boilerplateCode[newLang]) || LANGUAGE_BOILERPLATES[newLang] || LANGUAGE_BOILERPLATES['javascript'];
+            setCode(newBoilerplate);
             return newLang;
         });
-    }, [code]);
+    }, [code, task]);
 
     // Memoized editor change handler to prevent re-renders
     const handleCodeChange = useCallback((value: string | undefined) => {
@@ -1025,21 +1287,10 @@ const TaskPage: React.FC = () => {
                 // Determine overall status
                 const submissionStatus = status || (passed === total ? 'Accepted' : 'Wrong Answer');
 
-                // Add to submission history
-                setSubmissions((prev: SubmissionHistory[]) => {
-                    const avgTime = results.reduce((sum: number, r: any) => sum + (r.executionTime || 0), 0) / results.length;
-                    const avgMemory = results.reduce((sum: number, r: any) => sum + (r.memory || 0), 0) / results.length / 1024;
-
-                    const newSubmission: SubmissionHistory = {
-                        id: prev.length + 1,
-                        timestamp: new Date(),
-                        status: submissionStatus as any,
-                        runtime: `${avgTime.toFixed(0)} ms`,
-                        memory: `${avgMemory.toFixed(1)} MB`,
-                        language: language.charAt(0).toUpperCase() + language.slice(1),
-                    };
-                    return [newSubmission, ...prev];
-                });
+                // Refetch submission history from backend to get the latest submissions
+                if (task?.id) {
+                    fetchSubmissionHistory(task.id);
+                }
 
                 // Update test cases with results (only visible ones)
                 setTestCases((prevCases: TestCase[]) => prevCases.map((tc, index) => {
@@ -1079,7 +1330,7 @@ const TaskPage: React.FC = () => {
         }
 
         setIsRunning(false);
-    }, [language, task, contest]);
+    }, [language, task, contest, fetchSubmissionHistory]);
 
     const handleTestCaseTabChange = useCallback((index: number) => {
         setTestCaseActiveTab(index);
@@ -1191,6 +1442,51 @@ const TaskPage: React.FC = () => {
         );
     }
 
+    if (!mediaVerified && contestSettings) {
+        return (
+            <div style={{ minHeight: '100vh', background: '#0a0a0b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+                <MediaCheckHelper
+                    requiredPermissions={{
+                        camera: contestSettings.requireCamera,
+                        microphone: contestSettings.requireMicrophone,
+                        screen: contestSettings.requireScreenShare
+                    }}
+                    onPermissionsGranted={(streams) => {
+                        setLocalStreams(streams);
+                        setMediaVerified(true);
+                    }}
+                />
+            </div>
+        );
+    } else if (!mediaVerified && !contestSettings) {
+        if (settingsError) {
+            return (
+                <div style={{ minHeight: '100vh', background: '#0a0a0b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+                    <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', color: '#f87171', padding: '16px 24px', borderRadius: 12, fontSize: '0.9rem', textAlign: 'center' }}>
+                        <p style={{ margin: '0 0 8px 0', fontWeight: 600 }}>Error Loading Settings</p>
+                        <p style={{ margin: 0 }}>{settingsError}</p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            style={{
+                                marginTop: '16px',
+                                background: 'rgba(239, 68, 68, 0.2)',
+                                border: 'none',
+                                borderRadius: '6px',
+                                color: '#f87171',
+                                padding: '8px 16px',
+                                cursor: 'pointer',
+                                fontSize: '0.875rem'
+                            }}
+                        >
+                            Retry
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+        return <div style={{ minHeight: '100vh', background: '#0a0a0b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif" }}>Loading contest settings...</div>;
+    }
+
     return (
         <div style={{ height: '100vh', width: '100vw', background: '#0a0a0b', color: '#fff', fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif", display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             {/* Navbar */}
@@ -1211,17 +1507,31 @@ const TaskPage: React.FC = () => {
                         <span style={{ fontSize: 12, fontWeight: 600, color: '#FDE68A', fontFamily: 'monospace' }}>{formatTime(time)}</span>
                     </div>
                     <button
-                        onClick={() => {
-                            hasExited.current = true;
-                            if (document.fullscreenElement) {
-                                document.exitFullscreen().catch(() => { });
+                        onClick={async () => {
+                            if (window.confirm('Are you sure you want to finish the contest? This will mark it as completed.')) {
+                                hasExited.current = true;
+                                if (document.fullscreenElement) {
+                                    document.exitFullscreen().catch(() => { });
+                                }
+                                if (contestId) {
+                                    try {
+                                        await contestAPI.completeContest(parseInt(contestId));
+                                        navigate('/player');
+                                    } catch (err: any) {
+                                        console.error('Failed to complete contest:', err);
+                                        alert(`Failed to complete contest: ${err.message || 'Unknown error'}`);
+                                        // Still navigate on error? Maybe not, or maybe yes if completed but API failed?
+                                        // For now, let's keep them here to retry if needed.
+                                    }
+                                } else {
+                                    navigate('/player');
+                                }
                             }
-                            navigate('/player');
                         }}
                         style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 6, color: '#f87171', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
                     >
                         <XCircle size={12} />
-                        Exit
+                        Finish & Exit
                     </button>
                 </div>
             </nav>
@@ -1295,7 +1605,7 @@ const TaskPage: React.FC = () => {
                             Please re-enter full-screen to continue.
                         </p>
                         <button
-                            onClick={requestFullscreen}
+                            onClick={() => requestFullscreen(true)}
                             style={{
                                 width: '100%',
                                 padding: '12px 24px',
@@ -1316,20 +1626,28 @@ const TaskPage: React.FC = () => {
 
             {/* Hint Modal */}
             {showHintModal && hint && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(0, 0, 0, 0.7)',
-                    backdropFilter: 'blur(4px)',
-                    zIndex: 10000,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 20,
-                }}>
+                <div
+                    onClick={(e) => {
+                        // Close modal only if clicking backdrop, not the content
+                        if (e.target === e.currentTarget) {
+                            setShowHintModal(false);
+                        }
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(0, 0, 0, 0.7)',
+                        backdropFilter: 'blur(4px)',
+                        zIndex: 10000,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 20,
+                    }}>
                     <div style={{
                         background: '#111113',
                         border: '1px solid rgba(253, 230, 138, 0.3)',
@@ -1417,20 +1735,27 @@ const TaskPage: React.FC = () => {
 
             {/* Solution Modal */}
             {showSolutionModal && solution && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(0, 0, 0, 0.8)',
-                    backdropFilter: 'blur(4px)',
-                    zIndex: 10000,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 20,
-                }}>
+                <div
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) {
+                            setShowSolutionModal(false);
+                        }
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(0, 0, 0, 0.8)',
+                        backdropFilter: 'blur(4px)',
+                        zIndex: 10000,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 20,
+                    }}>
                     <div style={{
                         background: '#111113',
                         border: '1px solid rgba(239, 68, 68, 0.3)',
@@ -1550,20 +1875,27 @@ const TaskPage: React.FC = () => {
             )}
             {/* Evaluation Modal */}
             {showEvaluationModal && evaluation && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(0, 0, 0, 0.7)',
-                    backdropFilter: 'blur(4px)',
-                    zIndex: 10000,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 20,
-                }}>
+                <div
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) {
+                            setShowEvaluationModal(false);
+                        }
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(0, 0, 0, 0.7)',
+                        backdropFilter: 'blur(4px)',
+                        zIndex: 10000,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 20,
+                    }}>
                     <div style={{
                         background: '#111113',
                         border: '1px solid rgba(59, 130, 246, 0.3)',
@@ -1680,7 +2012,7 @@ const TaskPage: React.FC = () => {
                             Ensure you are ready before proceeding.
                         </p>
                         <button
-                            onClick={requestFullscreen}
+                            onClick={() => requestFullscreen(true)}
                             style={{
                                 padding: '16px 48px',
                                 background: 'linear-gradient(135deg, #FDE68A 0%, #F59E0B 100%)',

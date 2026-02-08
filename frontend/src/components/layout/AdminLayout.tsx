@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Users, Trophy, UserCog, Settings, LogOut, ChevronLeft, ChevronRight, Bot } from 'lucide-react';
+import { LayoutDashboard, Users, Trophy, UserCog, Settings, LogOut, ChevronLeft, ChevronRight, Bot, Code } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 interface MenuItem {
@@ -20,6 +20,7 @@ const menuSections: MenuSection[] = [
             { icon: <LayoutDashboard size={18} />, label: 'Dashboard', path: '/admin' },
             { icon: <Users size={18} />, label: 'Participants', path: '/admin/participants' },
             { icon: <Trophy size={18} />, label: 'Contests', path: '/admin/contests' },
+            { icon: <Code size={18} />, label: 'Problems', path: '/admin/problems' },
             { icon: <UserCog size={18} />, label: 'Manage Users', path: '/admin/manage-users' },
             { icon: <Bot size={18} />, label: 'AI Usage', path: '/admin/ai-usage' },
             { icon: <Settings size={18} />, label: 'Settings', path: '/admin/settings' },

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Clock, CheckCircle, XCircle, Code, Brain, Lightbulb, Edit2, Save, X } from 'lucide-react';
-import { adminAPI } from '../../../../utils/api';
+import { ArrowLeft, Clock, CheckCircle, XCircle, Code, Brain, Lightbulb, Edit2, Save, X, RotateCcw, ChevronDown } from 'lucide-react';
+import { adminAPI, contestAPI } from '../../../../utils/api';
 import toast from 'react-hot-toast';
 
 interface Submission {
     id: number;
+    taskId: number;
     submittedAt: string;
     status: 'pending' | 'processing' | 'accepted' | 'wrong_answer' | 'time_limit_exceeded' | 'memory_limit_exceeded' | 'runtime_error' | 'compilation_error' | 'internal_error';
     executionTime: number;
@@ -17,6 +18,11 @@ interface Submission {
     usedSolution: boolean;
     passedTests: number;
     totalTests: number;
+}
+
+interface Task {
+    id: number;
+    title: string;
 }
 
 interface ContestInfo {
@@ -36,6 +42,11 @@ const Submissions: React.FC = () => {
     const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
     const [loading, setLoading] = useState(true);
 
+    // Task filter state
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+    const [resettingSubmissions, setResettingSubmissions] = useState(false);
+
     // Edit Score State
     const [showEditScoreModal, setShowEditScoreModal] = useState(false);
     const [editingScore, setEditingScore] = useState<number>(0);
@@ -50,9 +61,22 @@ const Submissions: React.FC = () => {
 
     useEffect(() => {
         if (id && contestId) {
+            loadContestTasks();
             loadSubmissions();
         }
     }, [id, contestId]);
+
+    const loadContestTasks = async () => {
+        try {
+            const contestData = await contestAPI.getById(Number(contestId));
+            if (contestData.contest.tasks) {
+                setTasks(contestData.contest.tasks);
+            }
+        } catch (error) {
+            console.error('Failed to load contest tasks:', error);
+            toast.error('Failed to load contest tasks');
+        }
+    };
 
     const loadSubmissions = async () => {
         try {
@@ -119,6 +143,42 @@ const Submissions: React.FC = () => {
         setShowEditScoreModal(true);
     };
 
+    const handleResetTaskSubmissions = async () => {
+        if (!selectedTaskId || !id) return;
+
+        const confirmed = confirm(`Are you sure you want to reset all submissions for this task? This action cannot be undone.`);
+        if (!confirmed) return;
+
+        try {
+            setResettingSubmissions(true);
+            const token = sessionStorage.getItem('token');
+            const response = await fetch(`http://localhost:3000/api/submissions/task/${selectedTaskId}/user/${id}/reset`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to reset submissions');
+            }
+
+            toast.success('Submissions reset successfully');
+            // Reload submissions
+            await loadSubmissions();
+        } catch (error) {
+            console.error('Failed to reset submissions:', error);
+            toast.error('Failed to reset submissions');
+        } finally {
+            setResettingSubmissions(false);
+        }
+    };
+
+    // Filter submissions by selected task
+    const filteredSubmissions = selectedTaskId
+        ? submissions.filter(s => s.taskId === selectedTaskId)
+        : submissions;
+
     const getStatusIcon = (status: string) => {
         switch (status) {
             case 'accepted': return <CheckCircle size={16} style={{ color: '#22c55e' }} />;
@@ -184,25 +244,91 @@ const Submissions: React.FC = () => {
                         Submissions by {contestInfo?.participantName || 'Participant'}
                     </p>
                 </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                    {[{ label: 'Submissions', value: contestInfo?.totalSubmissions || 0 }, { label: 'Best Score', value: contestInfo?.bestScore || 0 }].map((stat, i) => (
-                        <div key={i} style={{ textAlign: 'center', padding: '12px 20px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px' }}>
-                            <span style={{ display: 'block', fontSize: '1.25rem', fontWeight: 700, color: '#fafafa', letterSpacing: '-0.025em' }}>{stat.value}</span>
-                            <span style={{ fontSize: '0.75rem', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</span>
-                        </div>
-                    ))}
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    {/* Task Filter Dropdown */}
+                    <div style={{ position: 'relative' }}>
+                        <select
+                            value={selectedTaskId || ''}
+                            onChange={(e) => setSelectedTaskId(e.target.value ? Number(e.target.value) : null)}
+                            style={{
+                                padding: '8px 32px 8px 12px',
+                                background: '#18181b',
+                                border: '1px solid #27272a',
+                                borderRadius: '6px',
+                                color: '#fafafa',
+                                fontSize: '0.875rem',
+                                cursor: 'pointer',
+                                appearance: 'none',
+                                minWidth: '200px'
+                            }}
+                        >
+                            <option value="">All Tasks</option>
+                            {tasks.map(task => (
+                                <option key={task.id} value={task.id}>{task.title}</option>
+                            ))}
+                        </select>
+                        <ChevronDown size={16} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#71717a' }} />
+                    </div>
+
+                    {/* Reset Button - only show when a task is selected */}
+                    {selectedTaskId && (
+                        <button
+                            onClick={handleResetTaskSubmissions}
+                            disabled={resettingSubmissions}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '8px 16px',
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.2)',
+                                borderRadius: '6px',
+                                color: '#ef4444',
+                                fontSize: '0.875rem',
+                                fontWeight: 500,
+                                cursor: resettingSubmissions ? 'not-allowed' : 'pointer',
+                                opacity: resettingSubmissions ? 0.5 : 1,
+                                transition: 'all 0.15s ease'
+                            }}
+                            onMouseOver={(e) => {
+                                if (!resettingSubmissions) {
+                                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
+                                    e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                                }
+                            }}
+                            onMouseOut={(e) => {
+                                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                                e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+                            }}
+                        >
+                            <RotateCcw size={14} /> {resettingSubmissions ? 'Resetting...' : 'Reset Task Submissions'}
+                        </button>
+                    )}
                 </div>
             </header>
+
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                {[{ label: 'Total Submissions', value: contestInfo?.totalSubmissions || 0 }, { label: 'Best Score', value: contestInfo?.bestScore || 0 }, { label: 'Filtered', value: filteredSubmissions.length }].map((stat, i) => (
+                    <div key={i} style={{ textAlign: 'center', padding: '12px 20px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', flex: 1 }}>
+                        <span style={{ display: 'block', fontSize: '1.25rem', fontWeight: 700, color: '#fafafa', letterSpacing: '-0.025em' }}>{stat.value}</span>
+                        <span style={{ fontSize: '0.75rem', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</span>
+                    </div>
+                ))}
+            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '16px', height: 'calc(100vh - 280px)' }}>
                 {/* Submission List */}
                 <div style={{ background: '#09090b', border: '1px solid #27272a', borderRadius: '12px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ padding: '14px 20px', fontSize: '0.75rem', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #27272a', fontWeight: 500 }}>All Submissions</div>
+                    <div style={{ padding: '14px 20px', fontSize: '0.75rem', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #27272a', fontWeight: 500 }}>
+                        {selectedTaskId ? `Task Submissions (${filteredSubmissions.length})` : `All Submissions (${filteredSubmissions.length})`}
+                    </div>
                     <div style={{ flex: 1, overflowY: 'auto' }}>
-                        {submissions.length === 0 ? (
-                            <div style={{ padding: '24px', textAlign: 'center', color: '#52525b', fontSize: '0.875rem' }}>No submissions found</div>
+                        {filteredSubmissions.length === 0 ? (
+                            <div style={{ padding: '24px', textAlign: 'center', color: '#52525b', fontSize: '0.875rem' }}>
+                                {selectedTaskId ? 'No submissions found for this task' : 'No submissions found'}
+                            </div>
                         ) : (
-                            submissions.map(sub => (
+                            filteredSubmissions.map(sub => (
                                 <div key={sub.id} onClick={() => setSelectedSubmission(sub)} style={{ padding: '14px 20px', borderBottom: '1px solid #27272a', cursor: 'pointer', background: selectedSubmission?.id === sub.id ? 'rgba(255,255,255,0.02)' : 'transparent', borderLeft: selectedSubmission?.id === sub.id ? '2px solid #fafafa' : '2px solid transparent', transition: 'all 0.2s ease' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                                         {getStatusIcon(sub.status)}
