@@ -444,3 +444,125 @@ export type NewActivityLog = typeof activityLogs.$inferInsert;
 
 export type ContestSettings = typeof contestSettings.$inferSelect;
 export type NewContestSettings = typeof contestSettings.$inferInsert;
+
+/**
+ * Problems Table
+ * Standalone coding problems similar to LeetCode
+ * Independent of contests - users can solve anytime
+ */
+export const problems = pgTable('problems', {
+  id: serial('id').primaryKey(),
+
+  // Problem details
+  title: varchar('title', { length: 255 }).notNull(),
+  slug: varchar('slug', { length: 255 }).notNull().unique(), // URL-friendly identifier
+  description: text('description').notNull(),
+  difficulty: contestDifficultyEnum('difficulty').notNull(),
+
+  // Problem metadata
+  tags: jsonb('tags'), // e.g., ["array", "dynamic-programming", "graphs"]
+  hints: jsonb('hints'), // Array of hints
+  companies: jsonb('companies'), // Companies that asked this problem
+
+  // Code template and configuration
+  starterCode: jsonb('starter_code'), // { javascript: "...", python: "...", java: "..." }
+  functionSignature: jsonb('function_signature'), // Function name, params, return type
+
+  // New fields for Parity with Tasks
+  allowedLanguages: jsonb('allowed_languages').$type<string[]>().default([]),
+  testRunnerTemplate: jsonb('test_runner_template').$type<Record<string, string>>(),
+  aiConfig: jsonb('ai_config').$type<{
+    hintsEnabled: boolean;
+    hintThreshold: number;
+    solutionThreshold: number;
+  }>().default({
+    hintsEnabled: true,
+    hintThreshold: 2,
+    solutionThreshold: 5
+  }),
+
+  // Test cases stored as JSONB
+  testCases: jsonb('test_cases').notNull(), // Public + hidden test cases
+
+  // Statistics
+  totalSubmissions: integer('total_submissions').notNull().default(0),
+  acceptedSubmissions: integer('accepted_submissions').notNull().default(0),
+
+  // Problem status
+  isActive: boolean('is_active').notNull().default(true),
+  isPremium: boolean('is_premium').notNull().default(false),
+
+  // Timestamps
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+
+  // Created by admin
+  createdBy: integer('created_by').references(() => users.id),
+});
+
+/**
+ * Problem Submissions Table
+ * Tracks all user submissions for standalone problems
+ */
+export const problemSubmissions = pgTable('problem_submissions', {
+  id: serial('id').primaryKey(),
+
+  // Foreign keys
+  problemId: integer('problem_id').notNull().references(() => problems.id, { onDelete: 'cascade' }),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Submission details
+  code: text('code').notNull(),
+  language: varchar('language', { length: 50 }).notNull(),
+
+  // Results
+  status: varchar('status', { length: 50 }).notNull(), // 'accepted', 'wrong_answer', 'runtime_error', etc.
+  testCasesPassed: integer('test_cases_passed').notNull().default(0),
+  totalTestCases: integer('total_test_cases').notNull(),
+
+  // Performance metrics
+  executionTime: integer('execution_time'), // in milliseconds
+  memoryUsed: integer('memory_used'), // in KB
+
+  // Time tracking (how long user took to solve)
+  timeSpent: integer('time_spent'), // in seconds (from timer)
+
+  // Error details if any
+  errorMessage: text('error_message'),
+
+  // Submission timestamp
+  submittedAt: timestamp('submitted_at').defaultNow().notNull(),
+});
+
+/**
+ * User Problem Progress Table
+ * Tracks which problems a user has attempted/solved
+ */
+export const userProblemProgress = pgTable('user_problem_progress', {
+  id: serial('id').primaryKey(),
+
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  problemId: integer('problem_id').notNull().references(() => problems.id, { onDelete: 'cascade' }),
+
+  // Status
+  status: varchar('status', { length: 50 }).notNull().default('attempted'), // 'attempted', 'solved'
+
+  // Best submission metrics
+  bestTime: integer('best_time'), // fastest execution time
+  bestMemory: integer('best_memory'), // lowest memory usage
+
+  // Tracking
+  attempts: integer('attempts').notNull().default(0),
+  firstAttemptAt: timestamp('first_attempt_at').defaultNow().notNull(),
+  solvedAt: timestamp('solved_at'),
+  lastAttemptAt: timestamp('last_attempt_at').defaultNow().notNull(),
+});
+
+export type Problem = typeof problems.$inferSelect;
+export type NewProblem = typeof problems.$inferInsert;
+
+export type ProblemSubmission = typeof problemSubmissions.$inferSelect;
+export type NewProblemSubmission = typeof problemSubmissions.$inferInsert;
+
+export type UserProblemProgress = typeof userProblemProgress.$inferSelect;
+export type NewUserProblemProgress = typeof userProblemProgress.$inferInsert;
