@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../config/database';
-import { submissions, contestParticipants } from '../db/schema';
+import { submissions, contestParticipants, aiUsageLogs, users, contests } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 
 /**
@@ -120,26 +120,24 @@ export const updateSubmissionScore = async (req: Request, res: Response, next: N
  */
 export const getAiUsageStats = async (_req: Request, res: Response, next: NextFunction) => {
     try {
-        import('../db/schema').then(async ({ aiUsageLogs }) => {
-            const logs = await db.select().from(aiUsageLogs);
+        const logs = await db.select().from(aiUsageLogs as any); // Type assertion if needed implicitly, but direct import preferred
 
-            const stats = {
-                totalRequests: logs.length,
-                totalTokens: logs.reduce((acc, log) => acc + (log.tokensUsed || 0), 0),
-                byProvider: {
-                    groq: logs.filter(l => l.provider === 'groq').length,
-                    gemini: logs.filter(l => l.provider === 'gemini').length,
-                },
-                byPurpose: {
-                    hint: logs.filter(l => l.purpose === 'hint').length,
-                    solution: logs.filter(l => l.purpose === 'solution').length,
-                    evaluation: logs.filter(l => l.purpose === 'evaluation').length,
-                    generate_task: logs.filter(l => l.purpose === 'generate_task').length,
-                },
-                recentErrors: 0
-            };
-            return res.json(stats);
-        });
+        const stats = {
+            totalRequests: logs.length,
+            totalTokens: logs.reduce((acc, log) => acc + (log.tokensUsed || 0), 0),
+            byProvider: {
+                groq: logs.filter(l => l.provider === 'groq').length,
+                gemini: logs.filter(l => l.provider === 'gemini').length,
+            },
+            byPurpose: {
+                hint: logs.filter(l => l.purpose === 'hint').length,
+                solution: logs.filter(l => l.purpose === 'solution').length,
+                evaluation: logs.filter(l => l.purpose === 'evaluation').length,
+                generate_task: logs.filter(l => l.purpose === 'generate_task').length,
+            },
+            recentErrors: 0
+        };
+        return res.json(stats);
 
     } catch (error) {
         return next(error);

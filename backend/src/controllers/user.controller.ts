@@ -16,7 +16,53 @@ export const getAllUsers = async (_req: Request, res: Response, next: NextFuncti
       status: users.status,
       createdAt: users.createdAt,
     }).from(users);
-    return res.json({ users: allUsers });
+
+    // Enrich users with stats (contest count, submission count, success rate)
+    // Note: For large datasets, this should be optimized with aggregation queries/joins
+    const usersWithStats = await Promise.all(allUsers.map(async (user) => {
+      // 1. Contest Count
+      const contestParticipation = await db
+        .select({ count: contestParticipants.id })
+        .from(contestParticipants)
+        .where(eq(contestParticipants.userId, user.id));
+
+      const contestCount = contestParticipation.length;
+
+      // Debug log
+      if (contestCount > 0 || user.username.includes('player')) {
+        console.log(`[Stats] User: ${user.username} (ID: ${user.id}) - Contests: ${contestCount}`);
+      }
+
+      // 2. Submission Count
+      const submissionCount = await db
+        .select({ count: submissions.id })
+        .from(submissions)
+        .where(eq(submissions.userId, user.id))
+        .then(res => res.length);
+
+      // 3. Accepted Submission Count
+      const acceptedCount = await db
+        .select({ count: submissions.id })
+        .from(submissions)
+        .where(and(
+          eq(submissions.userId, user.id),
+          eq(submissions.status, 'accepted')
+        ))
+        .then(res => res.length);
+
+      const successRate = submissionCount > 0
+        ? Math.round((acceptedCount / submissionCount) * 100)
+        : 0;
+
+      return {
+        ...user,
+        contestCount,
+        submissionCount,
+        successRate
+      };
+    }));
+
+    return res.json({ users: usersWithStats });
   } catch (error) {
     return next(error);
   }
@@ -153,6 +199,55 @@ export const getUserContestDetails = async (req: Request, res: Response, next: N
       tasks: detailedTasks
     });
 
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * Update user details (admin only)
+ * PUT /api/users/:id
+ */
+export const updateUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { role, status } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    // Verify user exists
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update fields
+    const updateData: any = {};
+    if (role) updateData.role = role;
+    if (status) updateData.status = status;
+
+    const [updatedUser] = await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, userId))
+      .returning({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        role: users.role,
+        status: users.status,
+      });
+
+    return res.json({
+      success: true,
+      data: updatedUser,
+      message: 'User updated successfully'
+    });
   } catch (error) {
     return next(error);
   }

@@ -271,17 +271,7 @@ export type NewUserTaskProgress = typeof userTaskProgress.$inferInsert;
  * AI Usage Logs Table
  * Tracks all AI requests for auditing and quota management
  */
-export const aiUsageLogs = pgTable('ai_usage_logs', {
-  id: serial('id').primaryKey(),
-  userId: integer('user_id'), // Optional, in case of system calls
-  contestId: integer('contest_id'), // Optional
-  taskId: integer('task_id'), // Optional
-  provider: varchar('provider', { length: 50 }).notNull(), // 'groq', 'gemini'
-  model: varchar('model', { length: 50 }),
-  purpose: varchar('purpose', { length: 50 }).notNull(), // 'hint', 'solution', 'generate_task', 'evaluation'
-  tokensUsed: integer('tokens_used'),
-  timestamp: timestamp('timestamp').defaultNow().notNull(),
-});
+
 
 /**
  * Submissions Table
@@ -610,3 +600,30 @@ export const aiHintUsage = pgTable('ai_hint_usage', {
 
 export type AiHintUsage = typeof aiHintUsage.$inferSelect;
 export type NewAiHintUsage = typeof aiHintUsage.$inferInsert;
+
+/**
+ * AI Usage Logs Table
+ * Tracks token usage and AI requests for cost monitoring
+ */
+export const aiUsageLogs = pgTable('ai_usage_logs', {
+  id: serial('id').primaryKey(),
+
+  // Context
+  userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+  contestId: integer('contest_id').references(() => contests.id, { onDelete: 'set null' }),
+  taskId: integer('task_id').references(() => tasks.id, { onDelete: 'set null' }),
+
+  // AI Details
+  provider: varchar('provider', { length: 50 }).notNull(), // 'groq', 'gemini'
+  model: varchar('model', { length: 100 }).notNull(),
+  purpose: varchar('purpose', { length: 50 }).notNull(), // 'hint', 'solution', 'evaluation'
+
+  // Usage Stats
+  tokensUsed: integer('tokens_used').notNull().default(0),
+
+  // Timestamp
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+});
+
+export type AiUsageLog = typeof aiUsageLogs.$inferSelect;
+export type NewAiUsageLog = typeof aiUsageLogs.$inferInsert;
