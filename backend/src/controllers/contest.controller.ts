@@ -100,6 +100,13 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
 
     // Add participants if provided
     const newParticipantsRaw = participantIds || req.body.participants;
+
+    console.log('DEBUG: createContest payload participants:', {
+      participantIds,
+      bodyParticipants: req.body.participants,
+      merged: newParticipantsRaw
+    });
+
     if (newParticipantsRaw && Array.isArray(newParticipantsRaw) && newParticipantsRaw.length > 0) {
       // Deduplicate
       const uniqueParticipants = [...new Set(newParticipantsRaw)];
