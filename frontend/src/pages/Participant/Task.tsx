@@ -17,6 +17,8 @@ interface Task {
     maxPoints: number;
     orderIndex: number;
     allowedLanguages: string[];
+    boilerplateCode?: Record<string, string>;
+    testCases?: TestCase[];
     aiConfig?: {
         hintsEnabled: boolean;
         hintThreshold: number;
@@ -1068,12 +1070,14 @@ const TaskPage: React.FC = () => {
                     if (!savedLang && !savedCode && data.tasks[0].allowedLanguages?.length > 0) {
                         const initialLang = data.tasks[0].allowedLanguages[0];
                         setLanguage(initialLang);
-                        setCode(LANGUAGE_BOILERPLATES[initialLang] || LANGUAGE_BOILERPLATES['javascript']);
+                        const dbBoilerplate = data.tasks[0].boilerplateCode?.[initialLang];
+                        setCode(dbBoilerplate || LANGUAGE_BOILERPLATES[initialLang] || LANGUAGE_BOILERPLATES['javascript']);
                     } else if (savedLang && !data.tasks[0].allowedLanguages?.includes(savedLang)) {
                         // If saved language is not in allowed languages, reset
                         const initialLang = data.tasks[0].allowedLanguages[0];
                         setLanguage(initialLang);
-                        setCode(LANGUAGE_BOILERPLATES[initialLang] || LANGUAGE_BOILERPLATES['javascript']);
+                        const dbBoilerplate = data.tasks[0].boilerplateCode?.[initialLang];
+                        setCode(dbBoilerplate || LANGUAGE_BOILERPLATES[initialLang] || LANGUAGE_BOILERPLATES['javascript']);
                         localStorage.removeItem(`task_${contestId}_language`);
                         localStorage.removeItem(`task_${contestId}_code`);
                     }
@@ -1191,12 +1195,14 @@ const TaskPage: React.FC = () => {
 
     const handleLanguageChange = useCallback((newLang: string) => {
         setLanguage((prevLang: string) => {
-            const currentBoilerplate = LANGUAGE_BOILERPLATES[prevLang];
+            const currentBoilerplate = (task?.boilerplateCode && task.boilerplateCode[prevLang]) || LANGUAGE_BOILERPLATES[prevLang];
             if (code !== currentBoilerplate && !window.confirm('Switching languages will reset your code. Continue?')) return prevLang;
-            setCode(LANGUAGE_BOILERPLATES[newLang] || LANGUAGE_BOILERPLATES['javascript']);
+
+            const newBoilerplate = (task?.boilerplateCode && task.boilerplateCode[newLang]) || LANGUAGE_BOILERPLATES[newLang] || LANGUAGE_BOILERPLATES['javascript'];
+            setCode(newBoilerplate);
             return newLang;
         });
-    }, [code]);
+    }, [code, task]);
 
     // Memoized editor change handler to prevent re-renders
     const handleCodeChange = useCallback((value: string | undefined) => {
@@ -1508,9 +1514,18 @@ const TaskPage: React.FC = () => {
                                     document.exitFullscreen().catch(() => { });
                                 }
                                 if (contestId) {
-                                    await contestAPI.completeContest(parseInt(contestId));
+                                    try {
+                                        await contestAPI.completeContest(parseInt(contestId));
+                                        navigate('/player');
+                                    } catch (err: any) {
+                                        console.error('Failed to complete contest:', err);
+                                        alert(`Failed to complete contest: ${err.message || 'Unknown error'}`);
+                                        // Still navigate on error? Maybe not, or maybe yes if completed but API failed?
+                                        // For now, let's keep them here to retry if needed.
+                                    }
+                                } else {
+                                    navigate('/player');
                                 }
-                                navigate('/player');
                             }
                         }}
                         style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 6, color: '#f87171', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}

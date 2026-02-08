@@ -102,9 +102,13 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
     // Prioritize participants from body which matches frontend
     const newParticipantsRaw = participants || participantIds || req.body.participants;
 
-    console.log('DEBUG: createContest payload participants:', {
-      participantIds,
-      participants,
+    console.log('DEBUG: createContest payload:', {
+      hasParticipantIds: !!participantIds,
+      hasParticipants: !!participants,
+      hasBodyParticipants: !!req.body.participants,
+      participantIdsValue: participantIds,
+      participantsValue: participants,
+      bodyParticipantsValue: req.body.participants,
       merged: newParticipantsRaw
     });
 
@@ -565,6 +569,8 @@ export const getMyContests = async (req: Request, res: Response, next: NextFunct
         effectiveStatus = 'completed';
       }
 
+      // console.log(`Contest ${contest.id} status for user: ${effectiveStatus} (Original: ${contest.status}, CompletedAt: ${participantInfo?.completedAt})`);
+
       return {
         ...contest,
         status: effectiveStatus, // Override status for the user
@@ -608,6 +614,8 @@ export const completeContest = async (req: Request, res: Response, next: NextFun
       )
       .returning();
 
+    console.log(`User ${userId} completed contest ${contestId}. Updated:`, updatedParticipant);
+
     if (!updatedParticipant) {
       return res.status(404).json({ message: 'Contest participant not found' });
     }
@@ -640,15 +648,52 @@ export const getContestTasks = async (req: Request, res: Response, next: NextFun
 
     // Get all tasks for this contest
     const contestTasks = await db
-      .select()
+      .select({
+        id: tasks.id,
+        contestId: tasks.contestId,
+        title: tasks.title,
+        description: tasks.description,
+        difficulty: tasks.difficulty,
+        maxPoints: tasks.maxPoints,
+        orderIndex: tasks.orderIndex,
+        allowedLanguages: tasks.allowedLanguages,
+        functionName: tasks.functionName,
+        boilerplateCode: tasks.boilerplateCode,
+        testRunnerTemplate: tasks.testRunnerTemplate,
+        aiConfig: tasks.aiConfig,
+      })
       .from(tasks)
       .where(eq(tasks.contestId, contestId))
       .orderBy(tasks.orderIndex);
+
+    // Fetch test cases for all tasks
+    if (contestTasks.length > 0) {
+      const taskIds = contestTasks.map(t => t.id);
+      const allTestCases = await db
+        .select({
+          id: testCases.id,
+          taskId: testCases.taskId,
+          input: testCases.input,
+          expectedOutput: testCases.expectedOutput,
+          isHidden: testCases.isHidden,
+          orderIndex: testCases.orderIndex,
+        })
+        .from(testCases)
+        .where(inArray(testCases.taskId, taskIds))
+        .orderBy(testCases.orderIndex);
+
+      // Attach test cases to tasks
+      for (const task of contestTasks) {
+        // @ts-ignore
+        task.testCases = allTestCases.filter(tc => tc.taskId === task.id);
+      }
+    }
 
     return res.status(200).json({
       contest: {
         id: contest.id,
         title: contest.title,
+        description: contest.description,
         difficulty: contest.difficulty,
         duration: contest.duration,
         status: contest.status,
