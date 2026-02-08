@@ -424,51 +424,7 @@ export const activityLogs = pgTable('activity_logs', {
  * Contest Settings Table
  * Stores test mode and other settings for contests
  */
-export const contestSettings = pgTable('contest_settings', {
-  // Primary key
-  id: serial('id').primaryKey(),
 
-  // Contest reference (one-to-one relationship)
-  contestId: integer('contest_id').notNull().unique().references(() => contests.id, { onDelete: 'cascade' }),
-
-  // Test mode settings
-  testModeEnabled: boolean('test_mode_enabled').notNull().default(false),
-  aiHintsEnabled: boolean('ai_hints_enabled').notNull().default(true),
-  aiModeEnabled: boolean('ai_mode_enabled').notNull().default(true),
-  fullScreenModeEnabled: boolean('full_screen_mode_enabled').notNull().default(true),
-  allowCopyPaste: boolean('allow_copy_paste').notNull().default(false),
-  enableActivityLogs: boolean('enable_activity_logs').notNull().default(false),
-
-  // Media Monitoring Settings
-  requireCamera: boolean('require_camera').notNull().default(false),
-  requireMicrophone: boolean('require_microphone').notNull().default(false),
-  requireScreenShare: boolean('require_screen_share').notNull().default(false),
-
-  // AI Hints Configuration
-  maxHintsAllowed: integer('max_hints_allowed').default(3), // Maximum number of hints per task/problem
-  hintUnlockAfterSubmissions: integer('hint_unlock_after_submissions').default(0), // Unlock after X submissions
-  hintUnlockAfterSeconds: integer('hint_unlock_after_seconds').default(0), // Unlock after X seconds
-  provideLastSubmissionContext: boolean('provide_last_submission_context').notNull().default(true), // Send last submission to AI
-
-  // Submission limits
-  maxSubmissionsAllowed: integer('max_submissions_allowed').default(0), // 0 = unlimited submissions
-  autoSubmitOnTimeout: boolean('auto_submit_on_timeout').notNull().default(true), // Auto-submit when time expires
-
-  // Task timing settings
-  perTaskTimeLimit: integer('per_task_time_limit'), // in minutes
-  enablePerTaskTimer: boolean('enable_per_task_timer').notNull().default(false),
-
-  // Scheduling settings
-  autoStart: boolean('auto_start').notNull().default(false),
-  autoEnd: boolean('auto_end').notNull().default(true),
-
-  // Additional settings as JSON for flexibility
-  additionalSettings: jsonb('additional_settings'),
-
-  // Timestamps
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
 
 // TypeScript types inferred from the schema
 export type User = typeof users.$inferSelect;
@@ -492,8 +448,7 @@ export type NewSubmission = typeof submissions.$inferInsert;
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;
 
-export type ContestSettings = typeof contestSettings.$inferSelect;
-export type NewContestSettings = typeof contestSettings.$inferInsert;
+
 
 /**
  * Problems Table
@@ -673,5 +628,5 @@ export const aiUsageLogs = pgTable('ai_usage_logs', {
 export type AiUsageLog = typeof aiUsageLogs.$inferSelect;
 export type NewAiUsageLog = typeof aiUsageLogs.$inferInsert;
 
-export type ContestWrapper = typeof contestSettings.$inferSelect;
+export type ContestSettings = typeof contestSettings.$inferSelect;
 export type NewContestSettings = typeof contestSettings.$inferInsert;
