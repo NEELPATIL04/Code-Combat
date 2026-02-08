@@ -15,6 +15,13 @@
       "when": 1770281142944,
       "tag": "0001_lame_wallop",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770510135517,
+      "tag": "0002_graceful_lady_ursula",
+      "breakpoints": true
     }
   ]
 }

@@ -11,6 +11,18 @@ import {
   getMyContests,
   getContestTasks,
 } from '../controllers/contest.controller';
+import {
+  getContestSettings,
+  updateContestSettings,
+  deleteContestSettings,
+} from '../controllers/contestSettings.controller';
+import {
+  logActivity,
+  getContestActivityLogs,
+  getUserActivityLogs,
+  getActivityStats,
+  clearActivityLogs,
+} from '../controllers/activityLogs.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/roleCheck.middleware';
 
@@ -69,6 +81,62 @@ router.delete('/:id/participants/:userId', authenticate, requireRole(['admin', '
  * Requires: Authentication + Admin role
  */
 router.post('/:id/start', authenticate, requireRole(['admin', 'super_admin']), startContest);
+
+/**
+ * GET /api/contests/:id/settings
+ * Get contest settings
+ * Requires: Authentication + Admin role
+ */
+router.get('/:id/settings', authenticate, requireRole(['admin', 'super_admin']), getContestSettings);
+
+/**
+ * PUT /api/contests/:id/settings
+ * Update contest settings
+ * Requires: Authentication + Admin role
+ */
+router.put('/:id/settings', authenticate, requireRole(['admin', 'super_admin']), updateContestSettings);
+
+/**
+ * DELETE /api/contests/:id/settings
+ * Delete contest settings
+ * Requires: Authentication + Admin role
+ */
+router.delete('/:id/settings', authenticate, requireRole(['admin', 'super_admin']), deleteContestSettings);
+
+/**
+ * POST /api/contests/:id/activity
+ * Log user activity
+ * Requires: Authentication
+ */
+router.post('/:id/activity', authenticate, logActivity);
+
+/**
+ * GET /api/contests/:id/activity
+ * Get all activity logs for contest
+ * Requires: Authentication + Admin role
+ */
+router.get('/:id/activity', authenticate, requireRole(['admin', 'super_admin']), getContestActivityLogs);
+
+/**
+ * GET /api/contests/:id/activity/stats
+ * Get activity statistics
+ * Requires: Authentication + Admin role
+ */
+router.get('/:id/activity/stats', authenticate, requireRole(['admin', 'super_admin']), getActivityStats);
+
+/**
+ * GET /api/contests/:id/activity/user/:userId
+ * Get activity logs for specific user
+ * Requires: Authentication + Admin role
+ */
+router.get('/:id/activity/user/:userId', authenticate, requireRole(['admin', 'super_admin']), getUserActivityLogs);
+
+/**
+ * DELETE /api/contests/:id/activity
+ * Clear all activity logs
+ * Requires: Authentication + Admin role
+ */
+router.delete('/:id/activity', authenticate, requireRole(['admin', 'super_admin']), clearActivityLogs);
 
 /**
  * GET /api/contests/:id
