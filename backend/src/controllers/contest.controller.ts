@@ -58,9 +58,13 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
 
     // Create tasks if provided
     if (tasksList && Array.isArray(tasksList) && tasksList.length > 0) {
-      const taskValues = tasksList.map((task: any, index: number) => {
-        console.log(`Task ${index}: ${task.title} - Allowed Languages:`, task.allowedLanguages);
-        return {
+      console.log(`Processing ${tasksList.length} tasks...`);
+
+      for (const [index, task] of tasksList.entries()) {
+        console.log(`Creating Task ${index}: ${task.title}`);
+
+        // Insert task
+        const [newTask] = await db.insert(tasks).values({
           contestId: contest.id,
           title: task.title,
           description: task.description,
@@ -68,10 +72,28 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
           maxPoints: task.maxPoints || 100,
           allowedLanguages: task.allowedLanguages || [],
           orderIndex: index,
-        };
-      });
-      await db.insert(tasks).values(taskValues);
-      console.log('Tasks inserted successfully');
+          // New fields
+          functionName: task.functionName,
+          boilerplateCode: task.boilerplateCode,
+          testRunnerTemplate: task.testRunnerTemplate, // This maps to wrapperCode from frontend
+          aiConfig: task.aiConfig
+        }).returning();
+
+        // Insert test cases if provided
+        if (task.testCases && Array.isArray(task.testCases) && task.testCases.length > 0) {
+          const testCaseValues = task.testCases.map((tc: any, tcIndex: number) => ({
+            taskId: newTask.id,
+            input: tc.input,
+            expectedOutput: tc.expectedOutput,
+            isHidden: tc.isHidden || false,
+            orderIndex: tcIndex
+          }));
+
+          await db.insert(testCases).values(testCaseValues);
+          console.log(`Inserted ${testCaseValues.length} test cases for task ${newTask.id}`);
+        }
+      }
+      console.log('All tasks and test cases created successfully');
     } else {
       console.log('No tasks provided for creation');
     }
@@ -251,14 +273,24 @@ export const updateContest = async (req: Request, res: Response, next: NextFunct
     // Update tasks if provided
     if (tasksList && Array.isArray(tasksList)) {
       console.log('Updating tasks for contest:', contestId, 'Count:', tasksList.length);
+
+      // Get existing task IDs to delete their test cases first (if no cascade)
+      const existingTasks = await db.select({ id: tasks.id }).from(tasks).where(eq(tasks.contestId, contestId));
+      if (existingTasks.length > 0) {
+        const taskIds = existingTasks.map(t => t.id);
+        await db.delete(testCases).where(inArray(testCases.taskId, taskIds));
+      }
+
       // Delete existing tasks
       await db.delete(tasks).where(eq(tasks.contestId, contestId));
 
       // Insert new tasks
       if (tasksList.length > 0) {
-        const taskValues = tasksList.map((task: any, index: number) => {
-          console.log(`Updating Task ${index}: ${task.title} - Allowed Languages:`, task.allowedLanguages);
-          return {
+        for (const [index, task] of tasksList.entries()) {
+          console.log(`Creating Task ${index}: ${task.title}`);
+
+          // Insert task
+          const [newTask] = await db.insert(tasks).values({
             contestId: contestId,
             title: task.title,
             description: task.description,
@@ -266,10 +298,28 @@ export const updateContest = async (req: Request, res: Response, next: NextFunct
             maxPoints: task.maxPoints || 100,
             allowedLanguages: task.allowedLanguages || [],
             orderIndex: index,
-          };
-        });
-        await db.insert(tasks).values(taskValues);
-        console.log('Tasks replaced successfully');
+            // New fields
+            functionName: task.functionName,
+            boilerplateCode: task.boilerplateCode,
+            testRunnerTemplate: task.testRunnerTemplate,
+            aiConfig: task.aiConfig
+          }).returning();
+
+          // Insert test cases if provided
+          if (task.testCases && Array.isArray(task.testCases) && task.testCases.length > 0) {
+            const testCaseValues = task.testCases.map((tc: any, tcIndex: number) => ({
+              taskId: newTask.id,
+              input: tc.input,
+              expectedOutput: tc.expectedOutput,
+              isHidden: tc.isHidden || false,
+              orderIndex: tcIndex
+            }));
+
+            await db.insert(testCases).values(testCaseValues);
+            console.log(`Inserted ${testCaseValues.length} test cases for task ${newTask.id}`);
+          }
+        }
+        console.log('Tasks and test cases replaced successfully');
       }
     }
 

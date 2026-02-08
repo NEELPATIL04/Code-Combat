@@ -178,7 +178,7 @@ export const generateTestCases = async (req: Request, res: Response, next: NextF
     const { description, boilerplateCode, wrapperCode, functionName, language, numberOfTestCases } = req.body;
     const userId = (req as any).user.id;
 
-    if (!description || !boilerplateCode || !functionName || !language) {
+    if (!description || !functionName || !language) {
       res.status(400).json({ message: 'Missing required fields' });
       return;
     }
