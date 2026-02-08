@@ -25,6 +25,7 @@ export const useAuth = () => {
 
   // User object for components that need user info
   const user = {
+    id: sessionStorage.getItem('userId'),
     name: sessionStorage.getItem('username'),
     email: sessionStorage.getItem('email')
   };

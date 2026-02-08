@@ -45,10 +45,21 @@ export const getContestSettings = async (req: Request, res: Response, next: Next
           fullScreenModeEnabled: true,
           allowCopyPaste: false,
           enableActivityLogs: false,
+          requireCamera: false,
+          requireMicrophone: false,
+          requireScreenShare: false,
           perTaskTimeLimit: null,
           enablePerTaskTimer: false,
           autoStart: false,
           autoEnd: true,
+          // AI Hint Configuration defaults
+          maxHintsAllowed: 3,
+          hintUnlockAfterSubmissions: 0,
+          hintUnlockAfterSeconds: 0,
+          provideLastSubmissionContext: true,
+          // Submission Limits defaults
+          maxSubmissionsAllowed: 0,
+          autoSubmitOnTimeout: true,
           additionalSettings: {},
         },
       });
@@ -77,10 +88,21 @@ export const updateContestSettings = async (req: Request, res: Response, next: N
       fullScreenModeEnabled,
       allowCopyPaste,
       enableActivityLogs,
+      requireCamera,
+      requireMicrophone,
+      requireScreenShare,
       perTaskTimeLimit,
       enablePerTaskTimer,
       autoStart,
       autoEnd,
+      // AI Hint Configuration
+      maxHintsAllowed,
+      hintUnlockAfterSubmissions,
+      hintUnlockAfterSeconds,
+      provideLastSubmissionContext,
+      // Submission Limits
+      maxSubmissionsAllowed,
+      autoSubmitOnTimeout,
       additionalSettings,
     } = req.body;
 
@@ -115,10 +137,21 @@ export const updateContestSettings = async (req: Request, res: Response, next: N
           fullScreenModeEnabled: fullScreenModeEnabled !== undefined ? fullScreenModeEnabled : existingSettings.fullScreenModeEnabled,
           allowCopyPaste: allowCopyPaste !== undefined ? allowCopyPaste : existingSettings.allowCopyPaste,
           enableActivityLogs: enableActivityLogs !== undefined ? enableActivityLogs : existingSettings.enableActivityLogs,
+          requireCamera: requireCamera !== undefined ? requireCamera : existingSettings.requireCamera,
+          requireMicrophone: requireMicrophone !== undefined ? requireMicrophone : existingSettings.requireMicrophone,
+          requireScreenShare: requireScreenShare !== undefined ? requireScreenShare : existingSettings.requireScreenShare,
           perTaskTimeLimit: perTaskTimeLimit !== undefined ? perTaskTimeLimit : existingSettings.perTaskTimeLimit,
           enablePerTaskTimer: enablePerTaskTimer !== undefined ? enablePerTaskTimer : existingSettings.enablePerTaskTimer,
           autoStart: autoStart !== undefined ? autoStart : existingSettings.autoStart,
           autoEnd: autoEnd !== undefined ? autoEnd : existingSettings.autoEnd,
+          // AI Hint Configuration
+          maxHintsAllowed: maxHintsAllowed !== undefined ? maxHintsAllowed : existingSettings.maxHintsAllowed,
+          hintUnlockAfterSubmissions: hintUnlockAfterSubmissions !== undefined ? hintUnlockAfterSubmissions : existingSettings.hintUnlockAfterSubmissions,
+          hintUnlockAfterSeconds: hintUnlockAfterSeconds !== undefined ? hintUnlockAfterSeconds : existingSettings.hintUnlockAfterSeconds,
+          provideLastSubmissionContext: provideLastSubmissionContext !== undefined ? provideLastSubmissionContext : existingSettings.provideLastSubmissionContext,
+          // Submission Limits
+          maxSubmissionsAllowed: maxSubmissionsAllowed !== undefined ? maxSubmissionsAllowed : existingSettings.maxSubmissionsAllowed,
+          autoSubmitOnTimeout: autoSubmitOnTimeout !== undefined ? autoSubmitOnTimeout : existingSettings.autoSubmitOnTimeout,
           additionalSettings: additionalSettings || existingSettings.additionalSettings,
           updatedAt: new Date(),
         })
@@ -136,10 +169,21 @@ export const updateContestSettings = async (req: Request, res: Response, next: N
           fullScreenModeEnabled: fullScreenModeEnabled ?? true,
           allowCopyPaste: allowCopyPaste ?? false,
           enableActivityLogs: enableActivityLogs ?? false,
+          requireCamera: requireCamera ?? false,
+          requireMicrophone: requireMicrophone ?? false,
+          requireScreenShare: requireScreenShare ?? false,
           perTaskTimeLimit: perTaskTimeLimit ?? null,
           enablePerTaskTimer: enablePerTaskTimer ?? false,
           autoStart: autoStart ?? false,
           autoEnd: autoEnd ?? true,
+          // AI Hint Configuration
+          maxHintsAllowed: maxHintsAllowed ?? 3,
+          hintUnlockAfterSubmissions: hintUnlockAfterSubmissions ?? 0,
+          hintUnlockAfterSeconds: hintUnlockAfterSeconds ?? 0,
+          provideLastSubmissionContext: provideLastSubmissionContext ?? true,
+          // Submission Limits
+          maxSubmissionsAllowed: maxSubmissionsAllowed ?? 0,
+          autoSubmitOnTimeout: autoSubmitOnTimeout ?? true,
           additionalSettings: additionalSettings ?? null,
         })
         .returning();

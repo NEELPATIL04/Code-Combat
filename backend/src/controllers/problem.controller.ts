@@ -188,16 +188,6 @@ export const createProblem = async (req: Request, res: Response, next: NextFunct
         functionSignature: functionSignature || {},
         testCases,
         isPremium: isPremium || false,
-
-        // New fields
-        allowedLanguages: req.body.allowedLanguages || [],
-        testRunnerTemplate: req.body.testRunnerTemplate || {},
-        aiConfig: req.body.aiConfig || {
-          hintsEnabled: true,
-          hintThreshold: 2,
-          solutionThreshold: 5
-        },
-
         createdBy: userId,
       })
       .returning();

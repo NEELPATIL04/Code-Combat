@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 import { Play, Send, XCircle, Clock, ChevronRight, Check, X, GripHorizontal, Minimize2, Lightbulb, Brain, Unlock, MessageSquare } from 'lucide-react';
 import Editor from '@monaco-editor/react';
+import MediaCheckHelper from '../../components/MediaCheckHelper';
+import { useSocket } from '../../context/SocketContext';
+import { useAuth } from '../../hooks/useAuth';
 import { submissionAPI, aiAPI } from '../../utils/api';
-// import { Lightbulb } from 'lucide-react'; // Will replace this in next step with actual icon import
 
 
 interface Task {
@@ -613,6 +615,111 @@ const TaskPage: React.FC = () => {
     const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
     const [showEvaluationModal, setShowEvaluationModal] = useState<boolean>(false);
 
+    // Media & Socket State
+    const { user } = useAuth();
+    const { socket } = useSocket();
+    const [mediaVerified, setMediaVerified] = useState(false);
+    const [localStreams, setLocalStreams] = useState<{ camera: MediaStream | null, screen: MediaStream | null } | null>(null);
+    const [contestSettings, setContestSettings] = useState<any>(null); // Store contest settings
+    const [settingsError, setSettingsError] = useState<string | null>(null);
+    const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            if (!contestId) return;
+            try {
+                const token = sessionStorage.getItem('token');
+                const response = await fetch(`/api/contests/${contestId}/settings`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.settings) {
+                        setContestSettings(data.settings);
+
+                        // If no media is required, auto-verify
+                        const { requireCamera, requireMicrophone, requireScreenShare } = data.settings;
+                        if (!requireCamera && !requireMicrophone && !requireScreenShare) {
+                            setMediaVerified(true);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch contest settings:", error);
+            }
+        };
+        fetchSettings();
+    }, [contestId]);
+
+    useEffect(() => {
+        if (!socket || !mediaVerified || !localStreams || !user || !contestId) return;
+
+        socket.emit('join-contest', { contestId, userId: user.id });
+
+        const handleOffer = async ({ sender, payload }: { sender: string, payload: RTCSessionDescriptionInit }) => {
+            try {
+                const pc = new RTCPeerConnection({
+                    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] // Use public STUN
+                });
+
+                peerConnections.current.set(sender, pc);
+
+                // Add tracks
+                if (localStreams.camera) {
+                    const cameraTracks = localStreams.camera.getTracks();
+                    if (cameraTracks.length > 0) {
+                        cameraTracks.forEach(track => {
+                            if (localStreams.camera) pc.addTrack(track, localStreams.camera);
+                        });
+                    }
+                }
+                if (localStreams.screen) {
+                    const screenTracks = localStreams.screen.getTracks();
+                    if (screenTracks.length > 0) {
+                        screenTracks.forEach(track => {
+                            if (localStreams.screen) pc.addTrack(track, localStreams.screen);
+                        });
+                    }
+                }
+
+                pc.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        socket.emit('ice-candidate', { target: sender, candidate: event.candidate });
+                    }
+                };
+
+                await pc.setRemoteDescription(new RTCSessionDescription(payload));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+
+                socket.emit('answer', { target: sender, payload: answer });
+            } catch (err) {
+                console.error("Error handling offer:", err);
+            }
+        };
+
+        const handleIceCandidate = async ({ sender, candidate }: { sender: string, candidate: RTCIceCandidateInit }) => {
+            const pc = peerConnections.current.get(sender);
+            if (pc) {
+                try {
+                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (err) {
+                    console.error("Error adding ice candidate:", err);
+                }
+            }
+        };
+
+        socket.on('offer', handleOffer);
+        socket.on('ice-candidate', handleIceCandidate);
+
+        return () => {
+            socket.off('offer', handleOffer);
+            socket.off('ice-candidate', handleIceCandidate);
+            peerConnections.current.forEach(pc => pc.close());
+            peerConnections.current.clear();
+        };
+    }, [socket, mediaVerified, localStreams, user, contestId]);
+
     const handleGetHint = useCallback(async () => {
         if (!task) return;
         setIsGeneratingHint(true);
@@ -700,7 +807,9 @@ const TaskPage: React.FC = () => {
     // Effect for keyboard shortcuts and navigation lockdown
     useEffect(() => {
         // Only enable fullscreen lockdown if contest requires it
-        if (!contest?.fullScreenMode) {
+        const isFullScreenEnabled = contestSettings?.fullScreenModeEnabled; // Use contestSettings
+        if (!isFullScreenEnabled) {
+            // If previously locked and now unlocked, ensure we clean up (though listeners are removed on unmount/re-run)
             return;
         }
 
@@ -751,9 +860,10 @@ const TaskPage: React.FC = () => {
         document.addEventListener('contextmenu', handleContextMenu);
 
         // Attempt initial fullscreen entry (silent - no alert)
-        // Note: Browsers usually require a user gesture, so this might fail until the first click
-        // We don't show alert here because it's automatic, not user-initiated
-        requestFullscreen(false);
+        // Only request if we are NOT already in fullscreen (to avoid redundant calls/errors)
+        if (!document.fullscreenElement) {
+            requestFullscreen(false);
+        }
 
         return () => {
             window.removeEventListener('keydown', handleKeyDown, { capture: true });
@@ -766,7 +876,7 @@ const TaskPage: React.FC = () => {
                 (navigator as any).keyboard.unlock();
             }
         };
-    }, [requestFullscreen, contest]);
+    }, [requestFullscreen, contestSettings]); // Depend on contestSettings
 
     // Test execution state
     const [showTestCases, setShowTestCases] = useState<boolean>(false);
@@ -866,9 +976,9 @@ const TaskPage: React.FC = () => {
                         id: sub.id,
                         timestamp: new Date(sub.submittedAt).toLocaleTimeString(),
                         status: sub.status === 'accepted' ? 'Accepted' :
-                               sub.status === 'wrong_answer' ? 'Wrong Answer' :
-                               sub.status === 'runtime_error' ? 'Runtime Error' :
-                               sub.status === 'time_limit_exceeded' ? 'Time Limit Exceeded' : 'Error',
+                            sub.status === 'wrong_answer' ? 'Wrong Answer' :
+                                sub.status === 'runtime_error' ? 'Runtime Error' :
+                                    sub.status === 'time_limit_exceeded' ? 'Time Limit Exceeded' : 'Error',
                         testsPassed: sub.passedTests || 0,
                         totalTests: sub.totalTests || 0,
                         executionTime: sub.executionTime ? `${sub.executionTime}ms` : '-',
@@ -1284,6 +1394,51 @@ const TaskPage: React.FC = () => {
         );
     }
 
+    if (!mediaVerified && contestSettings) {
+        return (
+            <div style={{ minHeight: '100vh', background: '#0a0a0b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+                <MediaCheckHelper
+                    requiredPermissions={{
+                        camera: contestSettings.requireCamera,
+                        microphone: contestSettings.requireMicrophone,
+                        screen: contestSettings.requireScreenShare
+                    }}
+                    onPermissionsGranted={(streams) => {
+                        setLocalStreams(streams);
+                        setMediaVerified(true);
+                    }}
+                />
+            </div>
+        );
+    } else if (!mediaVerified && !contestSettings) {
+        if (settingsError) {
+            return (
+                <div style={{ minHeight: '100vh', background: '#0a0a0b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+                    <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', color: '#f87171', padding: '16px 24px', borderRadius: 12, fontSize: '0.9rem', textAlign: 'center' }}>
+                        <p style={{ margin: '0 0 8px 0', fontWeight: 600 }}>Error Loading Settings</p>
+                        <p style={{ margin: 0 }}>{settingsError}</p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            style={{
+                                marginTop: '16px',
+                                background: 'rgba(239, 68, 68, 0.2)',
+                                border: 'none',
+                                borderRadius: '6px',
+                                color: '#f87171',
+                                padding: '8px 16px',
+                                cursor: 'pointer',
+                                fontSize: '0.875rem'
+                            }}
+                        >
+                            Retry
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+        return <div style={{ minHeight: '100vh', background: '#0a0a0b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif" }}>Loading contest settings...</div>;
+    }
+
     return (
         <div style={{ height: '100vh', width: '100vw', background: '#0a0a0b', color: '#fff', fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif", display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             {/* Navbar */}
@@ -1678,7 +1833,7 @@ const TaskPage: React.FC = () => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         padding: 20,
-                }}>
+                    }}>
                     <div style={{
                         background: '#111113',
                         border: '1px solid rgba(59, 130, 246, 0.3)',

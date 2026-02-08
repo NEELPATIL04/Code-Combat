@@ -404,6 +404,21 @@ export const contestSettings = pgTable('contest_settings', {
   allowCopyPaste: boolean('allow_copy_paste').notNull().default(false),
   enableActivityLogs: boolean('enable_activity_logs').notNull().default(false),
 
+  // Media Monitoring Settings
+  requireCamera: boolean('require_camera').notNull().default(false),
+  requireMicrophone: boolean('require_microphone').notNull().default(false),
+  requireScreenShare: boolean('require_screen_share').notNull().default(false),
+
+  // AI Hints Configuration
+  maxHintsAllowed: integer('max_hints_allowed').default(3), // Maximum number of hints per task/problem
+  hintUnlockAfterSubmissions: integer('hint_unlock_after_submissions').default(0), // Unlock after X submissions
+  hintUnlockAfterSeconds: integer('hint_unlock_after_seconds').default(0), // Unlock after X seconds
+  provideLastSubmissionContext: boolean('provide_last_submission_context').notNull().default(true), // Send last submission to AI
+
+  // Submission limits
+  maxSubmissionsAllowed: integer('max_submissions_allowed').default(0), // 0 = unlimited submissions
+  autoSubmitOnTimeout: boolean('auto_submit_on_timeout').notNull().default(true), // Auto-submit when time expires
+
   // Task timing settings
   perTaskTimeLimit: integer('per_task_time_limit'), // in minutes
   enablePerTaskTimer: boolean('enable_per_task_timer').notNull().default(false),
@@ -468,18 +483,16 @@ export const problems = pgTable('problems', {
   starterCode: jsonb('starter_code'), // { javascript: "...", python: "...", java: "..." }
   functionSignature: jsonb('function_signature'), // Function name, params, return type
 
-  // New fields for Parity with Tasks
-  allowedLanguages: jsonb('allowed_languages').$type<string[]>().default([]),
-  testRunnerTemplate: jsonb('test_runner_template').$type<Record<string, string>>(),
-  aiConfig: jsonb('ai_config').$type<{
-    hintsEnabled: boolean;
-    hintThreshold: number;
-    solutionThreshold: number;
-  }>().default({
-    hintsEnabled: true,
-    hintThreshold: 2,
-    solutionThreshold: 5
-  }),
+  // AI Hints Configuration (same as contest settings)
+  maxHintsAllowed: integer('max_hints_allowed').default(3),
+  hintUnlockAfterSubmissions: integer('hint_unlock_after_submissions').default(0),
+  hintUnlockAfterSeconds: integer('hint_unlock_after_seconds').default(0),
+  provideLastSubmissionContext: boolean('provide_last_submission_context').notNull().default(true),
+  aiHintsEnabled: boolean('ai_hints_enabled').notNull().default(true),
+
+  // Submission limits
+  maxSubmissionsAllowed: integer('max_submissions_allowed').default(0), // 0 = unlimited
+  autoSubmitOnTimeout: boolean('auto_submit_on_timeout').notNull().default(true),
 
   // Test cases stored as JSONB
   testCases: jsonb('test_cases').notNull(), // Public + hidden test cases
@@ -566,3 +579,34 @@ export type NewProblemSubmission = typeof problemSubmissions.$inferInsert;
 
 export type UserProblemProgress = typeof userProblemProgress.$inferSelect;
 export type NewUserProblemProgress = typeof userProblemProgress.$inferInsert;
+
+/**
+ * AI Hint Usage Tracking Table
+ * Tracks how many hints a user has requested for each task/problem
+ */
+export const aiHintUsage = pgTable('ai_hint_usage', {
+  id: serial('id').primaryKey(),
+
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Either taskId OR problemId (one will be null)
+  taskId: integer('task_id').references(() => tasks.id, { onDelete: 'cascade' }),
+  problemId: integer('problem_id').references(() => problems.id, { onDelete: 'cascade' }),
+  contestId: integer('contest_id').references(() => contests.id, { onDelete: 'cascade' }),
+
+  // Hint tracking
+  hintsRequested: integer('hints_requested').notNull().default(0),
+  lastHintAt: timestamp('last_hint_at'),
+
+  // Context for AI
+  lastSubmissionCode: text('last_submission_code'),
+  lastSubmissionLanguage: varchar('last_submission_language', { length: 50 }),
+  lastSubmissionStatus: varchar('last_submission_status', { length: 50 }),
+
+  // Timestamps
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export type AiHintUsage = typeof aiHintUsage.$inferSelect;
+export type NewAiHintUsage = typeof aiHintUsage.$inferInsert;

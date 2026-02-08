@@ -18,7 +18,6 @@ const router = Router();
 router.get(
   '/:id/settings',
   authenticate,
-  requireRole(['admin', 'super_admin']),
   getContestSettings
 );
 

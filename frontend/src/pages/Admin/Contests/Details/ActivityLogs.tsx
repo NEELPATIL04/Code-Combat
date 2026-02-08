@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Activity, AlertTriangle, Info, RefreshCw, Filter, Users } from 'lucide-react';
+import { Activity, AlertTriangle, Info, RefreshCw, Filter, Users, Monitor } from 'lucide-react';
+import { useSocket } from '../../../../context/SocketContext';
+import VideoFeed from '../../../../components/VideoFeed';
 
 interface ActivityLogsProps {
     contestId: number;
@@ -36,6 +38,41 @@ const ActivityLogs: React.FC<ActivityLogsProps> = ({ contestId }) => {
     const [autoRefresh, setAutoRefresh] = useState(true);
     const [filterSeverity, setFilterSeverity] = useState<string>('all');
     const [filterType, setFilterType] = useState<string>('all');
+
+    // Live Monitoring
+    const { socket } = useSocket();
+    const [activeParticipants, setActiveParticipants] = useState<{ socketId: string, userId: string }[]>([]);
+    const [viewMode, setViewMode] = useState<'logs' | 'monitor'>('logs');
+
+    useEffect(() => {
+        if (!socket) return;
+        socket.emit('join-monitor', { contestId });
+
+        const handleActiveParticipants = (participants: { socketId: string, userId: string }[]) => {
+            setActiveParticipants(participants);
+        };
+
+        const handleParticipantJoined = ({ userId, socketId }: { userId: string, socketId: string }) => {
+            setActiveParticipants(prev => {
+                if (prev.find(p => p.socketId === socketId)) return prev;
+                return [...prev, { userId, socketId }];
+            });
+        };
+
+        const handleParticipantLeft = ({ socketId }: { socketId: string }) => {
+            setActiveParticipants(prev => prev.filter(p => p.socketId !== socketId));
+        };
+
+        socket.on('active-participants', handleActiveParticipants);
+        socket.on('participant-joined', handleParticipantJoined);
+        socket.on('participant-left', handleParticipantLeft);
+
+        return () => {
+            socket.off('active-participants', handleActiveParticipants);
+            socket.off('participant-joined', handleParticipantJoined);
+            socket.off('participant-left', handleParticipantLeft);
+        };
+    }, [socket, contestId]);
 
     const loadLogs = useCallback(async () => {
         try {
@@ -199,6 +236,59 @@ const ActivityLogs: React.FC<ActivityLogsProps> = ({ contestId }) => {
                     </button>
                 </div>
 
+                {/* View Mode Tabs */}
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', borderBottom: '1px solid #27272a' }}>
+                    <button
+                        onClick={() => setViewMode('logs')}
+                        style={{
+                            padding: '12px 24px',
+                            background: 'transparent',
+                            border: 'none',
+                            borderBottom: viewMode === 'logs' ? '2px solid #3b82f6' : '2px solid transparent',
+                            color: viewMode === 'logs' ? '#3b82f6' : '#a1a1aa',
+                            fontSize: '0.9375rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            transition: 'all 0.2s',
+                            marginBottom: '-1px'
+                        }}
+                    >
+                        <Activity size={18} /> Activity Logs
+                    </button>
+                    <button
+                        onClick={() => setViewMode('monitor')}
+                        style={{
+                            padding: '12px 24px',
+                            background: 'transparent',
+                            border: 'none',
+                            borderBottom: viewMode === 'monitor' ? '2px solid #ec4899' : '2px solid transparent',
+                            color: viewMode === 'monitor' ? '#ec4899' : '#a1a1aa',
+                            fontSize: '0.9375rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            transition: 'all 0.2s',
+                            marginBottom: '-1px'
+                        }}
+                    >
+                        <Monitor size={18} /> Live Monitor
+                        <span style={{
+                            background: '#27272a',
+                            color: '#fafafa',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem'
+                        }}>
+                            {activeParticipants.length}
+                        </span>
+                    </button>
+                </div>
+
                 {/* Stats Cards */}
                 {stats && (
                     <div style={{
@@ -232,132 +322,200 @@ const ActivityLogs: React.FC<ActivityLogsProps> = ({ contestId }) => {
 
                 {/* Filters */}
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <Filter size={16} color="#71717a" />
-                    <select
-                        value={filterSeverity}
-                        onChange={(e) => setFilterSeverity(e.target.value)}
-                        style={{
-                            background: '#18181b',
-                            border: '1px solid #27272a',
-                            borderRadius: '6px',
-                            color: '#fafafa',
-                            padding: '8px 12px',
-                            fontSize: '0.875rem',
-                            outline: 'none',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        <option value="all">All Severities</option>
-                        <option value="normal">Normal</option>
-                        <option value="warning">Warning</option>
-                        <option value="alert">Alert</option>
-                    </select>
+                    {/* View Mode Toggles */}
+                    <div style={{ display: 'flex', background: '#18181b', borderRadius: '6px', padding: '2px', border: '1px solid #27272a', marginRight: '12px' }}>
+                        <button
+                            onClick={() => setViewMode('logs')}
+                            style={{
+                                padding: '6px 12px',
+                                borderRadius: '4px',
+                                background: viewMode === 'logs' ? '#27272a' : 'transparent',
+                                color: viewMode === 'logs' ? '#fff' : '#a1a1aa',
+                                border: 'none',
+                                fontSize: '0.875rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                            }}
+                        >
+                            <Activity size={14} /> Logs
+                        </button>
+                        <button
+                            onClick={() => setViewMode('monitor')}
+                            style={{
+                                padding: '6px 12px',
+                                borderRadius: '4px',
+                                background: viewMode === 'monitor' ? '#27272a' : 'transparent',
+                                color: viewMode === 'monitor' ? '#fff' : '#a1a1aa',
+                                border: 'none',
+                                fontSize: '0.875rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                            }}
+                        >
+                            <Monitor size={14} /> Live Monitor
+                        </button>
+                    </div>
 
-                    <select
-                        value={filterType}
-                        onChange={(e) => setFilterType(e.target.value)}
-                        style={{
-                            background: '#18181b',
-                            border: '1px solid #27272a',
-                            borderRadius: '6px',
-                            color: '#fafafa',
-                            padding: '8px 12px',
-                            fontSize: '0.875rem',
-                            outline: 'none',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        <option value="all">All Activity Types</option>
-                        {uniqueTypes.map(type => (
-                            <option key={type} value={type}>{formatActivityType(type)}</option>
-                        ))}
-                    </select>
+                    {viewMode === 'logs' && (
+                        <>
+                            <Filter size={16} color="#71717a" />
+                            <select
+                                value={filterSeverity}
+                                onChange={(e) => setFilterSeverity(e.target.value)}
+                                style={{
+                                    background: '#18181b',
+                                    border: '1px solid #27272a',
+                                    borderRadius: '6px',
+                                    color: '#fafafa',
+                                    padding: '8px 12px',
+                                    fontSize: '0.875rem',
+                                    outline: 'none',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <option value="all">All Severities</option>
+                                <option value="normal">Normal</option>
+                                <option value="warning">Warning</option>
+                                <option value="alert">Alert</option>
+                            </select>
+
+                            <select
+                                value={filterType}
+                                onChange={(e) => setFilterType(e.target.value)}
+                                style={{
+                                    background: '#18181b',
+                                    border: '1px solid #27272a',
+                                    borderRadius: '6px',
+                                    color: '#fafafa',
+                                    padding: '8px 12px',
+                                    fontSize: '0.875rem',
+                                    outline: 'none',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <option value="all">All Activity Types</option>
+                                {uniqueTypes.map(type => (
+                                    <option key={type} value={type}>{formatActivityType(type)}</option>
+                                ))}
+                            </select>
+                        </>
+                    )}
                 </div>
             </div>
 
-            {/* Logs List */}
-            <div style={{
-                background: '#09090b',
-                border: '1px solid #27272a',
-                borderRadius: '12px',
-                overflow: 'hidden'
-            }}>
-                {logs.length === 0 ? (
-                    <div style={{ padding: '60px', textAlign: 'center', color: '#71717a' }}>
-                        <Info size={32} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
-                        <p style={{ margin: 0 }}>No activity logs found. Logs will appear here as participants interact with the contest.</p>
-                    </div>
-                ) : (
-                    <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
-                        {logs.map((log, index) => {
-                            const severityStyle = getSeverityColor(log.severity);
-                            const displayName = log.firstName && log.lastName
-                                ? `${log.firstName} ${log.lastName}`
-                                : log.username || 'Unknown User';
+            {viewMode === 'logs' ? (
+                /* Logs List */
+                <div style={{
+                    background: '#09090b',
+                    border: '1px solid #27272a',
+                    borderRadius: '12px',
+                    overflow: 'hidden'
+                }}>
+                    {logs.length === 0 ? (
+                        <div style={{ padding: '60px', textAlign: 'center', color: '#71717a' }}>
+                            <Info size={32} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+                            <p style={{ margin: 0 }}>No activity logs found. Logs will appear here as participants interact with the contest.</p>
+                        </div>
+                    ) : (
+                        <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
+                            {logs.map((log, index) => {
+                                const severityStyle = getSeverityColor(log.severity);
+                                const displayName = log.firstName && log.lastName
+                                    ? `${log.firstName} ${log.lastName}`
+                                    : log.username || 'Unknown User';
 
-                            return (
-                                <div
-                                    key={log.id}
-                                    style={{
-                                        padding: '16px 20px',
-                                        borderBottom: index === logs.length - 1 ? 'none' : '1px solid #27272a',
-                                        display: 'flex',
-                                        alignItems: 'flex-start',
-                                        gap: '16px',
-                                        transition: 'background 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                                >
-                                    <div style={{ fontSize: '1.5rem', flexShrink: 0 }}>
-                                        {getActivityIcon(log.activityType)}
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                            <span style={{ color: '#fafafa', fontWeight: 500, fontSize: '0.9375rem' }}>
-                                                {formatActivityType(log.activityType)}
-                                            </span>
-                                            <span style={{ color: '#71717a', fontSize: '0.75rem' }}>
-                                                {formatTimestamp(log.timestamp)}
-                                            </span>
+                                return (
+                                    <div
+                                        key={log.id}
+                                        style={{
+                                            padding: '16px 20px',
+                                            borderBottom: index === logs.length - 1 ? 'none' : '1px solid #27272a',
+                                            display: 'flex',
+                                            alignItems: 'flex-start',
+                                            gap: '16px',
+                                            transition: 'background 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                        <div style={{ fontSize: '1.5rem', flexShrink: 0 }}>
+                                            {getActivityIcon(log.activityType)}
                                         </div>
-                                        <div style={{ color: '#a1a1aa', fontSize: '0.875rem', marginBottom: '8px' }}>
-                                            {displayName} • User ID: {log.userId}
-                                        </div>
-                                        {log.activityData && Object.keys(log.activityData).length > 0 && (
-                                            <div style={{
-                                                background: '#18181b',
-                                                border: '1px solid #27272a',
-                                                borderRadius: '6px',
-                                                padding: '8px 10px',
-                                                fontSize: '0.8125rem',
-                                                color: '#71717a',
-                                                fontFamily: 'monospace',
-                                                marginTop: '8px'
-                                            }}>
-                                                {JSON.stringify(log.activityData, null, 2)}
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                <span style={{ color: '#fafafa', fontWeight: 500, fontSize: '0.9375rem' }}>
+                                                    {formatActivityType(log.activityType)}
+                                                </span>
+                                                <span style={{ color: '#71717a', fontSize: '0.75rem' }}>
+                                                    {formatTimestamp(log.timestamp)}
+                                                </span>
                                             </div>
-                                        )}
+                                            <div style={{ color: '#a1a1aa', fontSize: '0.875rem', marginBottom: '8px' }}>
+                                                {displayName} • User ID: {log.userId}
+                                            </div>
+                                            {log.activityData && Object.keys(log.activityData).length > 0 && (
+                                                <div style={{
+                                                    background: '#18181b',
+                                                    border: '1px solid #27272a',
+                                                    borderRadius: '6px',
+                                                    padding: '8px 10px',
+                                                    fontSize: '0.8125rem',
+                                                    color: '#71717a',
+                                                    fontFamily: 'monospace',
+                                                    marginTop: '8px'
+                                                }}>
+                                                    {JSON.stringify(log.activityData, null, 2)}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <span style={{
+                                            padding: '4px 10px',
+                                            borderRadius: '9999px',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 500,
+                                            background: severityStyle.bg,
+                                            color: severityStyle.color,
+                                            border: `1px solid ${severityStyle.border}`,
+                                            textTransform: 'uppercase',
+                                            flexShrink: 0
+                                        }}>
+                                            {log.severity}
+                                        </span>
                                     </div>
-                                    <span style={{
-                                        padding: '4px 10px',
-                                        borderRadius: '9999px',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 500,
-                                        background: severityStyle.bg,
-                                        color: severityStyle.color,
-                                        border: `1px solid ${severityStyle.border}`,
-                                        textTransform: 'uppercase',
-                                        flexShrink: 0
-                                    }}>
-                                        {log.severity}
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            ) : (
+                /* Live Monitor Grid */
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                    gap: '16px'
+                }}>
+                    {activeParticipants.length === 0 ? (
+                        <div style={{ gridColumn: '1 / -1', padding: '60px', textAlign: 'center', color: '#71717a', background: '#09090b', borderRadius: '12px', border: '1px solid #27272a' }}>
+                            <Monitor size={32} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+                            <p style={{ margin: 0 }}>No active participants connected.</p>
+                        </div>
+                    ) : (
+                        activeParticipants.map(p => (
+                            <VideoFeed
+                                key={p.socketId}
+                                socket={socket!}
+                                targetSocketId={p.socketId}
+                                userId={p.userId}
+                                isLarge={false}
+                            />
+                        ))
+                    )}
+                </div>
+            )}
         </div>
     );
 };
