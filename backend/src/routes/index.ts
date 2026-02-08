@@ -6,6 +6,7 @@ import submissionRoutes from './submission.routes';
 import uploadRoutes from './upload.routes';
 import aiRoutes from './ai.routes';
 import adminRoutes from './admin.routes';
+import problemRoutes from './problem.routes';
 
 /**
  * Main Router
@@ -38,6 +39,9 @@ router.use('/ai', aiRoutes);
 
 // Admin routes: /api/admin
 router.use('/admin', adminRoutes);
+
+// Problem routes: /api/problems
+router.use('/problems', problemRoutes);
 
 /**
  * Health Check Endpoint

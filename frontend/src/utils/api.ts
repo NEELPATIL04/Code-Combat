@@ -133,6 +133,58 @@ export const contestAPI = {
 };
 
 /**
+ * Problem API
+ * Manage standalone problems
+ */
+export const problemAPI = {
+  // Get all problems
+  getAll: async (difficulty?: string) => {
+    const url = difficulty ? `${API_BASE_URL}/problems?difficulty=${difficulty}` : `${API_BASE_URL}/problems`;
+    const response = await fetch(url, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  // Get single problem
+  getById: async (id: number) => {
+    const response = await fetch(`${API_BASE_URL}/problems/${id}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  // Create problem
+  create: async (problemData: any) => {
+    const response = await fetch(`${API_BASE_URL}/problems`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(problemData),
+    });
+    return handleResponse(response);
+  },
+
+  // Update problem
+  update: async (id: number, problemData: any) => {
+    const response = await fetch(`${API_BASE_URL}/problems/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(problemData),
+    });
+    return handleResponse(response);
+  },
+
+  // Delete problem
+  delete: async (id: number) => {
+    const response = await fetch(`${API_BASE_URL}/problems/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
+
+/**
  * User API
  */
 export const userAPI = {

@@ -10,6 +10,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
     { label: 'My Contests', path: '/player' },
+    { label: 'Problems', path: '/player/problems' },
 ];
 
 const ParticipantLayout: React.FC = () => {
