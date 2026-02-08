@@ -68,7 +68,7 @@ const ContestDetails: React.FC = () => {
             setError('');
         } catch (err: any) {
             console.error('Failed to load contest details:', err);
-            setError('Failed to load contest details. It may have been deleted.');
+            setError(err.message || 'Failed to load contest details. It may have been deleted.');
         } finally {
             setLoading(false);
         }

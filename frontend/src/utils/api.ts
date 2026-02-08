@@ -36,6 +36,16 @@ export const getAuthHeaders = (): HeadersInit => {
 const handleResponse = async (response: Response) => {
   const data = await response.json();
   if (!response.ok) {
+    // Handle 401 Unauthorized errors
+    if (response.status === 401) {
+      // Clear invalid token
+      sessionStorage.removeItem('token');
+      // Redirect to login if not already there
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
+      throw new Error('Invalid or expired token. Please login again.');
+    }
     throw new Error(data.message || 'API request failed');
   }
   return data;

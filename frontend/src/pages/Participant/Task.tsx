@@ -45,7 +45,7 @@ interface TestCase {
 
 interface SubmissionHistory {
     id: number;
-    timestamp: Date;
+    timestamp: string;
     status: 'Accepted' | 'Wrong Answer' | 'Time Limit Exceeded' | 'Runtime Error';
     runtime: string;
     memory: string;
@@ -438,7 +438,7 @@ const MemoizedDescription = React.memo<{ task: Task; testCases: TestCase[]; left
                             <div key={sub.id} style={{ background: 'rgba(0, 0, 0, 0.2)', borderRadius: 6, padding: 12, marginBottom: 8 }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                                     <span style={{ fontSize: 13, fontWeight: 600, color: sub.status === 'Accepted' ? '#34d399' : '#f87171' }}>{sub.status}</span>
-                                    <span style={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.4)' }}>{sub.timestamp.toLocaleTimeString()}</span>
+                                    <span style={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.4)' }}>{sub.timestamp}</span>
                                 </div>
                                 <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.5)' }}>{sub.language} • {sub.runtime} • {sub.memory}</div>
                             </div>
@@ -925,17 +925,10 @@ const TaskPage: React.FC = () => {
     // Test execution state
     const [showTestCases, setShowTestCases] = useState<boolean>(false);
     const [isRunning, setIsRunning] = useState<boolean>(false);
-    const [testCases, setTestCases] = useState<TestCase[]>([
-        { id: 1, input: 'nums = [2,7,11,15], target = 9', expectedOutput: '[0,1]' },
-        { id: 2, input: 'nums = [3,2,4], target = 6', expectedOutput: '[1,2]' },
-        { id: 3, input: 'nums = [3,3], target = 6', expectedOutput: '[0,1]' },
-    ]);
+    const [testCases, setTestCases] = useState<TestCase[]>([]);
 
     // Submission history
-    const [submissions, setSubmissions] = useState<SubmissionHistory[]>([
-        { id: 1, timestamp: new Date(Date.now() - 3600000), status: 'Wrong Answer', runtime: '52 ms', memory: '42.1 MB', language: 'JavaScript' },
-        { id: 2, timestamp: new Date(Date.now() - 7200000), status: 'Time Limit Exceeded', runtime: 'N/A', memory: 'N/A', language: 'JavaScript' },
-    ]);
+    const [submissions, setSubmissions] = useState<SubmissionHistory[]>([]);
 
     // Drag and Drop handlers
     const handleDragStart = useCallback((panel: PanelType) => (e: React.DragEvent) => {
@@ -1062,6 +1055,11 @@ const TaskPage: React.FC = () => {
                     setTask(data.tasks[0]);
                     setContest(data.contest);
 
+                    // Load test cases from task data
+                    if (data.tasks[0].testCases && data.tasks[0].testCases.length > 0) {
+                        setTestCases(data.tasks[0].testCases);
+                    }
+
                     // Check if we have saved code/language in localStorage
                     const savedLang = localStorage.getItem(`task_${contestId}_language`);
                     const savedCode = localStorage.getItem(`task_${contestId}_code`);
@@ -1071,13 +1069,17 @@ const TaskPage: React.FC = () => {
                         const initialLang = data.tasks[0].allowedLanguages[0];
                         setLanguage(initialLang);
                         const dbBoilerplate = data.tasks[0].boilerplateCode?.[initialLang];
-                        setCode(dbBoilerplate || LANGUAGE_BOILERPLATES[initialLang] || LANGUAGE_BOILERPLATES['javascript']);
+                        if (dbBoilerplate) {
+                            setCode(dbBoilerplate);
+                        }
                     } else if (savedLang && !data.tasks[0].allowedLanguages?.includes(savedLang)) {
                         // If saved language is not in allowed languages, reset
                         const initialLang = data.tasks[0].allowedLanguages[0];
                         setLanguage(initialLang);
                         const dbBoilerplate = data.tasks[0].boilerplateCode?.[initialLang];
-                        setCode(dbBoilerplate || LANGUAGE_BOILERPLATES[initialLang] || LANGUAGE_BOILERPLATES['javascript']);
+                        if (dbBoilerplate) {
+                            setCode(dbBoilerplate);
+                        }
                         localStorage.removeItem(`task_${contestId}_language`);
                         localStorage.removeItem(`task_${contestId}_code`);
                     }
@@ -1313,7 +1315,7 @@ const TaskPage: React.FC = () => {
             setSubmissions((prev: SubmissionHistory[]) => {
                 const newSubmission: SubmissionHistory = {
                     id: prev.length + 1,
-                    timestamp: new Date(),
+                    timestamp: new Date().toLocaleTimeString(),
                     status: 'Runtime Error',
                     runtime: 'N/A',
                     memory: 'N/A',

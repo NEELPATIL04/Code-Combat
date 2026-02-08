@@ -76,7 +76,7 @@ const Contests: React.FC = () => {
                 setFormData(prev => ({
                     ...prev,
                     tasks: data.contest.tasks || [],
-                    participants: data.contest.participants?.map((p: any) => p.id) || []
+                    participants: data.contest.participants?.map((p: any) => p.userId) || []
                 }));
             } catch (err) {
                 console.error('Failed to load contest details:', err);
