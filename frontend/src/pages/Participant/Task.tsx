@@ -632,6 +632,7 @@ const TaskPage: React.FC = () => {
                 const response = await fetch(`/api/contests/${contestId}/settings`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
+
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success && data.settings) {
@@ -642,10 +643,28 @@ const TaskPage: React.FC = () => {
                         if (!requireCamera && !requireMicrophone && !requireScreenShare) {
                             setMediaVerified(true);
                         }
+                        return;
                     }
                 }
+
+                // If response not ok or data invalid, throw to catch block
+                throw new Error('Failed to load settings');
             } catch (error) {
-                console.error("Failed to fetch contest settings:", error);
+                console.error("Failed to fetch contest settings, using defaults:", error);
+
+                // Fallback to default settings so user is not stuck
+                const defaultSettings = {
+                    testModeEnabled: false,
+                    aiHintsEnabled: true,
+                    fullScreenModeEnabled: false, // Default to false to avoid lockout issues on error
+                    requireCamera: false,
+                    requireMicrophone: false,
+                    requireScreenShare: false
+                };
+
+                setContestSettings(defaultSettings);
+                setMediaVerified(true); // Auto-verify if we can't load strict settings
+                setSettingsError(null); // Clear error since we are recovering
             }
         };
         fetchSettings();
