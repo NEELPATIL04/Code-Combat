@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Play, Send, XCircle, Clock, ChevronRight, Check, X, GripHorizontal, Minimize2, Lightbulb, Brain, Unlock, MessageSquare, CheckCircle2, Pause, StopCircle } from 'lucide-react';
+import { Play, Send, XCircle, Clock, ChevronRight, Check, X, GripHorizontal, Minimize2, Lightbulb, Brain, Unlock, Lock, MessageSquare, CheckCircle2, Pause, StopCircle } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import MediaCheckHelper from '../../components/MediaCheckHelper';
 import TaskSidebar from '../../components/TaskSidebar';
@@ -96,6 +96,10 @@ interface MemoizedCodeEditorProps {
         hintThreshold: number;
         solutionThreshold: number;
     };
+    submissionCount: number;
+    hintUnlockAfterSubmissions: number;
+    solutionUnlockAfterSubmissions: number;
+    aiModeEnabled: boolean;
     allowCopyPaste?: boolean;
     onCopyPasteAttempt?: (type: 'copy' | 'paste' | 'cut') => void;
 }
@@ -118,9 +122,41 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
     onAnalyze,
     isAnalyzing,
     aiConfig,
+    submissionCount,
+    hintUnlockAfterSubmissions,
+    solutionUnlockAfterSubmissions,
+    aiModeEnabled,
     allowCopyPaste = true,
     onCopyPasteAttempt,
 }) => {
+    // Lock/unlock state
+    const hintLocked = hintUnlockAfterSubmissions > 0 && submissionCount < hintUnlockAfterSubmissions;
+    const solutionLocked = solutionUnlockAfterSubmissions > 0 && submissionCount < solutionUnlockAfterSubmissions;
+    const analyzeLocked = !aiModeEnabled;
+
+    // Track previous lock state to detect unlock transitions
+    const prevHintLockedRef = React.useRef(hintLocked);
+    const prevSolutionLockedRef = React.useRef(solutionLocked);
+    const [hintJustUnlocked, setHintJustUnlocked] = React.useState(false);
+    const [solutionJustUnlocked, setSolutionJustUnlocked] = React.useState(false);
+
+    React.useEffect(() => {
+        if (prevHintLockedRef.current && !hintLocked) {
+            setHintJustUnlocked(true);
+            const timer = setTimeout(() => setHintJustUnlocked(false), 2000);
+            return () => clearTimeout(timer);
+        }
+        prevHintLockedRef.current = hintLocked;
+    }, [hintLocked]);
+
+    React.useEffect(() => {
+        if (prevSolutionLockedRef.current && !solutionLocked) {
+            setSolutionJustUnlocked(true);
+            const timer = setTimeout(() => setSolutionJustUnlocked(false), 2000);
+            return () => clearTimeout(timer);
+        }
+        prevSolutionLockedRef.current = solutionLocked;
+    }, [solutionLocked]);
     const editorOptions = useMemo(() => ({
         minimap: { enabled: false },
         fontSize: 14,
@@ -210,48 +246,127 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
                 />
             </div>
 
+            {/* Glow animation styles */}
+            <style>{`
+                @keyframes btnGlowPulse {
+                    0% { box-shadow: 0 0 4px 1px var(--glow-color); }
+                    50% { box-shadow: 0 0 16px 4px var(--glow-color); }
+                    100% { box-shadow: 0 0 4px 1px var(--glow-color); }
+                }
+                @keyframes lockShake {
+                    0%, 100% { transform: rotate(0deg); }
+                    20% { transform: rotate(-8deg); }
+                    40% { transform: rotate(8deg); }
+                    60% { transform: rotate(-5deg); }
+                    80% { transform: rotate(5deg); }
+                }
+            `}</style>
+
             {/* Action Buttons */}
-            <div style={{ padding: '8px 12px', borderTop: '1px solid rgba(255, 255, 255, 0.06)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <div style={{ padding: '8px 12px', borderTop: '1px solid rgba(255, 255, 255, 0.06)', display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+                {/* Get Hint Button */}
                 {aiConfig?.hintsEnabled && (
                     <button
                         onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
+                            if (hintLocked) return;
                             onGetHint();
                         }}
-                        disabled={isGeneratingHint || isRunning}
-                        style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'rgba(234, 179, 8, 0.15)', border: '1px solid rgba(234, 179, 8, 0.3)', borderRadius: 6, color: '#fbbf24', fontSize: 13, cursor: (isGeneratingHint || isRunning) ? 'not-allowed' : 'pointer', opacity: (isGeneratingHint || isRunning) ? 0.6 : 1 }}
+                        disabled={hintLocked || isGeneratingHint || isRunning}
+                        title={hintLocked ? `Unlocks after ${hintUnlockAfterSubmissions} submissions (${submissionCount}/${hintUnlockAfterSubmissions})` : 'Get AI Hint'}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px',
+                            background: hintLocked ? 'rgba(255,255,255,0.04)' : 'rgba(234, 179, 8, 0.15)',
+                            border: hintLocked ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(234, 179, 8, 0.3)',
+                            borderRadius: 6,
+                            color: hintLocked ? 'rgba(255,255,255,0.3)' : '#fbbf24',
+                            fontSize: 13, fontWeight: 500,
+                            cursor: hintLocked ? 'not-allowed' : (isGeneratingHint || isRunning) ? 'not-allowed' : 'pointer',
+                            opacity: (isGeneratingHint || isRunning) && !hintLocked ? 0.6 : 1,
+                            transition: 'all 0.3s ease',
+                            animation: hintJustUnlocked ? 'btnGlowPulse 0.7s ease-in-out 2' : 'none',
+                            ['--glow-color' as any]: 'rgba(234, 179, 8, 0.5)',
+                            position: 'relative' as const,
+                        }}
                     >
-                        <Lightbulb size={14} />
-                        {isGeneratingHint ? 'Thinking...' : 'Get Hint'}
+                        {hintLocked ? (
+                            <span style={{ display: 'inline-flex', animation: 'lockShake 0.5s ease-in-out' }}>
+                                <Lock size={14} />
+                            </span>
+                        ) : (
+                            <Lightbulb size={14} />
+                        )}
+                        {hintLocked
+                            ? `Hint (${submissionCount}/${hintUnlockAfterSubmissions})`
+                            : isGeneratingHint ? 'Thinking...' : 'Get Hint'}
                     </button>
                 )}
+
+                {/* Get Solution Button */}
                 {aiConfig?.hintsEnabled && (
                     <button
                         onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
+                            if (solutionLocked) return;
                             onGetSolution();
                         }}
-                        disabled={isGeneratingSolution || isRunning}
-                        style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 6, color: '#f87171', fontSize: 13, cursor: (isGeneratingSolution || isRunning) ? 'not-allowed' : 'pointer', opacity: (isGeneratingSolution || isRunning) ? 0.6 : 1 }}
+                        disabled={solutionLocked || isGeneratingSolution || isRunning}
+                        title={solutionLocked ? `Unlocks after ${solutionUnlockAfterSubmissions} submissions (${submissionCount}/${solutionUnlockAfterSubmissions})` : 'Get Full Solution'}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px',
+                            background: solutionLocked ? 'rgba(255,255,255,0.04)' : 'rgba(239, 68, 68, 0.15)',
+                            border: solutionLocked ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(239, 68, 68, 0.3)',
+                            borderRadius: 6,
+                            color: solutionLocked ? 'rgba(255,255,255,0.3)' : '#f87171',
+                            fontSize: 13, fontWeight: 500,
+                            cursor: solutionLocked ? 'not-allowed' : (isGeneratingSolution || isRunning) ? 'not-allowed' : 'pointer',
+                            opacity: (isGeneratingSolution || isRunning) && !solutionLocked ? 0.6 : 1,
+                            transition: 'all 0.3s ease',
+                            animation: solutionJustUnlocked ? 'btnGlowPulse 0.7s ease-in-out 2' : 'none',
+                            ['--glow-color' as any]: 'rgba(239, 68, 68, 0.5)',
+                            position: 'relative' as const,
+                        }}
                     >
-                        <Unlock size={14} />
-                        {isGeneratingSolution ? 'Unlocking...' : 'Get Solution'}
+                        {solutionLocked ? (
+                            <span style={{ display: 'inline-flex', animation: 'lockShake 0.5s ease-in-out' }}>
+                                <Lock size={14} />
+                            </span>
+                        ) : (
+                            <Unlock size={14} />
+                        )}
+                        {solutionLocked
+                            ? `Solution (${submissionCount}/${solutionUnlockAfterSubmissions})`
+                            : isGeneratingSolution ? 'Unlocking...' : 'Get Solution'}
                     </button>
                 )}
+
+                {/* AI Feedback / Analyze Button */}
                 {aiConfig?.hintsEnabled && (
                     <button
                         onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
+                            if (analyzeLocked) return;
                             onAnalyze();
                         }}
-                        disabled={isAnalyzing || isRunning}
-                        style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: 6, color: '#60a5fa', fontSize: 13, cursor: (isAnalyzing || isRunning) ? 'not-allowed' : 'pointer', opacity: (isAnalyzing || isRunning) ? 0.6 : 1 }}
+                        disabled={analyzeLocked || isAnalyzing || isRunning}
+                        title={analyzeLocked ? 'AI analysis is disabled for this contest' : 'Get AI code feedback'}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px',
+                            background: analyzeLocked ? 'rgba(255,255,255,0.04)' : 'rgba(59, 130, 246, 0.15)',
+                            border: analyzeLocked ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(59, 130, 246, 0.3)',
+                            borderRadius: 6,
+                            color: analyzeLocked ? 'rgba(255,255,255,0.3)' : '#60a5fa',
+                            fontSize: 13, fontWeight: 500,
+                            cursor: analyzeLocked ? 'not-allowed' : (isAnalyzing || isRunning) ? 'not-allowed' : 'pointer',
+                            opacity: (isAnalyzing || isRunning) && !analyzeLocked ? 0.6 : 1,
+                            transition: 'all 0.3s ease',
+                        }}
                     >
-                        <MessageSquare size={14} />
-                        {isAnalyzing ? 'Analyzing...' : 'AI Feedback'}
+                        {analyzeLocked ? <Lock size={14} /> : <MessageSquare size={14} />}
+                        {analyzeLocked ? 'Analysis Locked' : isAnalyzing ? 'Analyzing...' : 'AI Feedback'}
                     </button>
                 )}
                 <button
@@ -282,9 +397,12 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
         prevProps.language === nextProps.language &&
         prevProps.isRunning === nextProps.isRunning &&
         prevProps.isGeneratingHint === nextProps.isGeneratingHint &&
-        prevProps.isGeneratingHint === nextProps.isGeneratingHint &&
         prevProps.isGeneratingSolution === nextProps.isGeneratingSolution &&
         prevProps.isAnalyzing === nextProps.isAnalyzing &&
+        prevProps.submissionCount === nextProps.submissionCount &&
+        prevProps.hintUnlockAfterSubmissions === nextProps.hintUnlockAfterSubmissions &&
+        prevProps.solutionUnlockAfterSubmissions === nextProps.solutionUnlockAfterSubmissions &&
+        prevProps.aiModeEnabled === nextProps.aiModeEnabled &&
         JSON.stringify(prevProps.allowedLanguages) === JSON.stringify(nextProps.allowedLanguages) &&
         JSON.stringify(prevProps.aiConfig) === JSON.stringify(nextProps.aiConfig)
     );
@@ -2031,8 +2149,12 @@ const TaskPage: React.FC = () => {
                         aiConfig={{
                             hintsEnabled: contestSettings?.aiHintsEnabled ?? true,
                             hintThreshold: contestSettings?.hintUnlockAfterSubmissions ?? 0,
-                            solutionThreshold: 0 // Not implemented in contestSettings yet
+                            solutionThreshold: contestSettings?.solutionUnlockAfterSubmissions ?? 0
                         }}
+                        submissionCount={submissions.length}
+                        hintUnlockAfterSubmissions={contestSettings?.hintUnlockAfterSubmissions ?? 0}
+                        solutionUnlockAfterSubmissions={contestSettings?.solutionUnlockAfterSubmissions ?? 0}
+                        aiModeEnabled={contestSettings?.aiModeEnabled ?? true}
                         allowCopyPaste={contestSettings?.allowCopyPaste ?? false}
                         onCopyPasteAttempt={handleCopyPasteAttempt}
                     />
