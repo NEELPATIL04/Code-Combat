@@ -2,14 +2,37 @@ import React, { useState, useEffect } from 'react';
 import { Monitor as MonitorIcon } from 'lucide-react';
 import { useSocket } from '../../../../context/SocketContext';
 import VideoFeed from '../../../../components/VideoFeed';
+import VideoFeedModal from '../../../../components/VideoFeedModal';
+import { contestAPI } from '../../../../utils/api';
 
 interface MonitorProps {
     contestId: number;
 }
 
+interface SelectedParticipant {
+    socketId: string;
+    userId: string;
+}
+
 const Monitor: React.FC<MonitorProps> = ({ contestId }) => {
     const { socket } = useSocket();
     const [activeParticipants, setActiveParticipants] = useState<{ socketId: string, userId: string }[]>([]);
+    const [selectedParticipant, setSelectedParticipant] = useState<SelectedParticipant | null>(null);
+
+    const handleParticipantSelect = (participant: SelectedParticipant) => {
+        console.log('✅ Participant selected:', participant);
+        setSelectedParticipant(participant);
+        // Log activity when admin opens detailed monitoring view
+        contestAPI.logActivity(contestId, 'MONITOR_PARTICIPANT_OPENED', {
+            targetUserId: participant.userId,
+            targetSocketId: participant.socketId,
+            timestamp: new Date().toISOString()
+        }).catch(err => console.error('Failed to log monitor activity:', err));
+    };
+
+    useEffect(() => {
+        console.log('🔍 Monitor - Selected participant changed:', selectedParticipant);
+    }, [selectedParticipant]);
 
     useEffect(() => {
         if (!socket) return;
@@ -77,16 +100,54 @@ const Monitor: React.FC<MonitorProps> = ({ contestId }) => {
                     </div>
                 ) : (
                     activeParticipants.map(p => (
-                        <VideoFeed
+                        <div
                             key={p.socketId}
-                            socket={socket!}
-                            targetSocketId={p.socketId}
-                            userId={p.userId}
-                            isLarge={false}
-                        />
+                            onClick={() => {
+                                console.log('🖱️ Clicked on user:', p.userId);
+                                handleParticipantSelect(p);
+                            }}
+                            style={{ 
+                                cursor: 'pointer', 
+                                transition: 'transform 0.2s, box-shadow 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'scale(1.02)';
+                                e.currentTarget.style.boxShadow = '0 0 20px rgba(34, 197, 94, 0.3)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'scale(1)';
+                                e.currentTarget.style.boxShadow = 'none';
+                            }}
+                        >
+                            <VideoFeed
+                                socket={socket!}
+                                targetSocketId={p.socketId}
+                                userId={p.userId}
+                                isLarge={false}
+                            />
+                        </div>
                     ))
                 )}
             </div>
+
+            {/* Modal for detailed view */}
+            {selectedParticipant && (
+                <VideoFeedModal
+                    socket={socket!}
+                    targetSocketId={selectedParticipant.socketId}
+                    userId={selectedParticipant.userId}
+                    contestId={contestId}
+                    onClose={() => {
+                        // Log activity when admin closes monitoring view
+                        contestAPI.logActivity(contestId, 'MONITOR_PARTICIPANT_CLOSED', {
+                            targetUserId: selectedParticipant.userId,
+                            targetSocketId: selectedParticipant.socketId,
+                            timestamp: new Date().toISOString()
+                        }).catch(err => console.error('Failed to log monitor close activity:', err));
+                        setSelectedParticipant(null);
+                    }}
+                />
+            )}
         </div>
     );
 };

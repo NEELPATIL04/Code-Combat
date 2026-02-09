@@ -33,6 +33,7 @@ import ParticipantDashboard from './pages/Participant/Dashboard';
 import ProfilePage from './pages/Participant/Profile';
 import SettingsPage from './pages/Participant/Settings';
 import ProblemsPage from './pages/Participant/Problems';
+import ContestResults from './pages/Participant/ContestResults';
 
 const App: React.FC = () => {
     return (
@@ -94,6 +95,13 @@ const App: React.FC = () => {
                     <Route path="/task" element={
                         <PrivateRoute allowedRoles={['player']}>
                             <TaskPage />
+                        </PrivateRoute>
+                    } />
+
+                    {/* Contest Results Page - Standalone */}
+                    <Route path="/contest/:contestId/results" element={
+                        <PrivateRoute allowedRoles={['player']}>
+                            <ContestResults />
                         </PrivateRoute>
                     } />
 

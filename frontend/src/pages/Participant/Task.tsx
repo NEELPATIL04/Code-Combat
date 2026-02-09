@@ -927,10 +927,17 @@ const TaskPage: React.FC = () => {
 
     // Activity Logging Helper
     const logUserActivity = useCallback(async (type: string, data?: any) => {
-        if (!contestId || !contestSettings?.enableActivityLogs) return;
+        if (!contestId) return;
 
-        await contestAPI.logActivity(parseInt(contestId), type, data);
-    }, [contestId, contestSettings]);
+        // Always log if contest exists - enableActivityLogs check is on backend
+        console.log('📊 Logging activity:', type, data);
+        try {
+            await contestAPI.logActivity(parseInt(contestId), type, data);
+            console.log('✅ Activity logged successfully');
+        } catch (error) {
+            console.error('❌ Failed to log activity:', error);
+        }
+    }, [contestId]);
 
     // Effect for keyboard shortcuts, navigation lockdown, and activity logging
     useEffect(() => {
@@ -1159,6 +1166,10 @@ const TaskPage: React.FC = () => {
 
                 const data = await response.json();
                 if (data.tasks && data.tasks.length > 0) {
+                    console.log('✅ Tasks fetched from backend:', data.tasks.length);
+                    console.log('📋 First task boilerplate code:', data.tasks[0].boilerplateCode);
+                    console.log('🔧 First task wrapper/testRunner:', data.tasks[0].testRunnerTemplate);
+
                     setTasks(data.tasks);
                     setTask(data.tasks[0]);
                     setCurrentTaskIndex(0);
@@ -1226,6 +1237,9 @@ const TaskPage: React.FC = () => {
 
     const performTaskSwitch = (index: number) => {
         const newTask = tasks[index];
+        console.log('🔀 Switching to task:', newTask.id, newTask.title);
+        console.log('📦 Boilerplate available:', newTask.boilerplateCode ? Object.keys(newTask.boilerplateCode) : 'None');
+
         setTask(newTask);
         setCurrentTaskIndex(index);
         setShowShiftWarning(false);
@@ -1235,14 +1249,16 @@ const TaskPage: React.FC = () => {
 
         // Load last submitted code if this task was submitted before
         if (submittedTasks.has(newTask.id)) {
+            console.log('📝 Loading previously submitted code for this task');
             setCode(submittedTasks.get(newTask.id) || '');
             codeRef.current = submittedTasks.get(newTask.id) || '';
         } else {
             // Load boilerplate if available
-            if (newTask.boilerplateCode && newTask.boilerplateCode[language]) {
-                setCode(newTask.boilerplateCode[language]);
-                codeRef.current = newTask.boilerplateCode[language];
-            }
+            const boiler = newTask.boilerplateCode?.[language] || '';
+            console.log('🎯 Loading boilerplate for', language, ':', boiler ? `${boiler.length} chars` : 'Empty/Not found');
+            console.log('📄 Boilerplate preview:', boiler.substring(0, 100));
+            setCode(boiler);
+            codeRef.current = boiler;
         }
 
         // Load test cases for new task
@@ -1278,15 +1294,29 @@ const TaskPage: React.FC = () => {
         });
 
         // Set code only if not already set or if explicitly needed
-        // Logic: If saved code exists, use it. Else use boilerplate.
-        if (savedCode) {
-            console.log('📝 Loading saved code from localStorage');
+        console.log('🔄 Initializing code for task:', task.id);
+        console.log('📦 Available boilerplate languages:', task.boilerplateCode ? Object.keys(task.boilerplateCode) : 'None');
+        console.log('💾 Saved code exists:', !!savedCode);
+
+        // IMPORTANT: Always prefer backend boilerplate over cached code to reflect admin changes
+        // Only use saved code if it's different from boilerplate (i.e., user made changes)
+        const boiler = task.boilerplateCode?.[initialLang] || '';
+
+        if (savedCode && savedCode !== boiler) {
+            // User has made changes - keep their work
+            console.log('📝 Loading saved code from localStorage (user modified)');
             setCode(savedCode);
         } else {
-            // Fallback to boilerplate
-            const boiler = task.boilerplateCode?.[initialLang] || '';
-            console.log('🎯 Loading boilerplate for', initialLang, ':', boiler ? 'Found' : 'Not found');
+            // Use fresh boilerplate from backend
+            console.log('🎯 Loading boilerplate for', initialLang, ':', boiler ? `${boiler.length} chars` : 'Empty');
+            console.log('📄 Boilerplate preview:', boiler.substring(0, 100));
             setCode(boiler);
+            codeRef.current = boiler;
+
+            // Update localStorage with fresh boilerplate
+            if (boiler) {
+                localStorage.setItem(`task_${contestId}_code`, boiler);
+            }
         }
     }, [task, contestId]);
 
@@ -1386,15 +1416,21 @@ const TaskPage: React.FC = () => {
         // Get new boilerplate from task (admin's custom boilerplate) or empty string
         const newBoilerplate = task.boilerplateCode?.[newLang] || '';
 
-        setLanguage(newLang);
-
-        // Directly set code for new language
         console.log('🔄 Switching language to', newLang);
-        console.log('🎯 Loading boilerplate:', newBoilerplate ? 'Found' : 'Not found');
-        setCode(newBoilerplate);
+        console.log('🎯 Loading boilerplate:', newBoilerplate ? `${newBoilerplate.length} chars` : 'Empty/Not found');
+        console.log('📄 Boilerplate preview:', newBoilerplate.substring(0, 100));
 
-        // Clear saved code for previous language to avoid mix-up
-        localStorage.removeItem(`task_${contestId}_code`);
+        setLanguage(newLang);
+        setCode(newBoilerplate);
+        codeRef.current = newBoilerplate;
+
+        // Save new language preference and boilerplate
+        localStorage.setItem(`task_${contestId}_lang`, newLang);
+        if (newBoilerplate) {
+            localStorage.setItem(`task_${contestId}_code`, newBoilerplate);
+        } else {
+            localStorage.removeItem(`task_${contestId}_code`);
+        }
     }, [task, contestId]);
 
     // Memoized editor change handler to prevent re-renders
@@ -1473,6 +1509,16 @@ const TaskPage: React.FC = () => {
             });
 
             console.log('✅ Submit Result:', result);
+
+            // Log activity for submission
+            if (contestId && task) {
+                await logUserActivity('task_submitted', {
+                    taskId: task.id,
+                    taskTitle: task.title,
+                    language: language,
+                    timestamp: new Date().toISOString()
+                });
+            }
 
             if (result.success && result.data) {
                 const { passed, total, results, status, score } = result.data;
@@ -1553,7 +1599,7 @@ const TaskPage: React.FC = () => {
         }
 
         setIsRunning(false);
-    }, [language, task, contest, fetchSubmissionHistory]);
+    }, [language, task, contest, fetchSubmissionHistory, contestId, logUserActivity]);
 
     const handleFinishContest = useCallback(async () => {
         hasExited.current = true;
@@ -1563,7 +1609,9 @@ const TaskPage: React.FC = () => {
         if (contestId) {
             try {
                 await contestAPI.completeContest(parseInt(contestId));
-                navigate('/player');
+                showToast('Contest completed successfully!', 'success');
+                // Navigate to results page instead of dashboard
+                navigate(`/contest/${contestId}/results`);
             } catch (err: any) {
                 console.error('Failed to complete contest:', err);
                 showToast(`Failed to complete contest: ${err.message || 'Unknown error'}`, 'error');
@@ -1649,7 +1697,11 @@ const TaskPage: React.FC = () => {
                         isGeneratingSolution={isGeneratingSolution}
                         onAnalyze={handleAnalyze}
                         isAnalyzing={isAnalyzing}
-                        aiConfig={task?.aiConfig}
+                        aiConfig={{
+                            hintsEnabled: contestSettings?.aiHintsEnabled ?? true,
+                            hintThreshold: contestSettings?.hintUnlockAfterSubmissions ?? 0,
+                            solutionThreshold: 0 // Not implemented in contestSettings yet
+                        }}
                     />
                 )}
 
@@ -1914,7 +1966,7 @@ const TaskPage: React.FC = () => {
                 </div>
 
                 {/* Lockout Overlay */}
-                {contest?.fullScreenMode && showLockout && (
+                {contestSettings?.fullScreenModeEnabled && showLockout && (
                     <div style={{
                         position: 'fixed',
                         top: 0,
@@ -2097,7 +2149,7 @@ const TaskPage: React.FC = () => {
                 )}
 
                 {/* Initial Entry Modal */}
-                {contest?.fullScreenMode && !isFullscreen && !showLockout && (
+                {contestSettings?.fullScreenModeEnabled && !isFullscreen && !showLockout && (
                     <div style={{
                         position: 'fixed',
                         top: 0,

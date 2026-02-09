@@ -19,6 +19,7 @@ import {
 import { contestAPI } from '../../../../utils/api';
 import ContestSettings from './ContestSettings';
 import ActivityLogs from './ActivityLogs';
+import Monitor from './Monitor';
 
 interface ParticipantPerformance {
     id: number;
@@ -53,7 +54,7 @@ const ContestDetails: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeTab, setActiveTab] = useState<'overview' | 'settings' | 'activity'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'settings' | 'activity' | 'monitor'>('overview');
 
     useEffect(() => {
         loadContestDetails();
@@ -193,6 +194,12 @@ const ContestDetails: React.FC = () => {
                     label="Activity Logs"
                     active={activeTab === 'activity'}
                     onClick={() => setActiveTab('activity')}
+                />
+                <TabButton
+                    icon={<Eye size={18} />}
+                    label="Live Monitor"
+                    active={activeTab === 'monitor'}
+                    onClick={() => setActiveTab('monitor')}
                 />
             </div>
 
@@ -523,6 +530,11 @@ const ContestDetails: React.FC = () => {
             {/* Activity Logs Tab */}
             {activeTab === 'activity' && contest && (
                 <ActivityLogs contestId={contest.id} />
+            )}
+
+            {/* Monitor Tab */}
+            {activeTab === 'monitor' && contest && (
+                <Monitor contestId={contest.id} />
             )}
         </div>
     );
