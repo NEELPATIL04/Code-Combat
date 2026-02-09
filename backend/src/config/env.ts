@@ -14,7 +14,9 @@ function validateEnv() {
     'DB_PORT',
     'DB_NAME',
     'DB_USER',
-    'JWT_SECRET'
+    'DB_USER',
+    'JWT_SECRET',
+    'CORS_ORIGIN'
   ];
 
   // Find any missing variables
@@ -52,5 +54,5 @@ export const env = {
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '24h',
 
   // CORS allowed origin
-  CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  CORS_ORIGIN: process.env.CORS_ORIGIN!,
 } as const;

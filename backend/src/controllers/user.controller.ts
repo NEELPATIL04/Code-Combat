@@ -71,7 +71,7 @@ export const getAllUsers = async (_req: Request, res: Response, next: NextFuncti
 // Get current user profile
 export const getUserProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user.userId;
     const [user] = await db.select({
       id: users.id,
       username: users.username,
@@ -94,7 +94,7 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
 
 export const getUserContestHistory = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user.userId;
 
     const history = await db
       .select({
@@ -122,7 +122,7 @@ export const getUserContestHistory = async (req: Request, res: Response, next: N
 
 export const getUserContestDetails = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user.userId;
     const contestId = parseInt(req.params.contestId as string, 10);
 
     if (isNaN(contestId)) {
