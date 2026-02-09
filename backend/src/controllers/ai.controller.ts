@@ -258,11 +258,22 @@ import { groqService } from '../services/groq.service';
 export const generateCode = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { description, functionName, languages, inputFormat, outputFormat } = req.body;
-    const userId = (req as any).user.userId;
+    const userId = (req as any).user?.userId;
+
+    console.log('🎨 generateCode request:', {
+      userId,
+      functionName,
+      languages,
+      hasDescription: !!description,
+      hasInputFormat: !!inputFormat,
+      hasOutputFormat: !!outputFormat
+    });
 
     if (!description || !functionName || !languages || languages.length === 0) {
-      res.status(400).json({ message: 'Missing required fields' });
-      return;
+      return res.status(400).json({ 
+        success: false,
+        message: 'Missing required fields: description, functionName, and languages are required' 
+      });
     }
 
     const generatedCode = await groqService.generateTaskCode({
@@ -274,8 +285,12 @@ export const generateCode = async (req: Request, res: Response, next: NextFuncti
       userId // Pass userId for logging
     } as any);
 
-    res.json(generatedCode);
-  } catch (error) {
+    console.log('✅ Code generated successfully for languages:', Object.keys(generatedCode));
+
+    res.json({ success: true, ...generatedCode });
+  } catch (error: any) {
+    console.error('❌ generateCode error:', error.message);
+    console.error('Stack trace:', error.stack);
     next(error);
   }
 };

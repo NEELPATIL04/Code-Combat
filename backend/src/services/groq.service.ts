@@ -226,6 +226,8 @@ Respond with JSON: { "isValid": true/false, "suggestions": "improvement suggesti
     outputFormat?: string;
   }): Promise<Record<string, { boilerplate: string; driver: string }>> {
     try {
+      this.validateApiKey();
+      
       const prompt = `You are an expert coding interview platform architect building code for a Judge0 CE sandbox.
 
 Problem Description:
@@ -363,9 +365,13 @@ REMEMBER: Every driver MUST include {{USER_CODE}} as a literal placeholder strin
       }
 
       return parsed;
-    } catch (error) {
-      console.error('Error generating task code:', error);
-      throw error;
+    } catch (error: any) {
+      console.error('❌ Error generating task code:', error.message);
+      console.error('Stack trace:', error.stack);
+      if (error.message?.includes('GROQ_API_KEY')) {
+        throw new Error('AI code generation is not configured. Please contact the administrator.');
+      }
+      throw new Error(`Failed to generate code: ${error.message}`);
     }
   }
   /**
