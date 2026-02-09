@@ -106,8 +106,8 @@ const Monitor: React.FC<MonitorProps> = ({ contestId }) => {
                                 console.log('🖱️ Clicked on user:', p.userId);
                                 handleParticipantSelect(p);
                             }}
-                            style={{ 
-                                cursor: 'pointer', 
+                            style={{
+                                cursor: 'pointer',
                                 transition: 'transform 0.2s, box-shadow 0.2s'
                             }}
                             onMouseEnter={(e) => {
@@ -119,12 +119,21 @@ const Monitor: React.FC<MonitorProps> = ({ contestId }) => {
                                 e.currentTarget.style.boxShadow = 'none';
                             }}
                         >
-                            <VideoFeed
-                                socket={socket!}
-                                targetSocketId={p.socketId}
-                                userId={p.userId}
-                                isLarge={false}
-                            />
+                            <div style={{ height: '100%', minHeight: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1c1c1c', borderRadius: '8px' }}>
+                                {selectedParticipant?.socketId === p.socketId ? (
+                                    <div style={{ color: '#a1a1aa', fontSize: '0.875rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                        <MonitorIcon size={24} />
+                                        <span>Viewing in Modal...</span>
+                                    </div>
+                                ) : (
+                                    <VideoFeed
+                                        socket={socket!}
+                                        targetSocketId={p.socketId}
+                                        userId={p.userId}
+                                        isLarge={false}
+                                    />
+                                )}
+                            </div>
                         </div>
                     ))
                 )}

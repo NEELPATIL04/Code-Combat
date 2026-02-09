@@ -152,7 +152,7 @@ const Submissions: React.FC = () => {
         try {
             setResettingSubmissions(true);
             const token = sessionStorage.getItem('token');
-            const response = await fetch(`http://localhost:3000/api/submissions/task/${selectedTaskId}/user/${id}/reset`, {
+            const response = await fetch(`/api/submissions/task/${selectedTaskId}/user/${id}/reset`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`,

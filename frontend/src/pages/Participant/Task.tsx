@@ -864,7 +864,7 @@ const TaskPage: React.FC = () => {
 
         setIsGeneratingSolution(true);
         try {
-            const result = await aiAPI.getSolution(task.id);
+            const result = await aiAPI.getSolution(task.id, language);
             if (result.solution) {
                 setSolution(result.solution);
                 setShowSolutionModal(true);
@@ -875,7 +875,7 @@ const TaskPage: React.FC = () => {
         } finally {
             setIsGeneratingSolution(false);
         }
-    }, [task, showToast]);
+    }, [task, language, showToast]);
 
     const handleAnalyze = useCallback(async () => {
         if (!task) return;

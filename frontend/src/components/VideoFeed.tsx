@@ -3,7 +3,7 @@ import { User, Monitor, Maximize2 } from 'lucide-react';
 import { Socket } from 'socket.io-client';
 
 interface VideoFeedProps {
-    socket:  Socket;
+    socket: Socket;
     targetSocketId: string;
     userId: string;
     isLarge?: boolean;
@@ -15,6 +15,7 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
     const peerConnection = useRef<RTCPeerConnection | null>(null);
     const videoStreamCount = useRef<number>(0);
     const [connectionState, setConnectionState] = useState<string>('connecting');
+    const [isHovered, setIsHovered] = useState(false);
 
     useEffect(() => {
         const setupConnection = async () => {
@@ -44,9 +45,9 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
                     // First video stream = Camera, Second video stream = Screen share
                     videoStreamCount.current += 1;
                     const streamIndex = videoStreamCount.current;
-                    
+
                     console.log(`🎬 Video stream #${streamIndex} received in VideoFeed`);
-                    
+
                     if (streamIndex === 1) {
                         // First video stream is camera
                         console.log('📷 Stream #1 → Setting to CAMERA');
@@ -108,15 +109,18 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
     }, [socket, targetSocketId]);
 
     return (
-        <div style={{
-            background: '#18181b',
-            borderRadius: '8px',
-            overflow: 'hidden',
-            border: '1px solid #27272a',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column'
-        }}>
+        <div
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            style={{
+                background: '#18181b',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                border: '1px solid #27272a',
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column'
+            }}>
             <div style={{ padding: '8px 12px', borderBottom: '1px solid #27272a', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#fafafa' }}>User: {userId}</span>
                 <span style={{ fontSize: '0.75rem', color: connectionState === 'connected' ? '#22c55e' : '#eab308' }}>
@@ -142,23 +146,23 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
             </div>
 
             {/* Click to expand indicator */}
-            <div style={{
-                position: 'absolute',
-                top: '44px',
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: 'rgba(0, 0, 0, 0)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: 0,
-                transition: 'opacity 0.2s, background 0.2s',
-                pointerEvents: 'none',
-                zIndex: 10
-            }} 
-            className="video-feed-overlay"
-            id={`overlay-${targetSocketId}`}>
+            <div
+                style={{
+                    position: 'absolute',
+                    top: '44px',
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: isHovered ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: isHovered ? 1 : 0,
+                    transition: 'opacity 0.2s, background 0.2s',
+                    pointerEvents: 'none',
+                    zIndex: 10
+                }}
+            >
                 <div style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -173,13 +177,6 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
                     <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#fafafa' }}>Click to expand</span>
                 </div>
             </div>
-
-            <style>{`
-                #overlay-${targetSocketId}:hover {
-                    opacity: 1 !important;
-                    background: rgba(0, 0, 0, 0.4) !important;
-                }
-            `}</style>
         </div>
     );
 };

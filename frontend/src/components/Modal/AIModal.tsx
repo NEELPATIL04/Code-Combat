@@ -113,7 +113,8 @@ const AIModal: React.FC<AIModalProps> = ({
                     border: `1px solid ${config.contentBorder}`,
                     borderRadius: 12,
                     width: '100%',
-                    maxWidth: type === 'solution' ? 800 : type === 'evaluation' ? 700 : 600,
+                    maxWidth: type === 'solution' ? 1000 : type === 'evaluation' ? 700 : 600,
+                    height: type === 'solution' ? '85vh' : 'auto',
                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
                     overflow: 'hidden',
                     display: 'flex',
@@ -182,24 +183,32 @@ const AIModal: React.FC<AIModalProps> = ({
                         overflow: 'hidden',
                         display: 'flex',
                         flexDirection: 'column',
+                        minHeight: type === 'solution' ? 400 : 200,
                     }}
                 >
                     {type === 'solution' ? (
-                        <Editor
-                            height="100%"
-                            language={language}
-                            value={content}
-                            options={{
-                                readOnly: true,
-                                minimap: { enabled: false },
-                                fontSize: 14,
-                                lineNumbers: 'on',
-                                scrollBeyondLastLine: false,
-                                automaticLayout: true,
-                                theme: 'vs-dark',
-                                fontFamily: "'JetBrains Mono', monospace",
-                            }}
-                        />
+                        <div style={{ height: '100%', minHeight: 400 }}>
+                            <Editor
+                                height="100%"
+                                language={language}
+                                value={content}
+                                options={{
+                                    readOnly: true,
+                                    minimap: { enabled: false },
+                                    fontSize: 14,
+                                    lineNumbers: 'on',
+                                    scrollBeyondLastLine: false,
+                                    automaticLayout: true,
+                                    theme: 'vs-dark',
+                                    fontFamily: "'JetBrains Mono', monospace",
+                                    wordWrap: 'on',
+                                    scrollbar: {
+                                        vertical: 'visible',
+                                        horizontal: 'visible',
+                                    },
+                                }}
+                            />
+                        </div>
                     ) : (
                         <div
                             style={{

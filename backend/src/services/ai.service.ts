@@ -12,6 +12,12 @@ export class AIService {
     private gemini: GoogleGenerativeAI;
 
     constructor() {
+        if (!GROQ_API_KEY) {
+            console.warn('⚠️  GROQ_HINT_API_KEY not configured. AI hints will use Gemini fallback.');
+        }
+        if (!GEMINI_API_KEY) {
+            console.warn('⚠️  GEMINI_API_KEY not configured. AI features may not work properly.');
+        }
         this.groq = new Groq({ apiKey: GROQ_API_KEY });
         this.gemini = new GoogleGenerativeAI(GEMINI_API_KEY);
     }
@@ -47,10 +53,16 @@ export class AIService {
 
         const meta = { userId, taskId, contestId, purpose: 'hint' };
         try {
+            console.log(`🤖 Generating hint for user ${userId}, task ${taskId}`);
             return await this.callGroq(prompt, false, meta);
-        } catch (error) {
-            console.warn('Groq hint generation failed, falling back to Gemini:', error);
-            return await this.callGemini(prompt, false, meta);
+        } catch (error: any) {
+            console.warn('⚠️  Groq hint generation failed, falling back to Gemini:', error.message);
+            try {
+                return await this.callGemini(prompt, false, meta);
+            } catch (fallbackError: any) {
+                console.error('❌ Both Groq and Gemini hint generation failed:', fallbackError.message);
+                throw new Error('AI hint generation failed. Please try again later.');
+            }
         }
     }
 
@@ -65,22 +77,69 @@ export class AIService {
         contestId?: number
     ): Promise<string> {
         const prompt = `
-      You are an expert programmer. Please provide a correct and efficient solution for the following problem.
-      
-      Problem Description:
-      ${problemDescription}
-      
-      Language: ${language}
-      
-      Provide ONLY the code solution. No markdown, no explanations. Just the raw code that can be executed.
+You are an expert programmer. Provide a complete, working solution for the following coding problem.
+
+Problem Description:
+${problemDescription}
+
+Programming Language: ${language}
+
+Requirements:
+1. Write complete, executable code in ${language}
+2. Include all necessary imports/includes
+3. Implement the full solution, not just boilerplate
+4. Handle edge cases appropriately
+5. Use efficient algorithms
+6. Add brief inline comments for complex logic
+
+Output Format:
+- Provide ONLY the code, no markdown formatting
+- No explanations before or after the code
+- No \`\`\` code blocks
+- Just the raw, executable code
     `;
 
         const meta = { userId, taskId, contestId, purpose: 'solution' };
         try {
-            return await this.callGroq(prompt, false, meta);
-        } catch (error) {
-            console.warn('Groq solution generation failed, falling back to Gemini:', error);
-            return await this.callGemini(prompt, false, meta);
+            console.log(`🤖 Generating solution for user ${userId}, task ${taskId}, language: ${language}`);
+            console.log(`📝 Problem description length: ${problemDescription?.length || 0} characters`);
+            console.log(`📝 Problem description preview: ${problemDescription?.substring(0, 200) || 'EMPTY'}...`);
+
+            const rawSolution = await this.callGroq(prompt, false, meta);
+
+            // Clean up the response - remove markdown code blocks if present
+            let cleanedSolution = rawSolution.trim();
+
+            // Remove markdown code blocks (```language ... ```)
+            const codeBlockRegex = /```[\w]*\n?([\s\S]*?)```/g;
+            const match = codeBlockRegex.exec(cleanedSolution);
+            if (match) {
+                cleanedSolution = match[1].trim();
+            }
+
+            console.log(`✅ Generated solution length: ${cleanedSolution.length} characters`);
+            return cleanedSolution;
+        } catch (error: any) {
+            console.warn('⚠️  Groq solution generation failed, falling back to Gemini:', error.message);
+            try {
+                const rawSolution = await this.callGemini(prompt, false, meta);
+
+                // Clean up the response - remove markdown code blocks if present
+                let cleanedSolution = rawSolution.trim();
+
+                // Remove markdown code blocks (```language ... ```)
+                const codeBlockRegex = /```[\w]*\n?([\s\S]*?)```/g;
+                const match = codeBlockRegex.exec(cleanedSolution);
+                if (match) {
+                    cleanedSolution = match[1].trim();
+                }
+
+                console.log(`✅ Generated solution (Gemini) length: ${cleanedSolution.length} characters`);
+                return cleanedSolution;
+            } catch (fallbackError: any) {
+                console.error('❌ Both Groq and Gemini solution generation failed:', fallbackError.message);
+                throw new Error('AI solution generation failed. Please try again later.');
+            }
         }
     }
 
@@ -134,64 +193,90 @@ export class AIService {
     }
 
     private async callGroq(prompt: string, jsonMode = false, meta?: { userId?: number; contestId?: number; taskId?: number; purpose: string }): Promise<string> {
-        const model = 'llama-3.3-70b-versatile';
-        const chatCompletion = await this.groq.chat.completions.create({
-            messages: [{ role: 'user', content: prompt }],
-            model,
-            temperature: 0.7,
-            max_tokens: 1024,
-            response_format: jsonMode ? { type: 'json_object' } : { type: 'text' },
-        });
-
-        const content = chatCompletion.choices[0]?.message?.content || '';
-
-        // Log usage asynchronously
-        if (meta) {
-            import('../config/database').then(({ db }) => {
-                import('../db/schema').then(({ aiUsageLogs }) => {
-                    db.insert(aiUsageLogs).values({
-                        provider: 'groq',
-                        model,
-                        purpose: meta.purpose,
-                        tokensUsed: chatCompletion.usage?.total_tokens || 0,
-                        userId: meta.userId,
-                        contestId: meta.contestId,
-                        taskId: meta.taskId,
-                    }).catch(err => console.error('Failed to log AI usage:', err));
-                });
-            });
+        if (!GROQ_API_KEY) {
+            throw new Error('GROQ_HINT_API_KEY is not configured');
         }
 
-        return content;
+        try {
+            const model = 'llama-3.3-70b-versatile';
+            const chatCompletion = await this.groq.chat.completions.create({
+                messages: [{ role: 'user', content: prompt }],
+                model,
+                temperature: 0.7,
+                max_tokens: 1024,
+                response_format: jsonMode ? { type: 'json_object' } : { type: 'text' },
+            });
+
+            const content = chatCompletion.choices[0]?.message?.content || '';
+
+            if (!content) {
+                throw new Error('Groq returned empty response');
+            }
+
+            // Log usage asynchronously
+            if (meta) {
+                import('../config/database').then(({ db }) => {
+                    import('../db/schema').then(({ aiUsageLogs }) => {
+                        db.insert(aiUsageLogs).values({
+                            provider: 'groq',
+                            model,
+                            purpose: meta.purpose,
+                            tokensUsed: chatCompletion.usage?.total_tokens || 0,
+                            userId: meta.userId,
+                            contestId: meta.contestId,
+                            taskId: meta.taskId,
+                        }).catch(err => console.error('Failed to log AI usage:', err));
+                    });
+                });
+            }
+
+            return content;
+        } catch (error: any) {
+            console.error('❌ Groq API error:', error.message);
+            throw new Error(`Groq API failed: ${error.message}`);
+        }
     }
 
     private async callGemini(prompt: string, _jsonMode = false, meta?: { userId?: number; contestId?: number; taskId?: number; purpose: string }): Promise<string> {
-        const modelName = 'gemini-pro';
-        const model = this.gemini.getGenerativeModel({ model: modelName });
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
-
-        // Log usage asynchronously
-        if (meta) {
-            import('../config/database').then(({ db }) => {
-                import('../db/schema').then(({ aiUsageLogs }) => {
-                    // Estimate tokens (approx 4 chars per token)
-                    const estimatedTokens = Math.ceil((prompt.length + text.length) / 4);
-                    db.insert(aiUsageLogs).values({
-                        provider: 'gemini',
-                        model: modelName,
-                        purpose: meta.purpose,
-                        tokensUsed: estimatedTokens,
-                        userId: meta.userId,
-                        contestId: meta.contestId,
-                        taskId: meta.taskId,
-                    }).catch(err => console.error('Failed to log AI usage:', err));
-                });
-            });
+        if (!GEMINI_API_KEY) {
+            throw new Error('GEMINI_API_KEY is not configured');
         }
 
-        return text;
+        try {
+            const modelName = 'gemini-pro';
+            const model = this.gemini.getGenerativeModel({ model: modelName });
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const text = response.text();
+
+            if (!text) {
+                throw new Error('Gemini returned empty response');
+            }
+
+            // Log usage asynchronously
+            if (meta) {
+                import('../config/database').then(({ db }) => {
+                    import('../db/schema').then(({ aiUsageLogs }) => {
+                        // Estimate tokens (approx 4 chars per token)
+                        const estimatedTokens = Math.ceil((prompt.length + text.length) / 4);
+                        db.insert(aiUsageLogs).values({
+                            provider: 'gemini',
+                            model: modelName,
+                            purpose: meta.purpose,
+                            tokensUsed: estimatedTokens,
+                            userId: meta.userId,
+                            contestId: meta.contestId,
+                            taskId: meta.taskId,
+                        }).catch(err => console.error('Failed to log AI usage:', err));
+                    });
+                });
+            }
+
+            return text;
+        } catch (error: any) {
+            console.error('❌ Gemini API error:', error.message);
+            throw new Error(`Gemini API failed: ${error.message}`);
+        }
     }
 }
 

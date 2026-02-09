@@ -8,11 +8,36 @@ import { eq, and, count, sql } from 'drizzle-orm';
 export const getHint = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { taskId, userCode, language, errorLogs } = req.body;
-    const userId = (req as any).user.id;
+    const userId = (req as any).user.userId;
+
+    console.log(`📝 AI Hint request - User: ${userId}, Task: ${taskId}, Language: ${language}`);
+    console.log(`📝 Request body:`, JSON.stringify(req.body, null, 2));
+
+    // Validate required fields
+    if (!taskId) {
+      res.status(400).json({ message: 'taskId is required' });
+      return;
+    }
+    if (!userCode) {
+      res.status(400).json({ message: 'userCode is required' });
+      return;
+    }
+    if (!language) {
+      res.status(400).json({ message: 'language is required' });
+      return;
+    }
+
+    // Parse taskId to integer
+    const taskIdInt = typeof taskId === 'string' ? parseInt(taskId, 10) : taskId;
+    if (isNaN(taskIdInt)) {
+      res.status(400).json({ message: 'Invalid taskId format' });
+      return;
+    }
 
     // Fetch task to get contest ID
-    const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId));
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, taskIdInt));
     if (!task) {
+      console.error(`❌ Task ${taskId} not found for hint request`);
       res.status(404).json({ message: 'Task not found' });
       return;
     }
@@ -37,10 +62,13 @@ export const getHint = async (req: Request, res: Response, next: NextFunction) =
     const [progress] = await db
       .select()
       .from(userTaskProgress)
-      .where(and(eq(userTaskProgress.userId, userId), eq(userTaskProgress.taskId, taskId)));
+      .where(and(eq(userTaskProgress.userId, userId), eq(userTaskProgress.taskId, taskIdInt)));
 
     const hintsUsed = progress?.hintsUnlocked || 0;
+    console.log(`📊 User has used ${hintsUsed} hints, max allowed: ${maxHintsAllowed}`);
+
     if (maxHintsAllowed > 0 && hintsUsed >= maxHintsAllowed) {
+      console.log(`⛔ User reached max hints limit`);
       res.status(403).json({ message: `You have reached the maximum of ${maxHintsAllowed} hints for this task` });
       return;
     }
@@ -50,10 +78,13 @@ export const getHint = async (req: Request, res: Response, next: NextFunction) =
       const [submissionCount] = await db
         .select({ count: count() })
         .from(submissions)
-        .where(and(eq(submissions.taskId, taskId), eq(submissions.userId, userId)));
+        .where(and(eq(submissions.taskId, taskIdInt), eq(submissions.userId, userId)));
 
-      const currentCount = submissionCount?.count || 0;
+      const currentCount = Number(submissionCount?.count || 0);
+      console.log(`📊 User has ${currentCount} submissions, required: ${hintUnlockAfterSubmissions}`);
+
       if (currentCount < hintUnlockAfterSubmissions) {
+        console.log(`⛔ User needs ${hintUnlockAfterSubmissions - currentCount} more submissions`);
         res.status(403).json({
           message: `You need ${hintUnlockAfterSubmissions - currentCount} more submission(s) to unlock hints`
         });
@@ -67,28 +98,39 @@ export const getHint = async (req: Request, res: Response, next: NextFunction) =
       language,
       errorLogs,
       userId,
-      parseInt(taskId),
+      taskIdInt,
       req.body.contestId ? parseInt(req.body.contestId) : undefined
     );
 
-    // Track hint usage
-    await db.insert(userTaskProgress)
-      .values({
-        userId,
-        taskId,
-        hintsUnlocked: 1,
-        updatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: [userTaskProgress.userId, userTaskProgress.taskId],
-        set: {
-          hintsUnlocked: sql`${userTaskProgress.hintsUnlocked} + 1`,
-          updatedAt: new Date(),
-        },
-      });
+    // Track hint usage (reuse progress variable from earlier check)
+    console.log(`📊 Tracking hint usage - userId: ${userId}, taskId: ${taskIdInt}`);
 
+    if (progress) {
+      // Update existing record
+      await db
+        .update(userTaskProgress)
+        .set({
+          hintsUnlocked: (progress.hintsUnlocked || 0) + 1,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(userTaskProgress.userId, userId), eq(userTaskProgress.taskId, taskIdInt)));
+      console.log(`✅ Updated hints count to ${(progress.hintsUnlocked || 0) + 1}`);
+    } else {
+      // Insert new record
+      await db.insert(userTaskProgress).values({
+        userId: userId,
+        taskId: taskIdInt,
+        hintsUnlocked: 1,
+        solutionUnlocked: false,
+        updatedAt: new Date(),
+      });
+      console.log(`✅ Created new progress record with 1 hint`);
+    }
+
+    console.log(`✅ Hint generated successfully for user ${userId}, task ${taskIdInt}`);
     res.json({ hint });
   } catch (error) {
+    console.error(`❌ Error generating hint:`, error);
     next(error);
   }
 };
@@ -96,13 +138,38 @@ export const getHint = async (req: Request, res: Response, next: NextFunction) =
 export const getSolution = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { taskId, language } = req.body;
-    const userId = (req as any).user.id;
+    const userId = (req as any).user.userId;
 
-    const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId));
+    console.log(`📝 AI Solution request - User: ${userId}, Task: ${taskId}, Language: ${language}`);
+    console.log(`📝 Request body:`, JSON.stringify(req.body, null, 2));
+
+    // Validate required fields
+    if (!taskId) {
+      res.status(400).json({ message: 'taskId is required' });
+      return;
+    }
+    if (!language) {
+      console.error(`❌ Missing language parameter for solution request`);
+      res.status(400).json({ message: 'Language parameter is required' });
+      return;
+    }
+
+    // Parse taskId to integer
+    const taskIdInt = typeof taskId === 'string' ? parseInt(taskId, 10) : taskId;
+    if (isNaN(taskIdInt)) {
+      res.status(400).json({ message: 'Invalid taskId format' });
+      return;
+    }
+
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, taskIdInt));
     if (!task) {
+      console.error(`❌ Task ${taskId} not found for solution request`);
       res.status(404).json({ message: 'Task not found' });
       return;
     }
+
+    console.log(`📋 Task found: "${task.title}"`);
+    console.log(`📋 Description length: ${task.description?.length || 0} characters`);
 
     // Fetch contest settings instead of task.aiConfig
     const [settings] = await db
@@ -125,28 +192,43 @@ export const getSolution = async (req: Request, res: Response, next: NextFunctio
       task.description,
       language || 'javascript',
       userId,
-      parseInt(taskId),
+      taskIdInt,
       req.body.contestId ? parseInt(req.body.contestId) : undefined
     );
 
     // Track solution usage
-    await db.insert(userTaskProgress)
-      .values({
-        userId,
-        taskId,
-        solutionUnlocked: true,
-        updatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: [userTaskProgress.userId, userTaskProgress.taskId],
-        set: {
+    console.log(`📊 Tracking solution usage - userId: ${userId}, taskId: ${taskIdInt}`);
+
+    // Check if record exists
+    const [existingProgress] = await db
+      .select()
+      .from(userTaskProgress)
+      .where(and(eq(userTaskProgress.userId, userId), eq(userTaskProgress.taskId, taskIdInt)));
+
+    if (existingProgress) {
+      // Update existing record
+      await db
+        .update(userTaskProgress)
+        .set({
           solutionUnlocked: true,
           updatedAt: new Date(),
-        },
+        })
+        .where(and(eq(userTaskProgress.userId, userId), eq(userTaskProgress.taskId, taskIdInt)));
+    } else {
+      // Insert new record
+      await db.insert(userTaskProgress).values({
+        userId: userId,
+        taskId: taskIdInt,
+        hintsUnlocked: 0,
+        solutionUnlocked: true,
+        updatedAt: new Date(),
       });
+    }
 
+    console.log(`✅ Solution generated successfully for user ${userId}, task ${taskIdInt}`);
     res.json({ solution });
   } catch (error) {
+    console.error(`❌ Error generating solution:`, error);
     next(error);
   }
 };
@@ -176,7 +258,7 @@ import { groqService } from '../services/groq.service';
 export const generateCode = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { description, functionName, languages, inputFormat, outputFormat } = req.body;
-    const userId = (req as any).user.id;
+    const userId = (req as any).user.userId;
 
     if (!description || !functionName || !languages || languages.length === 0) {
       res.status(400).json({ message: 'Missing required fields' });
@@ -201,7 +283,7 @@ export const generateCode = async (req: Request, res: Response, next: NextFuncti
 export const generateTestCases = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { description, boilerplateCode, wrapperCode, functionName, language, numberOfTestCases } = req.body;
-    const userId = (req as any).user.id;
+    const userId = (req as any).user.userId;
 
     console.log('🧪 generateTestCases request:', {
       userId,

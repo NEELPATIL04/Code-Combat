@@ -412,11 +412,11 @@ export const aiAPI = {
   },
 
   // Get full solution
-  getSolution: async (taskId: number) => {
+  getSolution: async (taskId: number, language: string) => {
     const response = await fetch(`${API_BASE_URL}/ai/solution`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ taskId }),
+      body: JSON.stringify({ taskId, language }),
     });
     return handleResponse(response);
   },

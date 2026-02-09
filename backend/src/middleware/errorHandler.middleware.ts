@@ -19,17 +19,26 @@ import { env } from '../config/env';
  */
 export const errorHandler = (
   err: any,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction
 ) => {
   // Log error details for debugging
-  console.error('Error occurred:', err);
+  console.error('❌ Error occurred in:', req.method, req.path);
+  console.error('❌ Error details:', err);
+  console.error('❌ Stack trace:', err.stack);
+
+  // Determine status code
+  const statusCode = err.statusCode || err.status || 500;
 
   // Send error response to client
-  res.status(500).json({
-    message: 'Internal server error',
-    // Only show error details in development mode (not in production)
-    error: env.NODE_ENV === 'development' ? err.message : undefined,
+  res.status(statusCode).json({
+    message: err.message || 'Internal server error',
+    // Show error details in development mode
+    ...(env.NODE_ENV === 'development' && {
+      error: err.message,
+      stack: err.stack,
+      details: err.details || undefined,
+    }),
   });
 }
