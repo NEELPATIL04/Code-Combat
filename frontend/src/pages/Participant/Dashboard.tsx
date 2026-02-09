@@ -114,15 +114,22 @@ const ParticipantDashboard: React.FC = () => {
     };
 
     const handleStartContest = (contest: Contest) => {
+        // Allow completed contests to be viewed in review mode
+        if (contest.status === 'completed') {
+            navigate(`/contest/${contest.id}?mode=review`);
+            return;
+        }
+
+        // Allow expired contests (ended) to be viewed in expired mode
+        if (contest.endTime && new Date(contest.endTime) < currentTime) {
+            navigate(`/contest/${contest.id}?mode=expired`);
+            return;
+        }
+
         if (!isContestOpen(contest)) {
             // If it's closed because it hasn't started yet
             if (contest.scheduledStartTime && new Date(contest.scheduledStartTime) > currentTime) {
                 alert(`Contest starts in ${formatCountdown(contest.scheduledStartTime)}`);
-                return;
-            }
-            // If it's closed because it ended
-            if (contest.endTime && new Date(contest.endTime) < currentTime) {
-                alert('This contest has ended.');
                 return;
             }
 
@@ -130,11 +137,6 @@ const ParticipantDashboard: React.FC = () => {
                 alert('This contest has not been started yet. Please wait for the admin to start it.');
                 return;
             }
-        }
-
-        if (contest.status === 'completed') {
-            alert('You have already completed this contest.');
-            return;
         }
 
         if (contest.startPassword && !contest.isStarted) {
@@ -201,6 +203,20 @@ const ParticipantDashboard: React.FC = () => {
             alignItems: 'center',
             gap: '4px'
         };
+
+        // Completed contests
+        if (contest.status === 'completed') {
+            return (
+                <span style={{
+                    ...baseStyle,
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    color: '#34d399',
+                    border: '1px solid rgba(16, 185, 129, 0.3)'
+                }}>
+                    ✓ Completed
+                </span>
+            );
+        }
 
         if (contest.isStarted) {
             return (

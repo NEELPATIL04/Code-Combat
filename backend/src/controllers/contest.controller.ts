@@ -833,8 +833,8 @@ export const getContestTasks = async (req: Request, res: Response, next: NextFun
 
     const settings = settingsRow;
 
-    // Mark participant as started if not already
-    if (userId && participant && !participant.hasStarted) {
+    // Mark participant as started if not already (skip for already-completed participants in review mode)
+    if (userId && participant && !participant.hasStarted && !participant.completedAt) {
       await db
         .update(contestParticipants)
         .set({

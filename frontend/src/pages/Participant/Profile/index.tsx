@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Trophy,
     Calendar,
@@ -24,6 +25,7 @@ interface ContestHistory {
 
 const ProfilePage: React.FC = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [history, setHistory] = useState<ContestHistory[]>([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
@@ -406,6 +408,7 @@ const ProfilePage: React.FC = () => {
                             {history.map((contest, index) => (
                                 <div
                                     key={contest.id}
+                                    onClick={() => navigate(`/contest/${contest.id}?mode=review`)}
                                     style={{
                                         padding: '16px 24px',
                                         borderBottom: index !== history.length - 1 ? '1px solid rgba(255, 255, 255, 0.04)' : 'none',
@@ -413,13 +416,16 @@ const ProfilePage: React.FC = () => {
                                         justifyContent: 'space-between',
                                         alignItems: 'center',
                                         transition: 'all 0.15s ease',
-                                        background: 'transparent'
+                                        background: 'transparent',
+                                        cursor: 'pointer'
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                                        e.currentTarget.style.background = 'rgba(253, 230, 138, 0.03)';
+                                        e.currentTarget.style.borderLeftColor = '#FDE68A';
                                     }}
                                     onMouseLeave={(e) => {
                                         e.currentTarget.style.background = 'transparent';
+                                        e.currentTarget.style.borderLeftColor = 'transparent';
                                     }}
                                 >
                                     <div style={{ flex: 1 }}>

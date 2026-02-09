@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Play, Send, XCircle, Clock, ChevronRight, Check, X, GripHorizontal, Minimize2, Lightbulb, Brain, Unlock, Lock, MessageSquare, CheckCircle2, Pause, StopCircle } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import MediaCheckHelper from '../../components/MediaCheckHelper';
@@ -102,6 +102,7 @@ interface MemoizedCodeEditorProps {
     aiModeEnabled: boolean;
     allowCopyPaste?: boolean;
     onCopyPasteAttempt?: (type: 'copy' | 'paste' | 'cut') => void;
+    readOnly?: boolean;
 }
 
 // Memoized Code Editor component to prevent re-renders
@@ -128,6 +129,7 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
     aiModeEnabled,
     allowCopyPaste = true,
     onCopyPasteAttempt,
+    readOnly = false,
 }) => {
     // Lock/unlock state — only lock when there's a real positive threshold
     const hintThreshold = Number(hintUnlockAfterSubmissions) || 0;
@@ -170,7 +172,8 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
         padding: { top: 12 },
         fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",
         fontLigatures: true,
-    }), []);
+        readOnly: readOnly,
+    }), [readOnly]);
 
     return (
         <>
@@ -370,22 +373,32 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
                         {isAnalyzing ? 'Analyzing...' : 'AI Feedback'}
                     </button>
                 )}
-                <button
-                    onClick={onRun}
-                    disabled={isRunning}
-                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'transparent', border: '1px solid rgba(255, 255, 255, 0.15)', borderRadius: 6, color: 'rgba(255, 255, 255, 0.8)', fontSize: 13, cursor: isRunning ? 'not-allowed' : 'pointer', opacity: isRunning ? 0.6 : 1 }}
-                >
-                    <Play size={14} />
-                    {isRunning ? 'Running...' : 'Run'}
-                </button>
-                <button
-                    onClick={onSubmit}
-                    disabled={isRunning}
-                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 6, color: '#34d399', fontSize: 13, fontWeight: 500, cursor: isRunning ? 'not-allowed' : 'pointer', opacity: isRunning ? 0.6 : 1 }}
-                >
-                    <Send size={14} />
-                    Submit
-                </button>
+                {!readOnly && (
+                    <>
+                        <button
+                            onClick={onRun}
+                            disabled={isRunning}
+                            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'transparent', border: '1px solid rgba(255, 255, 255, 0.15)', borderRadius: 6, color: 'rgba(255, 255, 255, 0.8)', fontSize: 13, cursor: isRunning ? 'not-allowed' : 'pointer', opacity: isRunning ? 0.6 : 1 }}
+                        >
+                            <Play size={14} />
+                            {isRunning ? 'Running...' : 'Run'}
+                        </button>
+                        <button
+                            onClick={onSubmit}
+                            disabled={isRunning}
+                            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 6, color: '#34d399', fontSize: 13, fontWeight: 500, cursor: isRunning ? 'not-allowed' : 'pointer', opacity: isRunning ? 0.6 : 1 }}
+                        >
+                            <Send size={14} />
+                            Submit
+                        </button>
+                    </>
+                )}
+                {readOnly && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: 6, color: 'rgba(255, 255, 255, 0.4)', fontSize: 13 }}>
+                        <Lock size={14} />
+                        Read Only
+                    </div>
+                )}
             </div>
         </>
     );
@@ -404,6 +417,7 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
         prevProps.hintUnlockAfterSubmissions === nextProps.hintUnlockAfterSubmissions &&
         prevProps.solutionUnlockAfterSubmissions === nextProps.solutionUnlockAfterSubmissions &&
         prevProps.aiModeEnabled === nextProps.aiModeEnabled &&
+        prevProps.readOnly === nextProps.readOnly &&
         JSON.stringify(prevProps.allowedLanguages) === JSON.stringify(nextProps.allowedLanguages) &&
         JSON.stringify(prevProps.aiConfig) === JSON.stringify(nextProps.aiConfig)
     );
@@ -811,6 +825,10 @@ const TaskPage: React.FC = () => {
     const navigate = useNavigate();
     const { showToast } = useToast();
     const { id: contestId } = useParams<{ id: string }>();
+    const [searchParams] = useSearchParams();
+    const mode = searchParams.get('mode'); // 'review' or 'expired'
+    const isReviewMode = mode === 'review' || mode === 'expired';
+    const isExpiredMode = mode === 'expired';
 
     // Data state
     const [task, setTask] = useState<Task | null>(null);
@@ -1058,6 +1076,9 @@ const TaskPage: React.FC = () => {
 
     // Socket listeners for contest state changes (pause/resume/end)
     useEffect(() => {
+        // Skip socket listeners in review mode
+        if (isReviewMode) return;
+
         if (!socket || !contestId) {
             console.log('⏸️ Pause listeners not ready:', { socket: !!socket, contestId });
             return;
@@ -1364,6 +1385,9 @@ const TaskPage: React.FC = () => {
 
     // Effect for keyboard shortcuts, navigation lockdown, and activity logging
     useEffect(() => {
+        // Skip all lockdown in review mode
+        if (isReviewMode) return;
+
         // Only enable fullscreen lockdown if contest requires it
         const isFullScreenEnabled = contestSettings?.fullScreenModeEnabled;
 
@@ -1601,7 +1625,7 @@ const TaskPage: React.FC = () => {
                     }
 
                     // Check contest state on load (for pause/end persistence)
-                    if (data.contest) {
+                    if (data.contest && !isReviewMode) {
                         console.log('🔍 Contest state on load:', data.contest.contestState);
                         if (data.contest.contestState === 'paused') {
                             setContestPaused(true);
@@ -1763,11 +1787,12 @@ const TaskPage: React.FC = () => {
         }
     }, [task, contestId]);
 
-    // Timer countdown
+    // Timer countdown (skip in review mode)
     useEffect(() => {
+        if (isReviewMode) return;
         const interval = setInterval(() => setTime(prev => prev > 0 ? prev - 1 : 0), 1000);
         return () => clearInterval(interval);
-    }, []);
+    }, [isReviewMode]);
 
     // Auto-save code and language to localStorage
     useEffect(() => {
@@ -1884,6 +1909,7 @@ const TaskPage: React.FC = () => {
     }, [updateCodeState]);
 
     const handleRun = useCallback(async () => {
+        if (isReviewMode) return;
         const currentCode = codeRef.current;
         console.log('Running code against test cases...');
         setIsRunning(true);
@@ -1935,6 +1961,7 @@ const TaskPage: React.FC = () => {
     }, [language, task]);
 
     const handleSubmit = useCallback(async () => {
+        if (isReviewMode) return;
         const currentCode = codeRef.current;
         console.log('Submitting code solution...');
 
@@ -2169,6 +2196,7 @@ const TaskPage: React.FC = () => {
                         aiModeEnabled={contestSettings?.aiModeEnabled ?? true}
                         allowCopyPaste={contestSettings?.allowCopyPaste ?? false}
                         onCopyPasteAttempt={handleCopyPasteAttempt}
+                        readOnly={isReviewMode}
                     />
                 )}
 
@@ -2206,7 +2234,7 @@ const TaskPage: React.FC = () => {
         );
     }
 
-    if (!mediaVerified && contestSettings) {
+    if (!mediaVerified && !isReviewMode && contestSettings) {
         return (
             <div style={{ minHeight: '100vh', background: '#0a0a0b', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif" }}>
                 <MediaCheckHelper
@@ -2222,7 +2250,7 @@ const TaskPage: React.FC = () => {
                 />
             </div>
         );
-    } else if (!mediaVerified && !contestSettings) {
+    } else if (!mediaVerified && !isReviewMode && !contestSettings) {
         if (settingsError) {
             return (
                 <div style={{ minHeight: '100vh', background: '#0a0a0b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif" }}>
@@ -2266,6 +2294,43 @@ const TaskPage: React.FC = () => {
                     <span style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.6)' }}>{task.title}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {isReviewMode ? (
+                        <>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', background: isExpiredMode ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)', border: `1px solid ${isExpiredMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(59, 130, 246, 0.2)'}`, borderRadius: 6 }}>
+                                <Lock size={12} style={{ color: isExpiredMode ? '#f87171' : '#60a5fa' }} />
+                                <span style={{ fontSize: 12, fontWeight: 600, color: isExpiredMode ? '#f87171' : '#60a5fa' }}>
+                                    {isExpiredMode ? 'Expired — Read Only' : 'Review Mode — Read Only'}
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => navigate('/player')}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    padding: '6px 14px',
+                                    background: 'rgba(255, 255, 255, 0.05)',
+                                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                                    borderRadius: 6,
+                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    whiteSpace: 'nowrap'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                                }}
+                            >
+                                ← Back to Dashboard
+                            </button>
+                        </>
+                    ) : (
+                        <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', background: 'rgba(253, 230, 138, 0.1)', border: '1px solid rgba(253, 230, 138, 0.2)', borderRadius: 6 }}>
                         <Clock size={12} style={{ color: '#FDE68A' }} />
                         <span style={{ fontSize: 12, fontWeight: 600, color: '#FDE68A', fontFamily: 'monospace' }}>{formatTime(time)}</span>
@@ -2365,6 +2430,8 @@ const TaskPage: React.FC = () => {
                                 <XCircle size={14} />
                                 Finish and Exit
                             </button>
+                        </>
+                    )}
                         </>
                     )}
                 </div>

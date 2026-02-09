@@ -105,7 +105,7 @@ export const getUserContestHistory = async (req: Request, res: Response, next: N
       .where(eq(contestParticipants.userId, userId))
       .orderBy(desc(contestParticipants.startedAt));
 
-    return res.json({ history });
+    return res.json({ contests: history });
   } catch (error) {
     return next(error);
   }
