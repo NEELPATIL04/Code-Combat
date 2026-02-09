@@ -362,6 +362,74 @@ function mergeJavaCode(userCode: string, template: string, functionName: string)
 }
 
 /**
+ * Find the position after the last #include or using line in C++ code.
+ * Returns the index of the character after the newline, or -1 if none found.
+ */
+function findLastIncludeLine(code: string): number {
+  const lines = code.split('\n');
+  let lastIdx = -1;
+  let pos = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (trimmed.startsWith('#include') || trimmed.startsWith('using ')) {
+      lastIdx = pos + lines[i].length + 1; // +1 for the newline
+    }
+    pos += lines[i].length + 1;
+  }
+  return lastIdx;
+}
+
+/**
+ * Merge a bare C++ method (no class wrapper) into the template's Solution class.
+ * Finds the stub method in the template's Solution class and replaces it with the user's method.
+ */
+function mergeCppBareMethod(userCode: string, template: string, functionName: string): string {
+  try {
+    // Find the stub method in template's Solution class
+    const templateClassIdx = template.indexOf('class Solution');
+    const tmplBraceStart = template.indexOf('{', templateClassIdx);
+    if (tmplBraceStart === -1) return template.replace('class Solution', userCode + '\n\nclass Solution');
+    const tmplBraceEnd = findMatchingBrace(template, tmplBraceStart);
+    if (tmplBraceEnd === -1) return template.replace('class Solution', userCode + '\n\nclass Solution');
+
+    // Try to find the stub method by function name
+    const methodPattern = new RegExp(
+      `([\\w<>:&*\\s]+\\s+${functionName}\\s*\\([^)]*\\))\\s*\\{`,
+      's'
+    );
+    const classBody = template.substring(tmplBraceStart + 1, tmplBraceEnd);
+    const stubMatch = classBody.match(methodPattern);
+
+    if (stubMatch) {
+      // Found the stub — find its boundaries in the full template
+      const stubStartInBody = classBody.indexOf(stubMatch[0]);
+      const stubAbsStart = tmplBraceStart + 1 + stubStartInBody;
+      const stubBraceStart = template.indexOf('{', stubAbsStart + stubMatch[1].length);
+      const stubBraceEnd = findMatchingBrace(template, stubBraceStart);
+      if (stubBraceEnd !== -1) {
+        // Replace the stub method with user's method
+        const result = template.substring(0, stubAbsStart) + '  ' + userCode.trim() + '\n' + template.substring(stubBraceEnd + 1);
+        console.log('✅ C++ bare method merge successful (replaced stub)');
+        return result;
+      }
+    }
+
+    // Fallback: inject user method before the closing brace of the Solution class
+    const result = template.substring(0, tmplBraceEnd) + '\n  ' + userCode.trim() + '\n' + template.substring(tmplBraceEnd);
+    console.log('✅ C++ bare method merge successful (injected before closing brace)');
+    return result;
+  } catch (e) {
+    console.error('❌ C++ bare method merge failed:', e);
+    // Safe fallback: put user code after includes but before the class
+    const includeEnd = findLastIncludeLine(template);
+    if (includeEnd !== -1) {
+      return template.substring(0, includeEnd) + '\n\n' + userCode + '\n\n' + template.substring(includeEnd);
+    }
+    return userCode + '\n\n' + template;
+  }
+}
+
+/**
  * Merge C++ user code with driver template.
  * Replaces the Solution class stub in the template with the user's Solution class.
  */
@@ -372,8 +440,20 @@ function mergeCppCode(userCode: string, template: string, _functionName: string)
     const templateClassIdx = template.indexOf('class Solution');
     const userClassIdx = userCode.indexOf('class Solution');
 
+    // Case 1: User provides just a bare method (no class Solution)
+    // => inject into the template's Solution class by replacing the stub method
+    if (templateClassIdx !== -1 && userClassIdx === -1) {
+      console.log('📝 User provided bare method, injecting into template Solution class');
+      return mergeCppBareMethod(userCode, template, _functionName);
+    }
+
     if (templateClassIdx === -1 || userClassIdx === -1) {
-      console.log('📝 No Solution class found in both, using prepend');
+      console.log('📝 No Solution class found in both, using prepend after includes');
+      // At least put user code after the includes/using lines
+      const includeEnd = findLastIncludeLine(template);
+      if (includeEnd !== -1) {
+        return template.substring(0, includeEnd) + '\n\n' + userCode + '\n\n' + template.substring(includeEnd);
+      }
       return userCode + '\n\n' + template;
     }
 

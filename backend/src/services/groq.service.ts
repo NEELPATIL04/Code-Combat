@@ -120,19 +120,36 @@ ${params.description}
 ## Function Signature (${params.language}):
 ${params.boilerplateCode}
 
-## Wrapper Code Template:
+## Wrapper/Driver Code Template:
 ${params.wrapperCode}
 
 ## Function Name: ${params.functionName}
 
-## Instructions:
+## CRITICAL RULES:
+
+### Input Format:
+The "input" field is what gets passed to the program via STDIN (standard input). Look at the wrapper/driver code above to understand how it reads and parses input.
+- If the driver does \`fs.readFileSync(0, 'utf-8').trim()\` or \`sys.stdin.read().strip()\` or \`scanner.nextLine()\` or \`getline(cin, s)\`, then "input" should be the RAW string value that gets read.
+- For a single string argument: just provide the raw string (e.g., \"hello\" or \"madam\" or \"\" for empty).
+- For multiple arguments on separate lines: put each on a new line (e.g., \"2 7 11 15\\n9\").
+- For arrays: use the format the driver expects (e.g., \"[2,7,11,15]\" if the driver does JSON.parse).
+- Do NOT use named parameter format like \"nums = [2,7,11,15], target = 9\" unless the driver explicitly parses that format.
+
+### Expected Output Format:
+The "expectedOutput" field must match EXACTLY what the program prints to STDOUT.
+- Booleans MUST be lowercase: \"true\" or \"false\" (never \"True\"/\"False\", never \"1\"/\"0\").
+- Arrays MUST be JSON format: \"[0,1]\" or \"[1, 2, 3]\".
+- Strings should NOT have extra quotes unless the driver explicitly adds them.
+- Numbers should be plain: \"42\" not \"42.0\" (unless the problem returns floats).
+
+### Test Case Diversity:
 1. Generate ${params.numberOfTestCases} diverse test cases covering:
-   - Edge cases (empty inputs, single elements, etc.)
-   - Normal cases (typical inputs)
-   - Large cases (if applicable)
+   - Edge cases (empty input, single element, boundary values)
+   - Normal/typical cases
+   - Tricky cases (duplicates, negative numbers, special characters if applicable)
 2. For each test case, provide:
-   - **input**: The test input in the format that matches the wrapper code (e.g., "nums = [2,7,11,15], target = 9" or "[[2,7,11,15], 9]")
-   - **expectedOutput**: The expected output as a string (e.g., "[0,1]")
+   - **input**: Raw STDIN input string
+   - **expectedOutput**: Exact STDOUT output string
    - **explanation**: Brief explanation of what this test case checks
 
 ## Output Format:
@@ -140,8 +157,8 @@ Return a JSON object with this exact structure:
 {
   "testCases": [
     {
-      "input": "input string here",
-      "expectedOutput": "output string here",
+      "input": "raw stdin input here",
+      "expectedOutput": "exact stdout output here",
       "explanation": "what this tests"
     }
   ]
@@ -209,44 +226,73 @@ Respond with JSON: { "isValid": true/false, "suggestions": "improvement suggesti
     outputFormat?: string;
   }): Promise<Record<string, { boilerplate: string; driver: string }>> {
     try {
-      const prompt = `
-        You are an expert coding interview platform architect.
-        Generate "boilerplate" code (method signature) and "driver" code (input/output handling) for the following problem.
-        
-        Problem Description:
-        ${params.description}
-        
-        Function Name: ${params.functionName}
-        ${params.inputFormat ? `Input Format: ${params.inputFormat}` : ''}
-        ${params.outputFormat ? `Output Format: ${params.outputFormat}` : ''}
-        
-        Target Languages: ${params.languages.join(', ')}
-        
-        For EACH language, you MUST generate:
-        1. "boilerplate": The starter code for the user. It should contain the class (if applicable for the language) and function definition.
-        2. "driver": The hidden driver code that:
-           - Imports necessary libraries.
-           - Reads input from STDIN (standard input).
-           - Parses the input lines.
-           - Calls the user's function (assuming it's available/imported).
-           - Prints the result to STDOUT (standard output).
-           
-        IMPORTANT: Use Judge0 compatible code.
-        - Javascript/Typescript: Use 'fs.readFileSync(0, "utf-8")' or 'readline'.
-        - Python: Use 'sys.stdin.read()'.
-        - Java: Use 'Scanner' or 'BufferedReader'.
-        - C++: Use 'cin' and 'cout'.
-        
-        Response Format:
-        Return ONLY a JSON object where keys are language names (lowercase) and values are objects containing "boilerplate" and "driver" strings.
-        Example:
-        {
-          "javascript": {
-            "boilerplate": "function solve(a, b) {\\n  return a + b;\\n}",
-            "driver": "const fs = require('fs');\\nconst input = fs.readFileSync(0, 'utf-8').trim().split('\\n');..."
-          }
-        }
-      `;
+      const prompt = `You are an expert coding interview platform architect building code for a Judge0 CE sandbox.
+
+Problem Description:
+${params.description}
+
+Function Name: ${params.functionName}
+${params.inputFormat ? `Input Format: ${params.inputFormat}` : ''}
+${params.outputFormat ? `Output Format: ${params.outputFormat}` : ''}
+
+Target Languages: ${params.languages.join(', ')}
+
+For EACH language, generate TWO things:
+
+1. "boilerplate": The starter code the user sees in their editor. It should ONLY contain the function/method signature with a placeholder body. For Java, wrap in a class. For C++, wrap in a Solution class.
+
+2. "driver": The hidden test-runner code. This is a COMPLETE, SELF-CONTAINED script that will be saved and executed as a SINGLE FILE in Judge0. 
+
+CRITICAL RULES FOR THE DRIVER CODE:
+- The driver MUST contain the literal placeholder {{USER_CODE}} at the TOP of the file (or inside the class for Java/C++). At runtime, the platform will replace {{USER_CODE}} with the user's actual code before sending to Judge0.
+- The driver reads ONE test case input from STDIN, calls the user's function, and prints the result to STDOUT.
+- ALL languages MUST output boolean values as lowercase "true" or "false" (never "True"/"False", never "1"/"0").
+- ALL languages MUST output arrays/lists as JSON arrays like [1,2,3].
+- ALL languages MUST output strings WITHOUT extra quotes unless the expected output includes them.
+
+LANGUAGE-SPECIFIC RULES:
+
+JavaScript:
+- Use: const fs = require('fs'); const input = fs.readFileSync(0, 'utf-8').trim();
+- Place {{USER_CODE}} at the top, then the driver code below it.
+- For booleans: console.log(result) works (JS prints lowercase true/false).
+
+TypeScript:
+- MUST start with: declare const process: any; declare function require(name: string): any;
+- Then: const fs = require('fs'); const input = fs.readFileSync(0, 'utf-8').trim();
+- Place {{USER_CODE}} at the top (after declares), then driver code.
+
+Python:
+- Use: import sys; input_data = sys.stdin.read().strip()
+- Place {{USER_CODE}} at the top, then driver code.
+- For booleans: print(str(result).lower()) to get "true"/"false" instead of "True"/"False".
+- For lists: import json; print(json.dumps(result))
+
+Java:
+- The driver must be a SINGLE public class Main with a main method.
+- Place {{USER_CODE}} as a static method INSIDE the Main class (the user writes just the method body).
+- Use Scanner with hasNextLine() guard: String s = scanner.hasNextLine() ? scanner.nextLine() : "";
+- For booleans: System.out.println(result) works (Java prints lowercase).
+- The boilerplate should be JUST the static method signature (e.g., public static boolean ${params.functionName}(String s) { ... }).
+
+C++:
+- The driver includes necessary headers and uses namespace std.
+- Define a Solution class with {{USER_CODE}} as the method inside it.
+- Use: cout << boolalpha << result; for booleans.
+- Use getline(cin, s) for string input.
+- The boilerplate should be JUST the method signature inside a Solution class.
+
+RESPONSE FORMAT:
+Return ONLY a JSON object. Keys are lowercase language names. Values have "boilerplate" and "driver" strings.
+Example for a function that checks if a string is a palindrome:
+{
+  "javascript": {
+    "boilerplate": "function ${params.functionName}(s) {\\n  // Your code here\\n  return false;\\n}",
+    "driver": "{{USER_CODE}}\\nconst fs = require('fs');\\nconst input = fs.readFileSync(0, 'utf-8').trim();\\nconst result = ${params.functionName}(input);\\nconsole.log(result);"
+  }
+}
+
+REMEMBER: Every driver MUST include {{USER_CODE}} as a literal placeholder string. Without it, the user's code will never be included and the function will be undefined at runtime.`;
 
       console.log('🤖 Generating task code with Groq AI...');
 
@@ -282,7 +328,37 @@ Respond with JSON: { "isValid": true/false, "suggestions": "improvement suggesti
         (params as any).taskId
       );
 
-      return JSON.parse(responseContent);
+      const parsed = JSON.parse(responseContent);
+
+      // POST-PROCESSING: Validate and fix driver templates
+      for (const [lang, code] of Object.entries(parsed) as [string, any][]) {
+        if (code.driver && !code.driver.includes('{{USER_CODE}}')) {
+          console.warn(`⚠️ AI-generated driver for ${lang} is MISSING {{USER_CODE}} placeholder. Auto-fixing...`);
+          
+          // For Java/C++ with classes, try to insert before the class
+          if (lang === 'java') {
+            // Insert {{USER_CODE}} as a comment marker inside the class
+            // The wrapper util's mergeJavaCode will handle the actual merging
+            code.driver = code.driver.replace(
+              /public\s+class\s+Main\s*\{/,
+              'public class Main {\n  {{USER_CODE}}\n'
+            );
+          } else if (lang === 'cpp') {
+            // Insert before main()
+            code.driver = code.driver.replace(
+              /int\s+main\s*\(\s*\)/,
+              '{{USER_CODE}}\n\nint main()'
+            );
+          } else {
+            // For JS/TS/Python: prepend {{USER_CODE}} at the top
+            code.driver = '{{USER_CODE}}\n\n' + code.driver;
+          }
+          
+          console.log(`✅ Auto-fixed ${lang} driver template with {{USER_CODE}} placeholder`);
+        }
+      }
+
+      return parsed;
     } catch (error) {
       console.error('Error generating task code:', error);
       throw error;
