@@ -48,26 +48,37 @@ public:
  * - {{FUNCTION_NAME}} - replaced with function name
  * - {{TEST_INPUT}} - replaced with test case input
  */
+/**
+ * Delimiter used to separate user's console output from the actual test result.
+ * Everything before this in stdout = user's console.log/print output
+ * Everything after this = the actual function result
+ */
+export const RESULT_DELIMITER = '\n---CODECOMBAT_RESULT---\n';
+
 export const DEFAULT_TEST_RUNNERS: Record<string, string> = {
   javascript: `{{USER_CODE}}
 
-// Test runner
-const result = {{FUNCTION_CALL}};
-console.log(JSON.stringify(result));`,
+// Test runner — delimiter separates user console.log from result
+const __result = {{FUNCTION_CALL}};
+process.stdout.write("\\n---CODECOMBAT_RESULT---\\n");
+console.log(JSON.stringify(__result));`,
 
   typescript: `{{USER_CODE}}
 
-// Test runner
-const result = {{FUNCTION_CALL}};
-console.log(JSON.stringify(result));`,
+// Test runner — delimiter separates user console.log from result
+const __result = {{FUNCTION_CALL}};
+process.stdout.write("\\n---CODECOMBAT_RESULT---\\n");
+console.log(JSON.stringify(__result));`,
 
   python: `import json
+import sys
 
 {{USER_CODE}}
 
-# Test runner
-result = {{FUNCTION_CALL}}
-print(json.dumps(result))`,
+# Test runner — delimiter separates user print() from result
+__result = {{FUNCTION_CALL}}
+sys.stdout.write("\\n---CODECOMBAT_RESULT---\\n")
+print(json.dumps(__result))`,
 
 
   java: `import java.util.*;
@@ -80,9 +91,10 @@ public class Main {
         Solution solution = new Solution();
         Gson gson = new Gson();
 
-        // Test runner
+        // Test runner — delimiter separates user output from result
         Object testInput = {{TEST_INPUT}};
         Object result = {{FUNCTION_CALL}};
+        System.out.print("\\n---CODECOMBAT_RESULT---\\n");
         System.out.println(gson.toJson(result));
     }
 }`,
@@ -97,10 +109,11 @@ using namespace std;
 int main() {
     Solution solution;
 
-    // Test runner
+    // Test runner — delimiter separates user output from result
     auto result = {{FUNCTION_CALL}};
 
-    // Print result (simplified JSON output)
+    // Print delimiter then result
+    cout << "\\n---CODECOMBAT_RESULT---\\n";
     cout << "[";
     for(size_t i = 0; i < result.size(); i++) {
         if(i > 0) cout << ",";

@@ -246,6 +246,7 @@ For EACH language, generate TWO things:
 CRITICAL RULES FOR THE DRIVER CODE:
 - The driver MUST contain the literal placeholder {{USER_CODE}} at the TOP of the file (or inside the class for Java/C++). At runtime, the platform will replace {{USER_CODE}} with the user's actual code before sending to Judge0.
 - The driver reads ONE test case input from STDIN, calls the user's function, and prints the result to STDOUT.
+- IMPORTANT: Before printing the actual result, the driver MUST print the delimiter string "\\n---CODECOMBAT_RESULT---\\n" to STDOUT. This separates any user console.log/print output from the actual test result. Example for JS: process.stdout.write("\\n---CODECOMBAT_RESULT---\\n"); console.log(result);
 - ALL languages MUST output boolean values as lowercase "true" or "false" (never "True"/"False", never "1"/"0").
 - ALL languages MUST output arrays/lists as JSON arrays like [1,2,3].
 - ALL languages MUST output strings WITHOUT extra quotes unless the expected output includes them.

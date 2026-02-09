@@ -1,6 +1,29 @@
 import axios from 'axios';
 import { getJudge0LanguageId, Judge0Submission, Judge0Result } from '../utils/judge0.util';
-import { wrapCodeWithTestRunner, DEFAULT_TEST_RUNNERS } from '../utils/codeWrapper.util';
+import { wrapCodeWithTestRunner, DEFAULT_TEST_RUNNERS, RESULT_DELIMITER } from '../utils/codeWrapper.util';
+
+/**
+ * Split stdout into user console output and actual test result.
+ * If the delimiter is present, everything before it is console output,
+ * and everything after it is the actual result.
+ * If no delimiter, the entire stdout is treated as the result (backward compatible).
+ */
+function parseStdout(stdout: string | null): { consoleOutput: string; actualResult: string } {
+  if (!stdout) return { consoleOutput: '', actualResult: '' };
+
+  const delimiterStr = '---CODECOMBAT_RESULT---';
+  const idx = stdout.indexOf(delimiterStr);
+
+  if (idx === -1) {
+    // No delimiter found — treat entire output as result (backward compatible)
+    return { consoleOutput: '', actualResult: stdout.trim() };
+  }
+
+  const consoleOutput = stdout.substring(0, idx).trim();
+  const actualResult = stdout.substring(idx + delimiterStr.length).trim();
+
+  return { consoleOutput, actualResult };
+}
 
 const JUDGE0_URL = process.env.JUDGE0_URL || 'http://localhost:2358';
 const JUDGE0_API_KEY = process.env.JUDGE0_API_KEY;
@@ -185,6 +208,7 @@ class Judge0Service {
     input: string;
     expectedOutput: string;
     actualOutput: string;
+    consoleOutput?: string;
     error?: string;
     executionTime?: number;
     memory?: number;
@@ -234,15 +258,16 @@ class Judge0Service {
           expectedOutput: testCase.expectedOutput,
         });
 
-        const actualOutput = (result.stdout || '').trim();
+        const { consoleOutput, actualResult } = parseStdout(result.stdout);
         const expectedOutput = testCase.expectedOutput.trim();
-        const passed = actualOutput === expectedOutput && result.status.id === 3; // 3 = Accepted
+        const passed = actualResult === expectedOutput && result.status.id === 3; // 3 = Accepted
 
         results.push({
           passed,
           input: testCase.input,
           expectedOutput: testCase.expectedOutput,
-          actualOutput: actualOutput || result.stderr || 'No output',
+          actualOutput: actualResult || result.stderr || 'No output',
+          consoleOutput: consoleOutput || undefined,
           error: result.stderr || result.compile_output || undefined,
           executionTime: result.time ? parseFloat(result.time) * 1000 : undefined, // Convert to ms
           memory: result.memory || undefined,

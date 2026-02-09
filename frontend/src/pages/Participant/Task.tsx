@@ -42,6 +42,7 @@ interface TestCase {
     input: string;
     expectedOutput: string;
     actualOutput?: string;
+    consoleOutput?: string;
     passed?: boolean;
     executionTime?: number;
 }
@@ -596,8 +597,30 @@ const MemoizedTestCases = React.memo<{
                             </div>
                         </div>
                         {testCases[activeTab].actualOutput && (
-                            <div>
-                                <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 11, marginBottom: 4 }}>Your Output</div>
+                            <>
+                                {testCases[activeTab].consoleOutput && (
+                                    <div style={{ marginBottom: 12 }}>
+                                        <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 11, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#a78bfa' }} />
+                                            Stdout / Console
+                                        </div>
+                                        <div style={{
+                                            background: 'rgba(139, 92, 246, 0.08)',
+                                            border: '1px solid rgba(139, 92, 246, 0.2)',
+                                            padding: 10,
+                                            borderRadius: 4,
+                                            color: '#c4b5fd',
+                                            whiteSpace: 'pre-wrap',
+                                            wordBreak: 'break-all',
+                                            maxHeight: 120,
+                                            overflow: 'auto',
+                                        }}>
+                                            {testCases[activeTab].consoleOutput}
+                                        </div>
+                                    </div>
+                                )}
+                                <div>
+                                    <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 11, marginBottom: 4 }}>Your Output</div>
                                 <div style={{
                                     background: testCases[activeTab].passed ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
                                     border: `1px solid ${testCases[activeTab].passed ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
@@ -613,6 +636,7 @@ const MemoizedTestCases = React.memo<{
                                     )}
                                 </div>
                             </div>
+                            </>
                         )}
                     </div>
                 )}
@@ -1470,6 +1494,7 @@ const TaskPage: React.FC = () => {
                         return {
                             ...tc,
                             actualOutput: testResult.actualOutput || 'No output',
+                            consoleOutput: testResult.consoleOutput || '',
                             passed: testResult.passed,
                             executionTime: testResult.executionTime,
                         };
@@ -1483,6 +1508,7 @@ const TaskPage: React.FC = () => {
                 ...tc,
                 actualOutput: `Error: ${error.message}`,
                 passed: false,
+                consoleOutput: '',
             })));
         }
 
@@ -1570,6 +1596,7 @@ const TaskPage: React.FC = () => {
                             actualOutput: result.actualOutput || 'No output',
                             passed: result.passed,
                             executionTime: result.executionTime,
+                            consoleOutput: result.consoleOutput || '',
                         };
                     }
                     return tc;
@@ -1595,6 +1622,7 @@ const TaskPage: React.FC = () => {
                 ...tc,
                 actualOutput: `Error: ${error.message}`,
                 passed: false,
+                consoleOutput: '',
             })));
         }
 
