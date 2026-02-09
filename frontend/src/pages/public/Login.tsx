@@ -1,6 +1,6 @@
 import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mail, AlertCircle } from 'lucide-react';
 
 // Get API URL from environment
 const LOCAL_BACKEND = import.meta.env.VITE_LOCAL_BACKEND_URL || 'http://localhost:5000/api';
@@ -17,7 +17,7 @@ interface Star {
     duration: number;
 }
 
-interface LoginResponse {
+interface AuthResponse {
     message: string;
     role: string;
     username: string;
@@ -26,12 +26,20 @@ interface LoginResponse {
     token: string;
 }
 
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
 const Login: React.FC = () => {
     const navigate = useNavigate();
+    const [isRegisterMode, setIsRegisterMode] = useState<boolean>(false);
     const [username, setUsername] = useState<string>('');
+    const [email, setEmail] = useState<string>('');
     const [password, setPassword] = useState<string>('');
+    const [confirmPassword, setConfirmPassword] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
+    const [success, setSuccess] = useState<string>('');
+    const [emailError, setEmailError] = useState<string>('');
+    const [passwordError, setPasswordError] = useState<string>('');
     const [typedText, setTypedText] = useState<string>('');
     const [isDeleting, setIsDeleting] = useState<boolean>(false);
     const [wordIndex, setWordIndex] = useState<number>(0);
@@ -73,41 +81,168 @@ const Login: React.FC = () => {
         return () => clearTimeout(timer);
     }, [typedText, isDeleting, wordIndex, words]);
 
+    // Clear errors when switching modes
+    const toggleMode = () => {
+        setIsRegisterMode(!isRegisterMode);
+        setError('');
+        setSuccess('');
+        setEmailError('');
+        setPasswordError('');
+        setUsername('');
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+    };
+
+    // Validate email on change
+    const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setEmail(val);
+        if (val && !EMAIL_REGEX.test(val)) {
+            setEmailError('Please enter a valid email address');
+        } else {
+            setEmailError('');
+        }
+    };
+
+    // Validate confirm password
+    const handleConfirmPasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setConfirmPassword(val);
+        if (val && val !== password) {
+            setPasswordError('Passwords do not match');
+        } else {
+            setPasswordError('');
+        }
+    };
+
+    const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setPassword(val);
+        if (confirmPassword && val !== confirmPassword) {
+            setPasswordError('Passwords do not match');
+        } else {
+            setPasswordError('');
+        }
+    };
+
     const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
         e.preventDefault();
         setLoading(true);
         setError('');
+        setSuccess('');
+
+        // Frontend validation for register
+        if (isRegisterMode) {
+            if (!EMAIL_REGEX.test(email)) {
+                setError('Please enter a valid email address');
+                setLoading(false);
+                return;
+            }
+            if (username.length < 3) {
+                setError('Username must be at least 3 characters');
+                setLoading(false);
+                return;
+            }
+            if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+                setError('Username can only contain letters, numbers, and underscores');
+                setLoading(false);
+                return;
+            }
+            if (password.length < 8) {
+                setError('Password must be at least 8 characters');
+                setLoading(false);
+                return;
+            }
+            if (password !== confirmPassword) {
+                setError('Passwords do not match');
+                setLoading(false);
+                return;
+            }
+        }
 
         try {
-            const response = await fetch(`${API_URL}/auth/login`, {
+            const endpoint = isRegisterMode ? '/auth/register' : '/auth/login';
+            const body = isRegisterMode
+                ? { username, email, password, role: 'player' }
+                : { username, password };
+
+            const response = await fetch(`${API_URL}${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password }),
+                body: JSON.stringify(body),
             });
 
-            const data: LoginResponse = await response.json();
+            const data: AuthResponse = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.message || 'Authentication Failed');
+                throw new Error(data.message || (isRegisterMode ? 'Registration failed' : 'Authentication failed'));
             }
 
-            sessionStorage.setItem('token', data.token);
-            sessionStorage.setItem('username', data.username);
-            sessionStorage.setItem('role', data.role);
-            sessionStorage.setItem('userId', data.userId.toString());
-            sessionStorage.setItem('email', data.email);
-
-            if (data.role === 'admin' || data.role === 'super_admin') {
-                navigate('/admin');
-            } else {
+            if (isRegisterMode) {
+                // Auto-login after registration
+                sessionStorage.setItem('token', data.token);
+                sessionStorage.setItem('username', data.username);
+                sessionStorage.setItem('role', data.role);
+                sessionStorage.setItem('userId', data.userId.toString());
+                sessionStorage.setItem('email', data.email);
                 navigate('/player');
+            } else {
+                sessionStorage.setItem('token', data.token);
+                sessionStorage.setItem('username', data.username);
+                sessionStorage.setItem('role', data.role);
+                sessionStorage.setItem('userId', data.userId.toString());
+                sessionStorage.setItem('email', data.email);
+
+                if (data.role === 'admin' || data.role === 'super_admin') {
+                    navigate('/admin');
+                } else {
+                    navigate('/player');
+                }
             }
         } catch (err) {
-            console.error('❌ Login error:', err);
-            setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+            console.error(`❌ ${isRegisterMode ? 'Register' : 'Login'} error:`, err);
+            setError(err instanceof Error ? err.message : `${isRegisterMode ? 'Registration' : 'Login'} failed. Please try again.`);
         } finally {
             setLoading(false);
         }
+    };
+
+    const inputStyle: React.CSSProperties = {
+        width: '100%',
+        padding: '10px 14px',
+        fontSize: '0.875rem',
+        background: 'rgba(255, 255, 255, 0.05)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: '8px',
+        color: '#ffffff',
+        outline: 'none',
+        boxSizing: 'border-box' as const,
+        transition: 'border-color 0.2s ease',
+    };
+
+    const inputErrorStyle: React.CSSProperties = {
+        ...inputStyle,
+        border: '1px solid rgba(239, 68, 68, 0.5)',
+    };
+
+    const labelStyle: React.CSSProperties = {
+        display: 'block',
+        fontSize: '0.75rem',
+        textTransform: 'uppercase' as const,
+        marginBottom: '8px',
+        fontWeight: 500,
+        color: 'rgba(255, 255, 255, 0.5)',
+        letterSpacing: '0.1em',
+    };
+
+    const fieldErrorStyle: React.CSSProperties = {
+        fontSize: '0.75rem',
+        color: '#ef4444',
+        marginTop: '4px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
     };
 
     return (
@@ -160,7 +295,7 @@ const Login: React.FC = () => {
                 background: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(120, 119, 198, 0.12), transparent)'
             }} />
 
-            {/* Login Container - 50/50 Split */}
+            {/* Container - 50/50 Split */}
             <div style={{
                 position: 'relative',
                 zIndex: 1,
@@ -219,7 +354,7 @@ const Login: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Right Side - Login Form */}
+                {/* Right Side - Form */}
                 <div style={{
                     flex: 1,
                     display: 'flex',
@@ -227,10 +362,60 @@ const Login: React.FC = () => {
                     justifyContent: 'space-between',
                     padding: '60px',
                     background: 'rgba(20, 20, 20, 0.6)',
-                    borderLeft: '1px solid rgba(255, 255, 255, 0.1)'
+                    borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
+                    overflowY: 'auto',
                 }}>
                     {/* Form - centered */}
                     <form style={{ width: '100%', maxWidth: '400px', margin: 'auto' }} onSubmit={handleSubmit}>
+                        {/* Toggle tabs */}
+                        <div style={{
+                            display: 'flex',
+                            marginBottom: '28px',
+                            background: 'rgba(255, 255, 255, 0.04)',
+                            borderRadius: '10px',
+                            padding: '4px',
+                            border: '1px solid rgba(255, 255, 255, 0.06)',
+                        }}>
+                            <button
+                                type="button"
+                                onClick={() => { if (isRegisterMode) toggleMode(); }}
+                                style={{
+                                    flex: 1,
+                                    padding: '10px 16px',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 600,
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    background: !isRegisterMode ? 'rgba(253, 230, 138, 0.15)' : 'transparent',
+                                    color: !isRegisterMode ? '#FDE68A' : 'rgba(255, 255, 255, 0.4)',
+                                    boxShadow: !isRegisterMode ? '0 2px 8px rgba(253, 230, 138, 0.1)' : 'none',
+                                }}
+                            >
+                                Login
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { if (!isRegisterMode) toggleMode(); }}
+                                style={{
+                                    flex: 1,
+                                    padding: '10px 16px',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 600,
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    background: isRegisterMode ? 'rgba(253, 230, 138, 0.15)' : 'transparent',
+                                    color: isRegisterMode ? '#FDE68A' : 'rgba(255, 255, 255, 0.4)',
+                                    boxShadow: isRegisterMode ? '0 2px 8px rgba(253, 230, 138, 0.1)' : 'none',
+                                }}
+                            >
+                                Create Account
+                            </button>
+                        </div>
+
                         <p style={{
                             fontSize: '0.875rem',
                             margin: '0 0 24px',
@@ -238,86 +423,161 @@ const Login: React.FC = () => {
                             textAlign: 'center',
                             color: 'rgba(255, 255, 255, 0.5)'
                         }}>
-                            Enter your credentials to access the battle arena.
+                            {isRegisterMode
+                                ? 'Create your player account to join the battle arena.'
+                                : 'Enter your credentials to access the battle arena.'}
                         </p>
 
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{
-                                display: 'block',
-                                fontSize: '0.75rem',
-                                textTransform: 'uppercase',
-                                marginBottom: '8px',
-                                fontWeight: 500,
-                                color: 'rgba(255, 255, 255, 0.5)',
-                                letterSpacing: '0.1em'
-                            }}>CODENAME</label>
+                        {/* Username */}
+                        <div style={{ marginBottom: '18px' }}>
+                            <label style={labelStyle}>CODENAME</label>
                             <input
                                 type="text"
                                 value={username}
                                 onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
-                                placeholder="Enter your codename"
+                                placeholder={isRegisterMode ? 'Choose a codename (3+ chars)' : 'Enter your codename'}
                                 required
-                                style={{
-                                    width: '100%',
-                                    padding: '10px 14px',
-                                    fontSize: '0.875rem',
-                                    background: 'rgba(255, 255, 255, 0.05)',
-                                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                                    borderRadius: '8px',
-                                    color: '#ffffff',
-                                    outline: 'none',
-                                    boxSizing: 'border-box'
-                                }}
+                                style={inputStyle}
+                                onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(253, 230, 138, 0.4)'; }}
+                                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'; }}
                             />
                         </div>
 
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{
-                                display: 'block',
-                                fontSize: '0.75rem',
-                                textTransform: 'uppercase',
-                                marginBottom: '8px',
-                                fontWeight: 500,
-                                color: 'rgba(255, 255, 255, 0.5)',
-                                letterSpacing: '0.1em'
-                            }}>ACCESS KEY</label>
+                        {/* Email - only for register */}
+                        {isRegisterMode && (
+                            <div style={{ marginBottom: '18px' }}>
+                                <label style={labelStyle}>EMAIL</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={handleEmailChange}
+                                        placeholder="your@email.com"
+                                        required
+                                        style={emailError ? inputErrorStyle : inputStyle}
+                                        onFocus={(e) => {
+                                            if (!emailError) e.currentTarget.style.borderColor = 'rgba(253, 230, 138, 0.4)';
+                                        }}
+                                        onBlur={(e) => {
+                                            if (!emailError) e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                        }}
+                                    />
+                                    {email && !emailError && (
+                                        <Mail size={14} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#34d399' }} />
+                                    )}
+                                </div>
+                                {emailError && (
+                                    <div style={fieldErrorStyle}>
+                                        <AlertCircle size={12} />
+                                        {emailError}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Password */}
+                        <div style={{ marginBottom: '18px' }}>
+                            <label style={labelStyle}>
+                                {isRegisterMode ? 'PASSWORD (min 8 characters)' : 'ACCESS KEY'}
+                            </label>
                             <input
                                 type="password"
                                 value={password}
-                                onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                                placeholder="Enter your passkey"
+                                onChange={isRegisterMode ? handlePasswordChange : (e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                                placeholder={isRegisterMode ? 'Create a strong password' : 'Enter your passkey'}
                                 required
-                                style={{
-                                    width: '100%',
-                                    padding: '10px 14px',
-                                    fontSize: '0.875rem',
-                                    background: 'rgba(255, 255, 255, 0.05)',
-                                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                                    borderRadius: '8px',
-                                    color: '#ffffff',
-                                    outline: 'none',
-                                    boxSizing: 'border-box'
-                                }}
+                                style={inputStyle}
+                                onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(253, 230, 138, 0.4)'; }}
+                                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'; }}
                             />
+                            {isRegisterMode && password && (
+                                <div style={{ marginTop: '6px', display: 'flex', gap: '4px' }}>
+                                    {[1, 2, 3, 4].map((level) => (
+                                        <div
+                                            key={level}
+                                            style={{
+                                                flex: 1,
+                                                height: '3px',
+                                                borderRadius: '2px',
+                                                background: password.length >= level * 3
+                                                    ? password.length >= 12 ? '#22c55e'
+                                                        : password.length >= 10 ? '#eab308'
+                                                            : password.length >= 8 ? '#f97316'
+                                                                : '#ef4444'
+                                                    : 'rgba(255, 255, 255, 0.1)',
+                                                transition: 'background 0.2s ease',
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
+                        {/* Confirm Password - only for register */}
+                        {isRegisterMode && (
+                            <div style={{ marginBottom: '18px' }}>
+                                <label style={labelStyle}>CONFIRM PASSWORD</label>
+                                <input
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={handleConfirmPasswordChange}
+                                    placeholder="Re-enter your password"
+                                    required
+                                    style={passwordError ? inputErrorStyle : inputStyle}
+                                    onFocus={(e) => {
+                                        if (!passwordError) e.currentTarget.style.borderColor = 'rgba(253, 230, 138, 0.4)';
+                                    }}
+                                    onBlur={(e) => {
+                                        if (!passwordError) e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                    }}
+                                />
+                                {passwordError && (
+                                    <div style={fieldErrorStyle}>
+                                        <AlertCircle size={12} />
+                                        {passwordError}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Error message */}
                         {error && (
                             <div style={{
-                                padding: '10px',
+                                padding: '10px 14px',
                                 marginBottom: '16px',
-                                fontSize: '0.875rem',
+                                fontSize: '0.85rem',
                                 background: 'rgba(239, 68, 68, 0.1)',
                                 border: '1px solid rgba(239, 68, 68, 0.3)',
                                 color: '#ef4444',
-                                borderRadius: '8px'
+                                borderRadius: '8px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
                             }}>
+                                <AlertCircle size={16} />
                                 {error}
                             </div>
                         )}
 
+                        {/* Success message */}
+                        {success && (
+                            <div style={{
+                                padding: '10px 14px',
+                                marginBottom: '16px',
+                                fontSize: '0.85rem',
+                                background: 'rgba(16, 185, 129, 0.1)',
+                                border: '1px solid rgba(16, 185, 129, 0.3)',
+                                color: '#34d399',
+                                borderRadius: '8px',
+                            }}>
+                                {success}
+                            </div>
+                        )}
+
+                        {/* Submit button */}
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={loading || (isRegisterMode && (!!emailError || !!passwordError))}
                             style={{
                                 width: '100%',
                                 display: 'flex',
@@ -328,20 +588,48 @@ const Login: React.FC = () => {
                                 border: 'none',
                                 fontSize: '0.875rem',
                                 fontWeight: 500,
-                                cursor: loading ? 'not-allowed' : 'pointer',
+                                cursor: loading || (isRegisterMode && (!!emailError || !!passwordError)) ? 'not-allowed' : 'pointer',
                                 background: '#ffffff',
                                 color: '#000000',
                                 borderRadius: '8px',
                                 marginTop: '8px',
-                                opacity: loading ? 0.5 : 1
+                                opacity: loading || (isRegisterMode && (!!emailError || !!passwordError)) ? 0.5 : 1,
+                                transition: 'opacity 0.2s ease',
                             }}
                         >
                             {loading ? (
-                                <><Loader2 size={18} className="animate-spin" /> Authenticating...</>
+                                <><Loader2 size={18} className="animate-spin" /> {isRegisterMode ? 'Creating Account...' : 'Authenticating...'}</>
                             ) : (
-                                <>Enter Arena</>
+                                <>{isRegisterMode ? 'Create Account & Enter Arena' : 'Enter Arena'}</>
                             )}
                         </button>
+
+                        {/* Toggle link */}
+                        <p style={{
+                            textAlign: 'center',
+                            marginTop: '20px',
+                            fontSize: '0.85rem',
+                            color: 'rgba(255, 255, 255, 0.4)',
+                        }}>
+                            {isRegisterMode ? 'Already have an account?' : "Don't have an account?"}{' '}
+                            <button
+                                type="button"
+                                onClick={toggleMode}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#FDE68A',
+                                    cursor: 'pointer',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 600,
+                                    padding: 0,
+                                    textDecoration: 'underline',
+                                    textUnderlineOffset: '3px',
+                                }}
+                            >
+                                {isRegisterMode ? 'Login here' : 'Create one'}
+                            </button>
+                        </p>
                     </form>
 
                     {/* Copyright - at bottom */}
