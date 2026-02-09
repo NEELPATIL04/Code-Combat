@@ -34,23 +34,29 @@ app.set('io', io);
 const connectedUsers = new Map<string, { contestId: string, userId: string, role: 'admin' | 'participant' }>();
 
 io.on('connection', (socket: any) => {
-  console.log('User connected:', socket.id);
+  console.log('✅ User connected:', socket.id);
 
   socket.on('join-contest', ({ contestId, userId }: { contestId: string, userId: string }) => {
     socket.join(`contest-${contestId}`);
     connectedUsers.set(socket.id, { contestId, userId, role: 'participant' });
-    console.log(`User ${userId} joined contest ${contestId}`);
+    console.log(`🚪 User ${userId} joined contest ${contestId} (socket: ${socket.id})`);
+    
+    // Get room info
+    const roomSockets = socket.io.sockets.adapter.rooms.get(`contest-${contestId}`);
+    console.log(`📊 Total participants in contest-${contestId}: ${roomSockets ? roomSockets.size : 0}`);
+    
     // Notify admins in the room
     io.to(`admin-contest-${contestId}`).emit('participant-joined', { userId, socketId: socket.id });
   });
 
   socket.on('join-monitor', ({ contestId }: { contestId: string }) => {
     socket.join(`admin-contest-${contestId}`);
-    console.log(`Admin joined monitor for contest ${contestId}`);
+    console.log(`👨‍💼 Admin joined monitor for contest ${contestId} (socket: ${socket.id})`);
     // Send list of currently connected participants
     const participants = Array.from(connectedUsers.entries())
       .filter(([_, data]) => data.contestId === contestId && data.role === 'participant')
       .map(([sid, data]) => ({ socketId: sid, userId: data.userId }));
+    console.log(`📋 Sending ${participants.length} active participants to admin`);
     socket.emit('active-participants', participants);
   });
 
@@ -71,9 +77,10 @@ io.on('connection', (socket: any) => {
     const user = connectedUsers.get(socket.id);
     if (user && user.role === 'participant') {
       io.to(`admin-contest-${user.contestId}`).emit('participant-left', { socketId: socket.id });
+      console.log(`👋 Participant ${user.userId} left contest ${user.contestId}`);
     }
     connectedUsers.delete(socket.id);
-    console.log('User disconnected:', socket.id);
+    console.log('❌ User disconnected:', socket.id);
   });
 });
 

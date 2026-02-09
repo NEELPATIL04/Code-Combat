@@ -843,10 +843,24 @@ const TaskPage: React.FC = () => {
         fetchSettings();
     }, [contestId]);
 
+    // Join contest room as soon as socket and user are available (for pause/resume events)
+    useEffect(() => {
+        if (!socket || !user || !contestId) {
+            console.log('🚪 Not ready to join contest:', { 
+                socket: !!socket, 
+                user: !!user, 
+                contestId 
+            });
+            return;
+        }
+
+        console.log(`🚪 Joining contest room: contest-${contestId} as user ${user.id}`);
+        socket.emit('join-contest', { contestId, userId: user.id });
+        console.log(`✅ Emitted join-contest event`);
+    }, [socket, contestId, user]);
+
     useEffect(() => {
         if (!socket || !mediaVerified || !localStreams || !user || !contestId) return;
-
-        socket.emit('join-contest', { contestId, userId: user.id });
 
         const handleOffer = async ({ sender, payload }: { sender: string, payload: RTCSessionDescriptionInit }) => {
             try {
@@ -914,24 +928,29 @@ const TaskPage: React.FC = () => {
 
     // Socket listeners for contest state changes (pause/resume/end)
     useEffect(() => {
-        if (!socket || !contestId) return;
+        if (!socket || !contestId) {
+            console.log('⏸️ Pause listeners not ready:', { socket: !!socket, contestId });
+            return;
+        }
+
+        console.log(`🎧 Setting up pause/resume/end listeners for contest ${contestId}`);
 
         const handleContestPaused = (data: { contestId: number, message: string }) => {
-            console.log('📌 Contest paused:', data);
+            console.log('📌 Contest paused event received:', data);
             setContestPaused(true);
             setPauseMessage(data.message || 'Contest has been paused by the administrator');
             showToast('Contest paused', 'warning');
         };
 
         const handleContestResumed = (data: { contestId: number, message: string }) => {
-            console.log('▶️ Contest resumed:', data);
+            console.log('▶️ Contest resumed event received:', data);
             setContestPaused(false);
             setPauseMessage('');
             showToast('Contest resumed', 'success');
         };
 
         const handleContestEnded = async (data: { contestId: number, message: string, autoSubmit: boolean }) => {
-            console.log('🛑 Contest ended:', data);
+            console.log('🛑 Contest ended event received:', data);
             setContestEnded(true);
             setEndMessage(data.message || 'Contest has ended');
             showToast('Contest ended', 'error');
@@ -939,6 +958,7 @@ const TaskPage: React.FC = () => {
             // Auto-submit if requested
             if (data.autoSubmit && task) {
                 try {
+                    console.log('📤 Auto-submitting due to contest end');
                     await handleSubmit();
                 } catch (error) {
                     console.error('Failed to auto-submit:', error);
@@ -954,11 +974,13 @@ const TaskPage: React.FC = () => {
         socket.on('contest-paused', handleContestPaused);
         socket.on('contest-resumed', handleContestResumed);
         socket.on('contest-ended', handleContestEnded);
+        console.log('✅ Pause/resume/end listeners registered');
 
         return () => {
             socket.off('contest-paused', handleContestPaused);
             socket.off('contest-resumed', handleContestResumed);
             socket.off('contest-ended', handleContestEnded);
+            console.log('🧹 Pause/resume/end listeners cleaned up');
         };
     }, [socket, contestId, task, navigate, showToast]);
 

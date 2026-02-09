@@ -1000,6 +1000,7 @@ export const getContestResultsByUser = async (req: Request, res: Response, next:
 export const pauseContest = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const contestId = parseInt(req.params.id as string);
+    console.log(`🔴 PAUSE CONTEST: Received request for contest ${contestId}`);
 
     const [contest] = await db
       .select()
@@ -1007,14 +1008,19 @@ export const pauseContest = async (req: Request, res: Response, next: NextFuncti
       .where(eq(contests.id, contestId));
 
     if (!contest) {
+      console.error(`Contest ${contestId} not found`);
       return res.status(404).json({ message: 'Contest not found' });
     }
 
+    console.log(`Contest found: status=${contest.status}, contestState=${contest.contestState}`);
+
     if (contest.status !== 'active') {
+      console.error(`Contest ${contestId} status is ${contest.status}, not active`);
       return res.status(400).json({ message: 'Only active contests can be paused' });
     }
 
     if (contest.contestState === 'paused') {
+      console.error(`Contest ${contestId} is already paused`);
       return res.status(400).json({ message: 'Contest is already paused' });
     }
 
@@ -1027,13 +1033,25 @@ export const pauseContest = async (req: Request, res: Response, next: NextFuncti
       .where(eq(contests.id, contestId))
       .returning();
 
+    console.log(`✅ Contest ${contestId} updated to paused state`);
+
     // Emit socket event to all participants
     const io = req.app.get('io');
+    console.log(`🔌 Socket.io instance: ${io ? 'EXISTS' : 'MISSING'}`);
+    
     if (io) {
+      console.log(`📢 Broadcasting 'contest-paused' to room: contest-${contestId}`);
+      const roomSockets = io.sockets.adapter.rooms.get(`contest-${contestId}`);
+      console.log(`📊 Participants in room: ${roomSockets ? roomSockets.size : 0}`);
+      
       io.to(`contest-${contestId}`).emit('contest-paused', {
         contestId,
         message: 'Contest has been paused by the administrator'
       });
+      
+      console.log(`✅ Event emitted to contest-${contestId}`);
+    } else {
+      console.error('❌ Socket.io instance not found!');
     }
 
     return res.status(200).json({
