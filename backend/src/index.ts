@@ -41,8 +41,8 @@ io.on('connection', (socket: any) => {
     connectedUsers.set(socket.id, { contestId, userId, role: 'participant' });
     console.log(`🚪 User ${userId} joined contest ${contestId} (socket: ${socket.id})`);
     
-    // Get room info
-    const roomSockets = socket.io.sockets.adapter.rooms.get(`contest-${contestId}`);
+    // Get room info using the server's adapter (not socket.io)
+    const roomSockets = io.sockets.adapter.rooms.get(`contest-${contestId}`);
     console.log(`📊 Total participants in contest-${contestId}: ${roomSockets ? roomSockets.size : 0}`);
     
     // Notify admins in the room
