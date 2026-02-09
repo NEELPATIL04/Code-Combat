@@ -233,24 +233,46 @@ export function wrapCodeWithTestRunner(params: {
 }): string {
   const { userCode, language, functionName, testInput, testRunnerTemplate } = params;
 
+  console.log('🔧 wrapCodeWithTestRunner called:', {
+    language,
+    functionName: functionName || 'MISSING',
+    hasUserCode: !!userCode,
+    userCodeLength: userCode?.length || 0,
+    hasTestInput: !!testInput,
+    testInputPreview: testInput?.substring(0, 100) || 'MISSING',
+    hasCustomTemplate: !!testRunnerTemplate,
+  });
+
   // If no function name or test input, return user code as-is
   if (!functionName || !testInput) {
-    console.warn('wrapCodeWithTestRunner: Missing functionName or testInput', { functionName, testInput: testInput ? 'present' : 'missing' });
+    console.warn('⚠️  wrapCodeWithTestRunner: Missing functionName or testInput - returning unwrapped code', {
+      functionName: functionName || 'MISSING',
+      testInput: testInput ? 'present' : 'MISSING'
+    });
     return userCode;
   }
 
   // Get test runner template
   const template = testRunnerTemplate || DEFAULT_TEST_RUNNERS[language];
   if (!template) {
-    console.warn(`No test runner template for language: ${language}`);
+    console.warn(`⚠️  No test runner template for language: ${language} - returning unwrapped code`);
     return userCode;
   }
+
+  console.log('✅ Using template:', testRunnerTemplate ? 'CUSTOM' : 'DEFAULT');
 
   // Parse test input
   const { params: functionParams } = parseTestInput(testInput);
 
+  console.log('📝 Parsed test input:', {
+    originalInput: testInput.substring(0, 100),
+    parsedParams: functionParams,
+  });
+
   // Generate function call
   const functionCall = generateFunctionCall(functionName, functionParams, language);
+
+  console.log('📝 Generated function call:', functionCall);
 
   // Replace placeholders in order
   let wrappedCode = template
@@ -259,12 +281,13 @@ export function wrapCodeWithTestRunner(params: {
     .replace(/\{\{FUNCTION_CALL\}\}/g, functionCall)
     .replace(/\{\{TEST_INPUT\}\}/g, testInput);
 
-  console.log('✅ Code wrapped successfully', {
+  console.log('✅ Code wrapped successfully:', {
     language,
     functionName,
     testInputLength: testInput.length,
     hasUserCode: !!userCode,
     wrappedCodeLength: wrappedCode.length,
+    wrappedCodePreview: wrappedCode.substring(0, 200) + '...',
   });
 
   return wrappedCode;
