@@ -281,6 +281,13 @@ export function wrapCodeWithTestRunner(params: {
     .replace(/\{\{FUNCTION_CALL\}\}/g, functionCall)
     .replace(/\{\{TEST_INPUT\}\}/g, testInput);
 
+  // Check if template is missing placeholders (hardcoded function calls)
+  const hasPlaceholders = template.includes('{{USER_CODE}}') || template.includes('{{FUNCTION_CALL}}');
+  if (!hasPlaceholders) {
+    console.warn('⚠️  Custom template missing placeholders! Template should use {{USER_CODE}} and {{FUNCTION_CALL}}');
+    console.warn('⚠️  Current template preview:', template.substring(0, 200));
+  }
+
   console.log('✅ Code wrapped successfully:', {
     language,
     functionName,
@@ -288,6 +295,7 @@ export function wrapCodeWithTestRunner(params: {
     hasUserCode: !!userCode,
     wrappedCodeLength: wrappedCode.length,
     wrappedCodePreview: wrappedCode.substring(0, 200) + '...',
+    templateHadPlaceholders: hasPlaceholders,
   });
 
   return wrappedCode;
