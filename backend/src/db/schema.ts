@@ -25,6 +25,15 @@ export const contestStatusEnum = pgEnum('contest_status', ['upcoming', 'active',
 export const contestDifficultyEnum = pgEnum('contest_difficulty', ['Easy', 'Medium', 'Hard']);
 
 /**
+ * Contest State Enum
+ * Defines the real-time state of an active contest:
+ * - running: Contest is actively running
+ * - paused: Contest is temporarily paused by admin
+ * - ended: Contest has been forcefully ended by admin
+ */
+export const contestStateEnum = pgEnum('contest_state', ['running', 'paused', 'ended']);
+
+/**
  * Users Table
  * Stores all user accounts in the system with authentication details
  */
@@ -85,6 +94,9 @@ export const contests = pgTable('contests', {
 
   // Contest status
   status: contestStatusEnum('status').notNull().default('upcoming'),
+
+  // Contest state (for real-time pause/resume/end control)
+  contestState: contestStateEnum('contest_state').default('running'),
 
   // Contest start password (optional, for security)
   startPassword: varchar('start_password', { length: 255 }),

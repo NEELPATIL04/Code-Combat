@@ -128,21 +128,19 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
                 </span>
             </div>
 
-            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: isLarge ? '1fr 1fr' : '1fr', gap: '1px', background: '#000', position: 'relative' }}>
+            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: isLarge ? '1fr 1fr' : '1fr 1fr', gap: '1px', background: '#000', position: 'relative' }}>
                 <div style={{ position: 'relative', aspectRatio: '16/9' }}>
                     <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     <div style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <User size={10} /> Camera
                     </div>
                 </div>
-                {isLarge && (
-                    <div style={{ position: 'relative', aspectRatio: '16/9' }}>
-                        <video ref={screenRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        <div style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Monitor size={10} /> Screen
-                        </div>
+                <div style={{ position: 'relative', aspectRatio: '16/9' }}>
+                    <video ref={screenRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <div style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Monitor size={10} /> Screen
                     </div>
-                )}
+                </div>
             </div>
 
             {/* Click to expand indicator */}

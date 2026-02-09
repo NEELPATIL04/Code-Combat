@@ -95,6 +95,8 @@ interface MemoizedCodeEditorProps {
         hintThreshold: number;
         solutionThreshold: number;
     };
+    allowCopyPaste?: boolean;
+    onCopyPasteAttempt?: (type: 'copy' | 'paste' | 'cut') => void;
 }
 
 // Memoized Code Editor component to prevent re-renders
@@ -115,6 +117,8 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
     onAnalyze,
     isAnalyzing,
     aiConfig,
+    allowCopyPaste = true,
+    onCopyPasteAttempt,
 }) => {
     const editorOptions = useMemo(() => ({
         minimap: { enabled: false },
@@ -157,10 +161,48 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
                     language={language}
                     defaultValue={code}
                     onChange={onCodeChange}
-                    onMount={(editor) => {
+                    onMount={(editor, monaco) => {
                         // Force layout after a delay to ensure font widths are calculated correctly
                         setTimeout(() => editor.layout(), 100);
                         setTimeout(() => editor.layout(), 500); // Secondary check for slow font loads
+
+                        // Add copy-paste detection if disabled
+                        if (!allowCopyPaste && onCopyPasteAttempt) {
+                            // Get the DOM node of the editor
+                            const editorDomNode = editor.getDomNode();
+                            if (editorDomNode) {
+                                const handleCopy = (e: ClipboardEvent) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    onCopyPasteAttempt('copy');
+                                };
+                                const handlePaste = (e: ClipboardEvent) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    onCopyPasteAttempt('paste');
+                                };
+                                const handleCut = (e: ClipboardEvent) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    onCopyPasteAttempt('cut');
+                                };
+
+                                editorDomNode.addEventListener('copy', handleCopy);
+                                editorDomNode.addEventListener('paste', handlePaste);
+                                editorDomNode.addEventListener('cut', handleCut);
+
+                                // Also intercept keyboard shortcuts
+                                editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC, () => {
+                                    onCopyPasteAttempt('copy');
+                                });
+                                editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, () => {
+                                    onCopyPasteAttempt('paste');
+                                });
+                                editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX, () => {
+                                    onCopyPasteAttempt('cut');
+                                });
+                            }
+                        }
                     }}
                     theme="vs-dark"
                     options={editorOptions}
@@ -723,6 +765,12 @@ const TaskPage: React.FC = () => {
     const [showLockout, setShowLockout] = useState<boolean>(false);
     const hasExited = useRef<boolean>(false);
 
+    // Contest state (pause/end)
+    const [contestPaused, setContestPaused] = useState<boolean>(false);
+    const [contestEnded, setContestEnded] = useState<boolean>(false);
+    const [pauseMessage, setPauseMessage] = useState<string>('');
+    const [endMessage, setEndMessage] = useState<string>('');
+
     // Hint state
     const [hint, setHint] = useState<string | null>(null);
     const [isGeneratingHint, setIsGeneratingHint] = useState<boolean>(false);
@@ -864,6 +912,56 @@ const TaskPage: React.FC = () => {
         };
     }, [socket, mediaVerified, localStreams, user, contestId]);
 
+    // Socket listeners for contest state changes (pause/resume/end)
+    useEffect(() => {
+        if (!socket || !contestId) return;
+
+        const handleContestPaused = (data: { contestId: number, message: string }) => {
+            console.log('📌 Contest paused:', data);
+            setContestPaused(true);
+            setPauseMessage(data.message || 'Contest has been paused by the administrator');
+            showToast('Contest paused', 'warning');
+        };
+
+        const handleContestResumed = (data: { contestId: number, message: string }) => {
+            console.log('▶️ Contest resumed:', data);
+            setContestPaused(false);
+            setPauseMessage('');
+            showToast('Contest resumed', 'success');
+        };
+
+        const handleContestEnded = async (data: { contestId: number, message: string, autoSubmit: boolean }) => {
+            console.log('🛑 Contest ended:', data);
+            setContestEnded(true);
+            setEndMessage(data.message || 'Contest has ended');
+            showToast('Contest ended', 'error');
+
+            // Auto-submit if requested
+            if (data.autoSubmit && task) {
+                try {
+                    await handleSubmit();
+                } catch (error) {
+                    console.error('Failed to auto-submit:', error);
+                }
+            }
+
+            // Redirect to results after 3 seconds
+            setTimeout(() => {
+                navigate(`/participant/contest/${contestId}/results`);
+            }, 3000);
+        };
+
+        socket.on('contest-paused', handleContestPaused);
+        socket.on('contest-resumed', handleContestResumed);
+        socket.on('contest-ended', handleContestEnded);
+
+        return () => {
+            socket.off('contest-paused', handleContestPaused);
+            socket.off('contest-resumed', handleContestResumed);
+            socket.off('contest-ended', handleContestEnded);
+        };
+    }, [socket, contestId, task, navigate, showToast]);
+
     const handleGetHint = useCallback(async () => {
         if (!task) return;
         setIsGeneratingHint(true);
@@ -962,6 +1060,18 @@ const TaskPage: React.FC = () => {
             console.error('❌ Failed to log activity:', error);
         }
     }, [contestId]);
+
+    // Handle copy-paste attempts
+    const handleCopyPasteAttempt = useCallback((type: 'copy' | 'paste' | 'cut') => {
+        console.log(`🚫 Copy-paste attempt detected: ${type}`);
+        logUserActivity(`${type}_attempt`, {
+            timestamp: new Date().toISOString(),
+            taskId: task?.id,
+            taskTitle: task?.title
+        });
+        // Show a toast notification to user
+        showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} is disabled in this contest`, 'warning');
+    }, [contestId, task, logUserActivity, showToast]);
 
     // Effect for keyboard shortcuts, navigation lockdown, and activity logging
     useEffect(() => {
@@ -1730,6 +1840,8 @@ const TaskPage: React.FC = () => {
                             hintThreshold: contestSettings?.hintUnlockAfterSubmissions ?? 0,
                             solutionThreshold: 0 // Not implemented in contestSettings yet
                         }}
+                        allowCopyPaste={contestSettings?.allowCopyPaste ?? false}
+                        onCopyPasteAttempt={handleCopyPasteAttempt}
                     />
                 )}
 
@@ -2035,6 +2147,79 @@ const TaskPage: React.FC = () => {
                             >
                                 Re-enter Full Screen
                             </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Pause Overlay */}
+                {contestPaused && (
+                    <div style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        background: 'rgba(0, 0, 0, 0.95)',
+                        backdropFilter: 'blur(10px)',
+                        zIndex: 10000,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 20,
+                        textAlign: 'center',
+                        padding: 20
+                    }}>
+                        <div style={{ padding: 40, background: '#111113', border: '1px solid rgba(234, 179, 8, 0.3)', borderRadius: 16, maxWidth: 500, boxShadow: '0 20px 50px rgba(0,0,0,0.7)', fontFamily: "'DM Sans', sans-serif" }}>
+                            <Pause size={64} style={{ color: '#eab308', marginBottom: 20 }} />
+                            <h2 style={{ fontSize: 28, fontWeight: 700, marginBottom: 16, color: '#fff' }}>Contest Paused</h2>
+                            <p style={{ color: 'rgba(255, 255, 255, 0.7)', marginBottom: 20, lineHeight: 1.6, fontSize: '1rem' }}>
+                                {pauseMessage}
+                            </p>
+                            <p style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.875rem', lineHeight: 1.5 }}>
+                                Please wait for the administrator to resume the contest.
+                                Do not close this window or refresh the page.
+                            </p>
+                            <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#eab308', animation: 'pulse 2s infinite' }}></div>
+                                <span style={{ color: '#eab308', fontSize: '0.875rem', fontWeight: 600 }}>Waiting for resume...</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* End Contest Overlay */}
+                {contestEnded && (
+                    <div style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        background: 'rgba(0, 0, 0, 0.95)',
+                        backdropFilter: 'blur(10px)',
+                        zIndex: 10000,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 20,
+                        textAlign: 'center',
+                        padding: 20
+                    }}>
+                        <div style={{ padding: 40, background: '#111113', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 16, maxWidth: 500, boxShadow: '0 20px 50px rgba(0,0,0,0.7)', fontFamily: "'DM Sans', sans-serif" }}>
+                            <StopCircle size={64} style={{ color: '#ef4444', marginBottom: 20 }} />
+                            <h2 style={{ fontSize: 28, fontWeight: 700, marginBottom: 16, color: '#fff' }}>Contest Ended</h2>
+                            <p style={{ color: 'rgba(255, 255, 255, 0.7)', marginBottom: 20, lineHeight: 1.6, fontSize: '1rem' }}>
+                                {endMessage}
+                            </p>
+                            <p style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.875rem', lineHeight: 1.5, marginBottom: 24 }}>
+                                Your work has been auto-submitted. You will be redirected to the results page shortly.
+                            </p>
+                            <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                <CheckCircle2 size={20} style={{ color: '#22c55e' }} />
+                                <span style={{ color: '#22c55e', fontSize: '0.875rem', fontWeight: 600 }}>Submission Complete</span>
+                            </div>
                         </div>
                     </div>
                 )}

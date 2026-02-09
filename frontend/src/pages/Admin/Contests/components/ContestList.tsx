@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Play, Users, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Play, Users, Edit2, Trash2, Pause, PlayCircle, StopCircle } from 'lucide-react';
 import { Contest } from '../types';
 
 interface ContestListProps {
@@ -10,6 +10,9 @@ interface ContestListProps {
     onEdit: (contest: Contest) => void;
     onDelete: (id: number) => void;
     onStart: (id: number) => void;
+    onPause: (id: number) => void;
+    onResume: (id: number) => void;
+    onEnd: (id: number) => void;
     onManageParticipants: (id: number) => void;
     onView: (contest: Contest) => void;
 }
@@ -21,6 +24,9 @@ const ContestList: React.FC<ContestListProps> = ({
     onEdit,
     onDelete,
     onStart,
+    onPause,
+    onResume,
+    onEnd,
     onManageParticipants,
     onView
 }) => {
@@ -205,7 +211,8 @@ const ContestList: React.FC<ContestListProps> = ({
 
                             {/* Actions Cell */}
                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                {!contest.isStarted && (
+                                {/* Start Button - Only for upcoming contests */}
+                                {!contest.isStarted && contest.status === 'upcoming' && (
                                     <button
                                         onClick={(e) => { e.stopPropagation(); onStart(contest.id); }}
                                         title="Start Contest"
@@ -228,6 +235,82 @@ const ContestList: React.FC<ContestListProps> = ({
                                         <Play size={14} />
                                     </button>
                                 )}
+
+                                {/* Pause Button - For running active contests */}
+                                {contest.status === 'active' && ((contest as any).contestState === 'running' || !(contest as any).contestState) && (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onPause(contest.id); }}
+                                        title="Pause Contest"
+                                        style={{
+                                            width: '32px',
+                                            height: '32px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            background: 'transparent',
+                                            border: '1px solid #27272a',
+                                            borderRadius: '6px',
+                                            color: '#eab308',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                        onMouseOver={(e) => { e.currentTarget.style.background = '#18181b'; }}
+                                        onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                    >
+                                        <Pause size={14} />
+                                    </button>
+                                )}
+
+                                {/* Resume Button - For paused contests */}
+                                {contest.status === 'active' && (contest as any).contestState === 'paused' && (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onResume(contest.id); }}
+                                        title="Resume Contest"
+                                        style={{
+                                            width: '32px',
+                                            height: '32px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            background: 'transparent',
+                                            border: '1px solid #27272a',
+                                            borderRadius: '6px',
+                                            color: '#22c55e',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                        onMouseOver={(e) => { e.currentTarget.style.background = '#18181b'; }}
+                                        onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                    >
+                                        <PlayCircle size={14} />
+                                    </button>
+                                )}
+
+                                {/* End Button - For active contests */}
+                                {contest.status === 'active' && (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onEnd(contest.id); }}
+                                        title="End Contest"
+                                        style={{
+                                            width: '32px',
+                                            height: '32px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            background: 'transparent',
+                                            border: '1px solid #27272a',
+                                            borderRadius: '6px',
+                                            color: '#ef4444',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                        onMouseOver={(e) => { e.currentTarget.style.background = '#18181b'; }}
+                                        onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                    >
+                                        <StopCircle size={14} />
+                                    </button>
+                                )}
+
                                 <button
                                     onClick={(e) => { e.stopPropagation(); onManageParticipants(contest.id); }}
                                     title="Add Participants"

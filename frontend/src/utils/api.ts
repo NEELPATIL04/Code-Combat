@@ -165,6 +165,33 @@ export const contestAPI = {
     return handleResponse(response);
   },
 
+  // Pause contest
+  pause: async (id: number) => {
+    const response = await fetch(`${API_BASE_URL}/contests/${id}/pause`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  // Resume contest
+  resume: async (id: number) => {
+    const response = await fetch(`${API_BASE_URL}/contests/${id}/resume`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  // End contest
+  end: async (id: number) => {
+    const response = await fetch(`${API_BASE_URL}/contests/${id}/end`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
   // Get my contests (for players)
   getMyContests: async () => {
     const response = await fetch(`${API_BASE_URL}/contests/my-contests`, {

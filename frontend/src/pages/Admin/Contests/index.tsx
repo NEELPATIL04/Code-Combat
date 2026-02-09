@@ -171,6 +171,42 @@ const Contests: React.FC = () => {
         }
     };
 
+    const pauseContest = async (id: number) => {
+        if (window.confirm('Are you sure you want to pause this contest? Participants will not be able to continue until you resume.')) {
+            try {
+                await contestAPI.pause(id);
+                loadContests();
+            } catch (err) {
+                console.error('Failed to pause contest:', err);
+                setError('Failed to pause contest');
+            }
+        }
+    };
+
+    const resumeContest = async (id: number) => {
+        if (window.confirm('Are you sure you want to resume this contest? Participants will be able to continue working.')) {
+            try {
+                await contestAPI.resume(id);
+                loadContests();
+            } catch (err) {
+                console.error('Failed to resume contest:', err);
+                setError('Failed to resume contest');
+            }
+        }
+    };
+
+    const endContest = async (id: number) => {
+        if (window.confirm('⚠️ Are you sure you want to END this contest? This action cannot be undone. All participants\' current work will be auto-submitted.')) {
+            try {
+                await contestAPI.end(id);
+                loadContests();
+            } catch (err) {
+                console.error('Failed to end contest:', err);
+                setError('Failed to end contest');
+            }
+        }
+    };
+
     const openParticipantModal = (contestId: number) => {
         const contest = contests.find(c => c.id === contestId);
         if (contest) {
@@ -288,6 +324,9 @@ const Contests: React.FC = () => {
                     onEdit={(c) => openModal(c)}
                     onDelete={deleteContest}
                     onStart={startContest}
+                    onPause={pauseContest}
+                    onResume={resumeContest}
+                    onEnd={endContest}
                     onManageParticipants={openParticipantModal}
                     onView={(contest) => {
                         setEditingContest(contest);

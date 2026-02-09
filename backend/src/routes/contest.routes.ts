@@ -13,6 +13,9 @@ import {
   completeContest,
   getContestResults,
   getContestResultsByUser,
+  pauseContest,
+  resumeContest,
+  endContest,
 } from '../controllers/contest.controller';
 import {
   getContestSettings,
@@ -84,6 +87,27 @@ router.delete('/:id/participants/:userId', authenticate, requireRole(['admin', '
  * Requires: Authentication + Admin role
  */
 router.post('/:id/start', authenticate, requireRole(['admin', 'super_admin']), startContest);
+
+/**
+ * POST /api/contests/:id/pause
+ * Pause an active contest
+ * Requires: Authentication + Admin role
+ */
+router.post('/:id/pause', authenticate, requireRole(['admin', 'super_admin']), pauseContest);
+
+/**
+ * POST /api/contests/:id/resume
+ * Resume a paused contest
+ * Requires: Authentication + Admin role
+ */
+router.post('/:id/resume', authenticate, requireRole(['admin', 'super_admin']), resumeContest);
+
+/**
+ * POST /api/contests/:id/end
+ * End an active contest immediately
+ * Requires: Authentication + Admin role
+ */
+router.post('/:id/end', authenticate, requireRole(['admin', 'super_admin']), endContest);
 
 /**
  * POST /api/contests/:id/complete

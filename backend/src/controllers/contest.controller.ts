@@ -992,3 +992,159 @@ export const getContestResultsByUser = async (req: Request, res: Response, next:
     return next(error);
   }
 };
+
+/**
+ * Pause an active contest
+ * POST /api/contests/:id/pause
+ */
+export const pauseContest = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const contestId = parseInt(req.params.id as string);
+
+    const [contest] = await db
+      .select()
+      .from(contests)
+      .where(eq(contests.id, contestId));
+
+    if (!contest) {
+      return res.status(404).json({ message: 'Contest not found' });
+    }
+
+    if (contest.status !== 'active') {
+      return res.status(400).json({ message: 'Only active contests can be paused' });
+    }
+
+    if (contest.contestState === 'paused') {
+      return res.status(400).json({ message: 'Contest is already paused' });
+    }
+
+    const [updatedContest] = await db
+      .update(contests)
+      .set({
+        contestState: 'paused',
+        updatedAt: new Date(),
+      })
+      .where(eq(contests.id, contestId))
+      .returning();
+
+    // Emit socket event to all participants
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`contest-${contestId}`).emit('contest-paused', {
+        contestId,
+        message: 'Contest has been paused by the administrator'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Contest paused successfully',
+      contest: updatedContest,
+    });
+  } catch (error) {
+    console.error('Error pausing contest:', error);
+    return next(error);
+  }
+};
+
+/**
+ * Resume a paused contest
+ * POST /api/contests/:id/resume
+ */
+export const resumeContest = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const contestId = parseInt(req.params.id as string);
+
+    const [contest] = await db
+      .select()
+      .from(contests)
+      .where(eq(contests.id, contestId));
+
+    if (!contest) {
+      return res.status(404).json({ message: 'Contest not found' });
+    }
+
+    if (contest.contestState !== 'paused') {
+      return res.status(400).json({ message: 'Contest is not paused' });
+    }
+
+    const [updatedContest] = await db
+      .update(contests)
+      .set({
+        contestState: 'running',
+        updatedAt: new Date(),
+      })
+      .where(eq(contests.id, contestId))
+      .returning();
+
+    // Emit socket event to all participants
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`contest-${contestId}`).emit('contest-resumed', {
+        contestId,
+        message: 'Contest has been resumed by the administrator'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Contest resumed successfully',
+      contest: updatedContest,
+    });
+  } catch (error) {
+    console.error('Error resuming contest:', error);
+    return next(error);
+  }
+};
+
+/**
+ * End an active contest immediately
+ * POST /api/contests/:id/end
+ */
+export const endContest = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const contestId = parseInt(req.params.id as string);
+
+    const [contest] = await db
+      .select()
+      .from(contests)
+      .where(eq(contests.id, contestId));
+
+    if (!contest) {
+      return res.status(404).json({ message: 'Contest not found' });
+    }
+
+    if (contest.status !== 'active') {
+      return res.status(400).json({ message: 'Only active contests can be ended' });
+    }
+
+    const [updatedContest] = await db
+      .update(contests)
+      .set({
+        contestState: 'ended',
+        status: 'completed',
+        updatedAt: new Date(),
+      })
+      .where(eq(contests.id, contestId))
+      .returning();
+
+    // Emit socket event to all participants
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`contest-${contestId}`).emit('contest-ended', {
+        contestId,
+        message: 'Contest has been ended by the administrator. Please submit your work.',
+        autoSubmit: true
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Contest ended successfully',
+      contest: updatedContest,
+    });
+  } catch (error) {
+    console.error('Error ending contest:', error);
+    return next(error);
+  }
+};
