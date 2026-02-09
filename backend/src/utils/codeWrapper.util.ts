@@ -393,21 +393,24 @@ function mergeCppBareMethod(userCode: string, template: string, functionName: st
     if (tmplBraceEnd === -1) return template.replace('class Solution', userCode + '\n\nclass Solution');
 
     // Try to find the stub method by function name
+    // Use a more precise regex that captures ONLY the method signature (not public: or other keywords)
     const methodPattern = new RegExp(
-      `([\\w<>:&*\\s]+\\s+${functionName}\\s*\\([^)]*\\))\\s*\\{`,
+      `((?:^|\\n)[\\t ]*)((?:bool|int|void|string|double|float|vector|auto)[\\w<>:&*\\s]*\\s+${functionName}\\s*\\([^)]*\\))\\s*\\{`,
       's'
     );
     const classBody = template.substring(tmplBraceStart + 1, tmplBraceEnd);
     const stubMatch = classBody.match(methodPattern);
 
     if (stubMatch) {
-      // Found the stub — find its boundaries in the full template
-      const stubStartInBody = classBody.indexOf(stubMatch[0]);
-      const stubAbsStart = tmplBraceStart + 1 + stubStartInBody;
-      const stubBraceStart = template.indexOf('{', stubAbsStart + stubMatch[1].length);
+      // stubMatch[1] = leading whitespace/newline before the method
+      // stubMatch[2] = the actual method signature
+      const fullMatchStart = classBody.indexOf(stubMatch[0]);
+      const methodSigStart = fullMatchStart + stubMatch[1].length;
+      const stubAbsStart = tmplBraceStart + 1 + methodSigStart;
+      const stubBraceStart = template.indexOf('{', stubAbsStart + stubMatch[2].length);
       const stubBraceEnd = findMatchingBrace(template, stubBraceStart);
       if (stubBraceEnd !== -1) {
-        // Replace the stub method with user's method
+        // Replace the stub method with user's method, preserving everything before it (like public:)
         const result = template.substring(0, stubAbsStart) + '  ' + userCode.trim() + '\n' + template.substring(stubBraceEnd + 1);
         console.log('✅ C++ bare method merge successful (replaced stub)');
         return result;
