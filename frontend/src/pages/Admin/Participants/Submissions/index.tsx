@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Clock, CheckCircle, XCircle, Code, Brain, Lightbulb, Edit2, Save, X, RotateCcw, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle, XCircle, Code, Brain, Lightbulb, Edit2, Save, X, RotateCcw, ChevronDown, Unlock } from 'lucide-react';
 import { adminAPI, contestAPI } from '../../../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -46,6 +46,7 @@ const Submissions: React.FC = () => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
     const [resettingSubmissions, setResettingSubmissions] = useState(false);
+    const [maxSubmissionsAllowed, setMaxSubmissionsAllowed] = useState<number>(0); // 0 = unlimited
 
     // Edit Score State
     const [showEditScoreModal, setShowEditScoreModal] = useState(false);
@@ -63,8 +64,25 @@ const Submissions: React.FC = () => {
         if (id && contestId) {
             loadContestTasks();
             loadSubmissions();
+            loadContestSettings();
         }
     }, [id, contestId]);
+
+    const loadContestSettings = async () => {
+        try {
+            const response = await fetch(`/api/contests/${contestId}/settings`, {
+                headers: {
+                    'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
+                },
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setMaxSubmissionsAllowed(data.settings?.maxSubmissionsAllowed || 0);
+            }
+        } catch (error) {
+            console.error('Failed to load contest settings:', error);
+        }
+    };
 
     const loadContestTasks = async () => {
         try {
@@ -174,10 +192,19 @@ const Submissions: React.FC = () => {
         }
     };
 
+    // Helper to count submissions per task
+    const getTaskSubmissionCount = (taskId: number) => {
+        return submissions.filter(s => s.taskId === taskId).length;
+    };
+
     // Filter submissions by selected task
     const filteredSubmissions = selectedTaskId
         ? submissions.filter(s => s.taskId === selectedTaskId)
         : submissions;
+
+    // Get submission info for selected task
+    const selectedTaskSubmissionCount = selectedTaskId ? getTaskSubmissionCount(selectedTaskId) : 0;
+    const canAddMoreSubmissions = maxSubmissionsAllowed === 0 || selectedTaskSubmissionCount < maxSubmissionsAllowed;
 
     const getStatusIcon = (status: string) => {
         switch (status) {
@@ -259,16 +286,82 @@ const Submissions: React.FC = () => {
                                 fontSize: '0.875rem',
                                 cursor: 'pointer',
                                 appearance: 'none',
-                                minWidth: '200px'
+                                minWidth: '250px'
                             }}
                         >
                             <option value="">All Tasks</option>
-                            {tasks.map(task => (
-                                <option key={task.id} value={task.id}>{task.title}</option>
-                            ))}
+                            {tasks.map(task => {
+                                const count = getTaskSubmissionCount(task.id);
+                                const limit = maxSubmissionsAllowed === 0 ? '∞' : maxSubmissionsAllowed;
+                                return (
+                                    <option key={task.id} value={task.id}>
+                                        {task.title} ({count}/{limit})
+                                    </option>
+                                );
+                            })}
                         </select>
                         <ChevronDown size={16} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#71717a' }} />
                     </div>
+
+                    {/* Submission Count Info */}
+                    {selectedTaskId && (
+                        <>
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '8px 16px',
+                                background: canAddMoreSubmissions ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                border: `1px solid ${canAddMoreSubmissions ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+                                borderRadius: '6px',
+                                color: canAddMoreSubmissions ? '#22c55e' : '#ef4444',
+                                fontSize: '0.875rem',
+                                fontWeight: 500
+                            }}>
+                                {selectedTaskSubmissionCount}/{maxSubmissionsAllowed === 0 ? '∞' : maxSubmissionsAllowed} Submissions
+                                {!canAddMoreSubmissions && maxSubmissionsAllowed > 0 && ' (Limit Reached)'}
+                            </div>
+                            {!canAddMoreSubmissions && maxSubmissionsAllowed > 0 && (
+                                <button
+                                    onClick={() => {
+                                        const taskName = tasks.find(t => t.id === selectedTaskId)?.title || 'this task';
+                                        if (confirm(`Reset all submissions for "${taskName}" to allow participant to submit again?\n\nThis will delete all existing submissions for this task.`)) {
+                                            handleResetTaskSubmissions();
+                                        }
+                                    }}
+                                    disabled={resettingSubmissions}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        padding: '8px 16px',
+                                        background: 'rgba(34, 197, 94, 0.1)',
+                                        border: '1px solid rgba(34, 197, 94, 0.2)',
+                                        borderRadius: '6px',
+                                        color: '#22c55e',
+                                        fontSize: '0.875rem',
+                                        fontWeight: 500,
+                                        cursor: resettingSubmissions ? 'not-allowed' : 'pointer',
+                                        opacity: resettingSubmissions ? 0.5 : 1,
+                                        whiteSpace: 'nowrap',
+                                        transition: 'all 0.15s ease'
+                                    }}
+                                    onMouseOver={(e) => {
+                                        if (!resettingSubmissions) {
+                                            e.currentTarget.style.background = 'rgba(34, 197, 94, 0.15)';
+                                            e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+                                        }
+                                    }}
+                                    onMouseOut={(e) => {
+                                        e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)';
+                                        e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.2)';
+                                    }}
+                                >
+                                    <Unlock size={14} /> {resettingSubmissions ? 'Allowing...' : 'Allow More Submissions'}
+                                </button>
+                            )}
+                        </>
+                    )}
 
                     {/* Reset Button - only show when a task is selected */}
                     {selectedTaskId && (

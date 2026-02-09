@@ -953,15 +953,25 @@ const TaskPage: React.FC = () => {
             console.log('🛑 Contest ended event received:', data);
             setContestEnded(true);
             setEndMessage(data.message || 'Contest has ended');
-            showToast('Contest ended', 'error');
+            showToast('Contest ended - Submitting your work...', 'error');
 
-            // Auto-submit if requested
+            // Auto-submit current code if requested
             if (data.autoSubmit && task) {
                 try {
                     console.log('📤 Auto-submitting due to contest end');
-                    await handleSubmit();
+                    // Submit current code immediately
+                    const currentCode = codeRef.current;
+                    await submissionAPI.submit({
+                        taskId: task.id,
+                        contestId: contest?.id || Number(contestId),
+                        code: currentCode,
+                        language: language,
+                    });
+                    console.log('✅ Auto-submit successful');
+                    showToast('Your work has been submitted', 'success');
                 } catch (error) {
                     console.error('Failed to auto-submit:', error);
+                    showToast('Failed to auto-submit. Redirecting...', 'error');
                 }
             }
 
@@ -982,7 +992,7 @@ const TaskPage: React.FC = () => {
             socket.off('contest-ended', handleContestEnded);
             console.log('🧹 Pause/resume/end listeners cleaned up');
         };
-    }, [socket, contestId, task, navigate, showToast]);
+    }, [socket, contestId, task, contest, navigate, showToast, language]);
 
     const handleGetHint = useCallback(async () => {
         if (!task) return;
@@ -1331,6 +1341,24 @@ const TaskPage: React.FC = () => {
                     setCurrentTaskIndex(0);
                     setContest(data.contest);
 
+                    // Check contest state on load (for pause/end persistence)
+                    if (data.contest) {
+                        console.log('🔍 Contest state on load:', data.contest.contestState);
+                        if (data.contest.contestState === 'paused') {
+                            setContestPaused(true);
+                            setPauseMessage('Contest has been paused by the administrator. Please wait for it to resume.');
+                            showToast('Contest is paused', 'warning');
+                        } else if (data.contest.contestState === 'ended' || data.contest.status === 'completed') {
+                            setContestEnded(true);
+                            setEndMessage('Contest has ended');
+                            showToast('Contest has ended', 'error');
+                            // Redirect to results after showing message
+                            setTimeout(() => {
+                                navigate(`/participant/contest/${contestId}/results`);
+                            }, 2000);
+                        }
+                    }
+
                     // Load test cases from task data
                     if (data.tasks[0].testCases && data.tasks[0].testCases.length > 0) {
                         setTestCases(data.tasks[0].testCases);
@@ -1354,7 +1382,7 @@ const TaskPage: React.FC = () => {
 
         if (contestId) fetchTaskData();
         else { setError('No contest ID'); setLoading(false); }
-    }, [contestId, navigate, fetchSubmissionHistory]);
+    }, [contestId, navigate, fetchSubmissionHistory, showToast]);
 
     const handleTaskSwitch = (index: number) => {
         if (index === currentTaskIndex) return;
