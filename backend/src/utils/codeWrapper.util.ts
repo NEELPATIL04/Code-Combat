@@ -58,17 +58,27 @@ export const RESULT_DELIMITER = '\n---CODECOMBAT_RESULT---\n';
 export const DEFAULT_TEST_RUNNERS: Record<string, string> = {
   javascript: `{{USER_CODE}}
 
-// Test runner — delimiter separates user console.log from result
-const __result = {{FUNCTION_CALL}};
-process.stdout.write("\\n---CODECOMBAT_RESULT---\\n");
-console.log(JSON.stringify(__result));`,
+// Test runner — handles both sync and async (Promise) results
+const __rawResult = {{FUNCTION_CALL}};
+Promise.resolve(__rawResult).then(__result => {
+  process.stdout.write("\\n---CODECOMBAT_RESULT---\\n");
+  console.log(JSON.stringify(__result));
+}).catch(__err => {
+  process.stdout.write("\\n---CODECOMBAT_RESULT---\\n");
+  console.log("Error: " + String(__err));
+});`,
 
   typescript: `{{USER_CODE}}
 
-// Test runner — delimiter separates user console.log from result
-const __result = {{FUNCTION_CALL}};
-process.stdout.write("\\n---CODECOMBAT_RESULT---\\n");
-console.log(JSON.stringify(__result));`,
+// Test runner — handles both sync and async (Promise) results
+const __rawResult = {{FUNCTION_CALL}};
+Promise.resolve(__rawResult).then((__result: any) => {
+  process.stdout.write("\\n---CODECOMBAT_RESULT---\\n");
+  console.log(JSON.stringify(__result));
+}).catch((__err: any) => {
+  process.stdout.write("\\n---CODECOMBAT_RESULT---\\n");
+  console.log("Error: " + String(__err));
+});`,
 
   python: `import json
 import sys

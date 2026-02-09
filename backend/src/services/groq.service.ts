@@ -247,6 +247,7 @@ CRITICAL RULES FOR THE DRIVER CODE:
 - The driver MUST contain the literal placeholder {{USER_CODE}} at the TOP of the file (or inside the class for Java/C++). At runtime, the platform will replace {{USER_CODE}} with the user's actual code before sending to Judge0.
 - The driver reads ONE test case input from STDIN, calls the user's function, and prints the result to STDOUT.
 - IMPORTANT: Before printing the actual result, the driver MUST print the delimiter string "\\n---CODECOMBAT_RESULT---\\n" to STDOUT. This separates any user console.log/print output from the actual test result. Example for JS: process.stdout.write("\\n---CODECOMBAT_RESULT---\\n"); console.log(result);
+- IMPORTANT: If the function might return a Promise (async operations), the driver MUST handle it. For JS/TS, always wrap the result with Promise.resolve() to handle both sync and async: Promise.resolve(result).then(res => { process.stdout.write("\\n---CODECOMBAT_RESULT---\\n"); console.log(JSON.stringify(res)); }).catch(err => { process.stdout.write("\\n---CODECOMBAT_RESULT---\\n"); console.log("Error: " + String(err)); });
 - ALL languages MUST output boolean values as lowercase "true" or "false" (never "True"/"False", never "1"/"0").
 - ALL languages MUST output arrays/lists as JSON arrays like [1,2,3].
 - ALL languages MUST output strings WITHOUT extra quotes unless the expected output includes them.
@@ -257,11 +258,13 @@ JavaScript:
 - Use: const fs = require('fs'); const input = fs.readFileSync(0, 'utf-8').trim();
 - Place {{USER_CODE}} at the top, then the driver code below it.
 - For booleans: console.log(result) works (JS prints lowercase true/false).
+- IMPORTANT: If the function might return a Promise, use Promise.resolve(result).then(res => { ... }) to handle both sync and async.
 
 TypeScript:
 - MUST start with: declare const process: any; declare function require(name: string): any;
 - Then: const fs = require('fs'); const input = fs.readFileSync(0, 'utf-8').trim();
 - Place {{USER_CODE}} at the top (after declares), then driver code.
+- IMPORTANT: If the function might return a Promise, use Promise.resolve(result).then(res => { ... }) to handle both sync and async.
 
 Python:
 - Use: import sys; input_data = sys.stdin.read().strip()
