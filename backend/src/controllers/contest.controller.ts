@@ -1167,3 +1167,315 @@ export const endContest = async (req: Request, res: Response, next: NextFunction
     return next(error);
   }
 };
+
+/**
+ * Reset an entire contest
+ * POST /api/contests/:id/reset
+ * Clears all submissions, progress, results, and resets participant state
+ */
+export const resetContest = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const contestId = parseInt(req.params.id as string);
+
+    const [contest] = await db
+      .select()
+      .from(contests)
+      .where(eq(contests.id, contestId));
+
+    if (!contest) {
+      return res.status(404).json({ message: 'Contest not found' });
+    }
+
+    // Get all task IDs for this contest
+    const contestTasks = await db.select({ id: tasks.id }).from(tasks).where(eq(tasks.contestId, contestId));
+    const taskIds = contestTasks.map(t => t.id);
+
+    // Delete submissions for this contest
+    await db.delete(submissions).where(eq(submissions.contestId, contestId));
+
+    // Delete user task progress for contest tasks
+    if (taskIds.length > 0) {
+      await db.delete(userTaskProgress).where(inArray(userTaskProgress.taskId, taskIds));
+    }
+
+    // Delete contest results
+    await db.delete(contestResults).where(eq(contestResults.contestId, contestId));
+
+    // Reset all participant records
+    await db
+      .update(contestParticipants)
+      .set({
+        hasStarted: false,
+        startedAt: null,
+        score: 0,
+        rank: null,
+        completedAt: null,
+      })
+      .where(eq(contestParticipants.contestId, contestId));
+
+    // Reset contest state back to upcoming
+    const [updatedContest] = await db
+      .update(contests)
+      .set({
+        status: 'upcoming',
+        contestState: 'running',
+        isStarted: false,
+        startedAt: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(contests.id, contestId))
+      .returning();
+
+    // Notify all connected participants
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`contest-${contestId}`).emit('contest-reset', {
+        contestId,
+        message: 'Contest has been reset by the administrator. You will be redirected.',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Contest reset successfully. All submissions, progress, and results have been cleared.',
+      contest: updatedContest,
+    });
+  } catch (error) {
+    console.error('Error resetting contest:', error);
+    return next(error);
+  }
+};
+
+/**
+ * Pause contest for a specific user
+ * POST /api/contests/:id/user/:userId/pause
+ */
+export const pauseUserContest = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const contestId = parseInt(req.params.id as string);
+    const targetUserId = parseInt(req.params.userId as string);
+
+    const [contest] = await db
+      .select()
+      .from(contests)
+      .where(eq(contests.id, contestId));
+
+    if (!contest) {
+      return res.status(404).json({ message: 'Contest not found' });
+    }
+
+    if (contest.status !== 'active') {
+      return res.status(400).json({ message: 'Contest is not active' });
+    }
+
+    // Verify participant exists
+    const [participant] = await db
+      .select()
+      .from(contestParticipants)
+      .where(and(eq(contestParticipants.contestId, contestId), eq(contestParticipants.userId, targetUserId)));
+
+    if (!participant) {
+      return res.status(404).json({ message: 'Participant not found in this contest' });
+    }
+
+    // Emit pause event targeted to this specific user
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`contest-${contestId}`).emit('user-contest-paused', {
+        contestId,
+        userId: targetUserId,
+        message: 'Your contest has been paused by the administrator.',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Contest paused for user ${targetUserId}`,
+    });
+  } catch (error) {
+    console.error('Error pausing user contest:', error);
+    return next(error);
+  }
+};
+
+/**
+ * Resume contest for a specific user
+ * POST /api/contests/:id/user/:userId/resume
+ */
+export const resumeUserContest = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const contestId = parseInt(req.params.id as string);
+    const targetUserId = parseInt(req.params.userId as string);
+
+    const [contest] = await db
+      .select()
+      .from(contests)
+      .where(eq(contests.id, contestId));
+
+    if (!contest) {
+      return res.status(404).json({ message: 'Contest not found' });
+    }
+
+    // Emit resume event targeted to this specific user
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`contest-${contestId}`).emit('user-contest-resumed', {
+        contestId,
+        userId: targetUserId,
+        message: 'Your contest has been resumed by the administrator.',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Contest resumed for user ${targetUserId}`,
+    });
+  } catch (error) {
+    console.error('Error resuming user contest:', error);
+    return next(error);
+  }
+};
+
+/**
+ * Reset contest for a specific user
+ * POST /api/contests/:id/user/:userId/reset
+ * Clears that user's submissions, progress, and results for this contest
+ */
+export const resetUserContest = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const contestId = parseInt(req.params.id as string);
+    const targetUserId = parseInt(req.params.userId as string);
+
+    const [contest] = await db
+      .select()
+      .from(contests)
+      .where(eq(contests.id, contestId));
+
+    if (!contest) {
+      return res.status(404).json({ message: 'Contest not found' });
+    }
+
+    // Verify participant exists
+    const [participant] = await db
+      .select()
+      .from(contestParticipants)
+      .where(and(eq(contestParticipants.contestId, contestId), eq(contestParticipants.userId, targetUserId)));
+
+    if (!participant) {
+      return res.status(404).json({ message: 'Participant not found in this contest' });
+    }
+
+    // Get all task IDs for this contest
+    const contestTasks = await db.select({ id: tasks.id }).from(tasks).where(eq(tasks.contestId, contestId));
+    const taskIds = contestTasks.map(t => t.id);
+
+    // Delete user's submissions for this contest
+    await db.delete(submissions).where(
+      and(eq(submissions.contestId, contestId), eq(submissions.userId, targetUserId))
+    );
+
+    // Delete user's task progress for contest tasks
+    if (taskIds.length > 0) {
+      await db.delete(userTaskProgress).where(
+        and(inArray(userTaskProgress.taskId, taskIds), eq(userTaskProgress.userId, targetUserId))
+      );
+    }
+
+    // Delete user's contest results
+    await db.delete(contestResults).where(
+      and(eq(contestResults.contestId, contestId), eq(contestResults.userId, targetUserId))
+    );
+
+    // Reset participant record
+    await db
+      .update(contestParticipants)
+      .set({
+        hasStarted: false,
+        startedAt: null,
+        score: 0,
+        rank: null,
+        completedAt: null,
+      })
+      .where(and(eq(contestParticipants.contestId, contestId), eq(contestParticipants.userId, targetUserId)));
+
+    // Notify the specific user
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`contest-${contestId}`).emit('user-contest-reset', {
+        contestId,
+        userId: targetUserId,
+        message: 'Your contest progress has been reset by the administrator. You will be redirected.',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Contest reset for user ${targetUserId}. All submissions, progress, and results cleared.`,
+    });
+  } catch (error) {
+    console.error('Error resetting user contest:', error);
+    return next(error);
+  }
+};
+
+/**
+ * End contest for a specific user
+ * POST /api/contests/:id/user/:userId/end
+ * Auto-submits their current work and redirects them to results
+ */
+export const endUserContest = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const contestId = parseInt(req.params.id as string);
+    const targetUserId = parseInt(req.params.userId as string);
+
+    const [contest] = await db
+      .select()
+      .from(contests)
+      .where(eq(contests.id, contestId));
+
+    if (!contest) {
+      return res.status(404).json({ message: 'Contest not found' });
+    }
+
+    if (contest.status !== 'active') {
+      return res.status(400).json({ message: 'Contest is not active' });
+    }
+
+    // Verify participant exists
+    const [participant] = await db
+      .select()
+      .from(contestParticipants)
+      .where(and(eq(contestParticipants.contestId, contestId), eq(contestParticipants.userId, targetUserId)));
+
+    if (!participant) {
+      return res.status(404).json({ message: 'Participant not found in this contest' });
+    }
+
+    // Mark participant as completed
+    await db
+      .update(contestParticipants)
+      .set({
+        completedAt: new Date(),
+      })
+      .where(and(eq(contestParticipants.contestId, contestId), eq(contestParticipants.userId, targetUserId)));
+
+    // Emit end event targeted to this specific user — triggers auto-submit + redirect on client
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`contest-${contestId}`).emit('user-contest-ended', {
+        contestId,
+        userId: targetUserId,
+        message: 'Your contest has been ended by the administrator. Your work is being submitted.',
+        autoSubmit: true,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Contest ended for user ${targetUserId}. Auto-submit triggered.`,
+    });
+  } catch (error) {
+    console.error('Error ending user contest:', error);
+    return next(error);
+  }
+};

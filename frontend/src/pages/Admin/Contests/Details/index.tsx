@@ -14,7 +14,12 @@ import {
     BarChart3,
     Eye,
     Settings as SettingsIcon,
-    LayoutDashboard
+    LayoutDashboard,
+    Pause,
+    PlayCircle,
+    RotateCcw,
+    StopCircle,
+    MoreVertical,
 } from 'lucide-react';
 import { contestAPI } from '../../../../utils/api';
 import ContestSettings from './ContestSettings';
@@ -55,6 +60,9 @@ const ContestDetails: React.FC = () => {
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState<'overview' | 'settings' | 'activity' | 'monitor'>('overview');
+    const [openActionMenu, setOpenActionMenu] = useState<number | null>(null);
+    const [userPausedMap, setUserPausedMap] = useState<Record<number, boolean>>({});
+    const [actionLoading, setActionLoading] = useState<number | null>(null);
 
     useEffect(() => {
         loadContestDetails();
@@ -72,6 +80,55 @@ const ContestDetails: React.FC = () => {
             setError(err.message || 'Failed to load contest details. It may have been deleted.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handlePauseUser = async (userId: number) => {
+        if (!contest) return;
+        setActionLoading(userId);
+        try {
+            if (userPausedMap[userId]) {
+                await contestAPI.resumeUser(contest.id, userId);
+                setUserPausedMap(prev => ({ ...prev, [userId]: false }));
+            } else {
+                await contestAPI.pauseUser(contest.id, userId);
+                setUserPausedMap(prev => ({ ...prev, [userId]: true }));
+            }
+        } catch (err) {
+            console.error('Failed to pause/resume user:', err);
+        } finally {
+            setActionLoading(null);
+            setOpenActionMenu(null);
+        }
+    };
+
+    const handleResetUser = async (userId: number) => {
+        if (!contest) return;
+        if (!window.confirm('⚠️ Are you sure you want to RESET this user\'s contest?\n\nThis will clear all their submissions, progress, and results.')) return;
+        setActionLoading(userId);
+        try {
+            await contestAPI.resetUser(contest.id, userId);
+            loadContestDetails();
+        } catch (err) {
+            console.error('Failed to reset user:', err);
+        } finally {
+            setActionLoading(null);
+            setOpenActionMenu(null);
+        }
+    };
+
+    const handleEndUser = async (userId: number) => {
+        if (!contest) return;
+        if (!window.confirm('⚠️ Are you sure you want to END the contest for this user?\n\nTheir current work will be auto-submitted and they will be redirected to the results page.')) return;
+        setActionLoading(userId);
+        try {
+            await contestAPI.endUser(contest.id, userId);
+            loadContestDetails();
+        } catch (err) {
+            console.error('Failed to end user contest:', err);
+        } finally {
+            setActionLoading(null);
+            setOpenActionMenu(null);
         }
     };
 
@@ -482,35 +539,109 @@ const ContestDetails: React.FC = () => {
                                             </div>
                                         </td>
                                         <td style={tdStyle}>
-                                            <button
-                                                onClick={() => navigate(`/admin/participants/${p.userId}/contest/${contest.id}`, { state: { from: 'contest' } })}
-                                                style={{
-                                                    background: 'transparent',
-                                                    border: '1px solid #27272a',
-                                                    borderRadius: '6px',
-                                                    color: '#a1a1aa',
-                                                    padding: '6px 10px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '6px',
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: 500,
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    e.currentTarget.style.borderColor = '#3b82f6';
-                                                    e.currentTarget.style.color = '#3b82f6';
-                                                    e.currentTarget.style.background = 'rgba(59, 130, 246, 0.05)';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    e.currentTarget.style.borderColor = '#27272a';
-                                                    e.currentTarget.style.color = '#a1a1aa';
-                                                    e.currentTarget.style.background = 'transparent';
-                                                }}
-                                            >
-                                                <Eye size={14} /> View Submissions
-                                            </button>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative' }}>
+                                                <button
+                                                    onClick={() => navigate(`/admin/participants/${p.userId}/contest/${contest.id}`, { state: { from: 'contest' } })}
+                                                    title="View Submissions"
+                                                    style={{
+                                                        background: 'transparent',
+                                                        border: '1px solid #27272a',
+                                                        borderRadius: '6px',
+                                                        color: '#a1a1aa',
+                                                        padding: '6px 8px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 500,
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.borderColor = '#3b82f6';
+                                                        e.currentTarget.style.color = '#3b82f6';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.borderColor = '#27272a';
+                                                        e.currentTarget.style.color = '#a1a1aa';
+                                                    }}
+                                                >
+                                                    <Eye size={13} />
+                                                </button>
+
+                                                {/* Pause/Resume user button */}
+                                                {contest.status === 'active' && p.hasStarted && (
+                                                    <button
+                                                        onClick={() => handlePauseUser(p.userId)}
+                                                        title={userPausedMap[p.userId] ? 'Resume for this user' : 'Pause for this user'}
+                                                        disabled={actionLoading === p.userId}
+                                                        style={{
+                                                            background: 'transparent',
+                                                            border: '1px solid #27272a',
+                                                            borderRadius: '6px',
+                                                            color: userPausedMap[p.userId] ? '#22c55e' : '#eab308',
+                                                            padding: '6px 8px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            cursor: actionLoading === p.userId ? 'wait' : 'pointer',
+                                                            transition: 'all 0.2s',
+                                                            opacity: actionLoading === p.userId ? 0.5 : 1,
+                                                        }}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.background = '#18181b'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                                    >
+                                                        {userPausedMap[p.userId] ? <PlayCircle size={13} /> : <Pause size={13} />}
+                                                    </button>
+                                                )}
+
+                                                {/* Reset user button */}
+                                                <button
+                                                    onClick={() => handleResetUser(p.userId)}
+                                                    title="Reset contest for this user"
+                                                    disabled={actionLoading === p.userId}
+                                                    style={{
+                                                        background: 'transparent',
+                                                        border: '1px solid #27272a',
+                                                        borderRadius: '6px',
+                                                        color: '#f97316',
+                                                        padding: '6px 8px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        cursor: actionLoading === p.userId ? 'wait' : 'pointer',
+                                                        transition: 'all 0.2s',
+                                                        opacity: actionLoading === p.userId ? 0.5 : 1,
+                                                    }}
+                                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#18181b'; }}
+                                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                                >
+                                                    <RotateCcw size={13} />
+                                                </button>
+
+                                                {/* End user contest button */}
+                                                {contest.status === 'active' && p.hasStarted && (
+                                                    <button
+                                                        onClick={() => handleEndUser(p.userId)}
+                                                        title="End contest for this user (auto-submit & redirect)"
+                                                        disabled={actionLoading === p.userId}
+                                                        style={{
+                                                            background: 'transparent',
+                                                            border: '1px solid #27272a',
+                                                            borderRadius: '6px',
+                                                            color: '#ef4444',
+                                                            padding: '6px 8px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            cursor: actionLoading === p.userId ? 'wait' : 'pointer',
+                                                            transition: 'all 0.2s',
+                                                            opacity: actionLoading === p.userId ? 0.5 : 1,
+                                                        }}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.background = '#18181b'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                                    >
+                                                        <StopCircle size={13} />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))

@@ -16,6 +16,11 @@ import {
   pauseContest,
   resumeContest,
   endContest,
+  resetContest,
+  pauseUserContest,
+  resumeUserContest,
+  resetUserContest,
+  endUserContest,
 } from '../controllers/contest.controller';
 import {
   getContestSettings,
@@ -108,6 +113,22 @@ router.post('/:id/resume', authenticate, requireRole(['admin', 'super_admin']), 
  * Requires: Authentication + Admin role
  */
 router.post('/:id/end', authenticate, requireRole(['admin', 'super_admin']), endContest);
+
+/**
+ * POST /api/contests/:id/reset
+ * Reset an entire contest (clear all progress)
+ * Requires: Authentication + Admin role
+ */
+router.post('/:id/reset', authenticate, requireRole(['admin', 'super_admin']), resetContest);
+
+/**
+ * Per-user contest actions
+ * Requires: Authentication + Admin role
+ */
+router.post('/:id/user/:userId/pause', authenticate, requireRole(['admin', 'super_admin']), pauseUserContest);
+router.post('/:id/user/:userId/resume', authenticate, requireRole(['admin', 'super_admin']), resumeUserContest);
+router.post('/:id/user/:userId/reset', authenticate, requireRole(['admin', 'super_admin']), resetUserContest);
+router.post('/:id/user/:userId/end', authenticate, requireRole(['admin', 'super_admin']), endUserContest);
 
 /**
  * POST /api/contests/:id/complete

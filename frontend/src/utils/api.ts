@@ -233,6 +233,48 @@ export const contestAPI = {
     });
     return handleResponse(response);
   },
+
+  // Reset entire contest (clear all progress)
+  reset: async (id: number) => {
+    const response = await fetch(`${API_BASE_URL}/contests/${id}/reset`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  // Per-user actions
+  pauseUser: async (contestId: number, userId: number) => {
+    const response = await fetch(`${API_BASE_URL}/contests/${contestId}/user/${userId}/pause`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  resumeUser: async (contestId: number, userId: number) => {
+    const response = await fetch(`${API_BASE_URL}/contests/${contestId}/user/${userId}/resume`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  resetUser: async (contestId: number, userId: number) => {
+    const response = await fetch(`${API_BASE_URL}/contests/${contestId}/user/${userId}/reset`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  endUser: async (contestId: number, userId: number) => {
+    const response = await fetch(`${API_BASE_URL}/contests/${contestId}/user/${userId}/end`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
 };
 
 /**

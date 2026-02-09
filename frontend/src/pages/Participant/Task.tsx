@@ -992,15 +992,95 @@ const TaskPage: React.FC = () => {
             }, 3000);
         };
 
+        // Per-user events (only react if this user is targeted)
+        const currentUserId = parseInt(user?.id || sessionStorage.getItem('userId') || '0');
+
+        const handleUserContestPaused = (data: { contestId: number, userId: number, message: string }) => {
+            if (data.userId === currentUserId) {
+                console.log('📌 User-specific pause event received:', data);
+                setContestPaused(true);
+                setPauseMessage(data.message || 'Your contest has been paused by the administrator');
+                showToast('Your contest has been paused', 'warning');
+            }
+        };
+
+        const handleUserContestResumed = (data: { contestId: number, userId: number, message: string }) => {
+            if (data.userId === currentUserId) {
+                console.log('▶️ User-specific resume event received:', data);
+                setContestPaused(false);
+                setPauseMessage('');
+                showToast('Your contest has been resumed', 'success');
+            }
+        };
+
+        const handleUserContestReset = (data: { contestId: number, userId: number, message: string }) => {
+            if (data.userId === currentUserId) {
+                console.log('🔄 User-specific reset event received:', data);
+                showToast('Your contest has been reset by the administrator. Redirecting...', 'error');
+                setTimeout(() => {
+                    navigate('/participant/contests');
+                }, 2000);
+            }
+        };
+
+        const handleUserContestEnded = async (data: { contestId: number, userId: number, message: string, autoSubmit: boolean }) => {
+            if (data.userId === currentUserId) {
+                console.log('🛑 User-specific end event received:', data);
+                setContestEnded(true);
+                setEndMessage(data.message || 'Your contest has been ended by the administrator');
+                showToast('Contest ended - Submitting your work...', 'error');
+
+                if (data.autoSubmit && task && contest) {
+                    try {
+                        const currentCode = codeRef.current;
+                        if (currentCode && currentCode.trim()) {
+                            await submissionAPI.submit({
+                                taskId: task.id,
+                                contestId: contest.id,
+                                code: currentCode,
+                                language: language,
+                            });
+                            showToast('Your work has been submitted', 'success');
+                        }
+                    } catch (error: any) {
+                        console.error('Failed to auto-submit:', error);
+                        showToast(error?.message || 'Failed to auto-submit. Redirecting...', 'error');
+                    }
+                }
+
+                setTimeout(() => {
+                    navigate(`/participant/contest/${contestId}/results`);
+                }, 3000);
+            }
+        };
+
+        const handleContestReset = (data: { contestId: number, message: string }) => {
+            console.log('🔄 Contest reset event received:', data);
+            showToast('Contest has been reset by the administrator. Redirecting...', 'error');
+            setTimeout(() => {
+                navigate('/participant/contests');
+            }, 2000);
+        };
+
         socket.on('contest-paused', handleContestPaused);
         socket.on('contest-resumed', handleContestResumed);
         socket.on('contest-ended', handleContestEnded);
+        socket.on('contest-reset', handleContestReset);
+        socket.on('user-contest-paused', handleUserContestPaused);
+        socket.on('user-contest-resumed', handleUserContestResumed);
+        socket.on('user-contest-reset', handleUserContestReset);
+        socket.on('user-contest-ended', handleUserContestEnded);
         console.log('✅ Pause/resume/end listeners registered');
 
         return () => {
             socket.off('contest-paused', handleContestPaused);
             socket.off('contest-resumed', handleContestResumed);
             socket.off('contest-ended', handleContestEnded);
+            socket.off('contest-reset', handleContestReset);
+            socket.off('user-contest-paused', handleUserContestPaused);
+            socket.off('user-contest-resumed', handleUserContestResumed);
+            socket.off('user-contest-reset', handleUserContestReset);
+            socket.off('user-contest-ended', handleUserContestEnded);
             console.log('🧹 Pause/resume/end listeners cleaned up');
         };
     }, [socket, contestId, task, contest, navigate, showToast, language]);

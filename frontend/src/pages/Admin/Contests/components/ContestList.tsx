@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Play, Users, Edit2, Trash2, Pause, PlayCircle, StopCircle } from 'lucide-react';
+import { Plus, Play, Users, Edit2, Trash2, Pause, PlayCircle, StopCircle, RotateCcw } from 'lucide-react';
 import { Contest } from '../types';
 
 interface ContestListProps {
@@ -13,6 +13,7 @@ interface ContestListProps {
     onPause: (id: number) => void;
     onResume: (id: number) => void;
     onEnd: (id: number) => void;
+    onReset: (id: number) => void;
     onManageParticipants: (id: number) => void;
     onView: (contest: Contest) => void;
 }
@@ -27,6 +28,7 @@ const ContestList: React.FC<ContestListProps> = ({
     onPause,
     onResume,
     onEnd,
+    onReset,
     onManageParticipants,
     onView
 }) => {
@@ -308,6 +310,31 @@ const ContestList: React.FC<ContestListProps> = ({
                                         onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
                                     >
                                         <StopCircle size={14} />
+                                    </button>
+                                )}
+
+                                {/* Reset Button - Available for active and completed contests */}
+                                {(contest.status === 'active' || contest.status === 'completed') && (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onReset(contest.id); }}
+                                        title="Reset Contest"
+                                        style={{
+                                            width: '32px',
+                                            height: '32px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            background: 'transparent',
+                                            border: '1px solid #27272a',
+                                            borderRadius: '6px',
+                                            color: '#f97316',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                        onMouseOver={(e) => { e.currentTarget.style.background = '#18181b'; }}
+                                        onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                    >
+                                        <RotateCcw size={14} />
                                     </button>
                                 )}
 

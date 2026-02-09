@@ -207,6 +207,18 @@ const Contests: React.FC = () => {
         }
     };
 
+    const resetContest = async (id: number) => {
+        if (window.confirm('⚠️ Are you sure you want to RESET this contest?\n\nThis will:\n• Clear ALL submissions\n• Clear ALL participant progress\n• Clear ALL results\n• Reset contest to "upcoming" status\n\nThis action cannot be undone!')) {
+            try {
+                await contestAPI.reset(id);
+                loadContests();
+            } catch (err) {
+                console.error('Failed to reset contest:', err);
+                setError('Failed to reset contest');
+            }
+        }
+    };
+
     const openParticipantModal = (contestId: number) => {
         const contest = contests.find(c => c.id === contestId);
         if (contest) {
@@ -327,6 +339,7 @@ const Contests: React.FC = () => {
                     onPause={pauseContest}
                     onResume={resumeContest}
                     onEnd={endContest}
+                    onReset={resetContest}
                     onManageParticipants={openParticipantModal}
                     onView={(contest) => {
                         setEditingContest(contest);
