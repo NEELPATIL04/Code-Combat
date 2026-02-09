@@ -365,7 +365,7 @@ function mergeJavaCode(userCode: string, template: string, functionName: string)
  * Merge C++ user code with driver template.
  * Replaces the Solution class stub in the template with the user's Solution class.
  */
-function mergeCppCode(userCode: string, template: string, functionName: string): string {
+function mergeCppCode(userCode: string, template: string, _functionName: string): string {
   try {
     console.log('🔧 Merging C++ code...');
 
