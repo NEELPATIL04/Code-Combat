@@ -56,6 +56,7 @@ export const getContestSettings = async (req: Request, res: Response, next: Next
           maxHintsAllowed: 3,
           hintUnlockAfterSubmissions: 0,
           hintUnlockAfterSeconds: 0,
+          solutionUnlockAfterSubmissions: 0,
           provideLastSubmissionContext: true,
           // Submission Limits defaults
           maxSubmissionsAllowed: 0,
@@ -99,6 +100,7 @@ export const updateContestSettings = async (req: Request, res: Response, next: N
       maxHintsAllowed,
       hintUnlockAfterSubmissions,
       hintUnlockAfterSeconds,
+      solutionUnlockAfterSubmissions,
       provideLastSubmissionContext,
       // Submission Limits
       maxSubmissionsAllowed,
@@ -148,6 +150,7 @@ export const updateContestSettings = async (req: Request, res: Response, next: N
           maxHintsAllowed: maxHintsAllowed !== undefined ? maxHintsAllowed : existingSettings.maxHintsAllowed,
           hintUnlockAfterSubmissions: hintUnlockAfterSubmissions !== undefined ? hintUnlockAfterSubmissions : existingSettings.hintUnlockAfterSubmissions,
           hintUnlockAfterSeconds: hintUnlockAfterSeconds !== undefined ? hintUnlockAfterSeconds : existingSettings.hintUnlockAfterSeconds,
+          solutionUnlockAfterSubmissions: solutionUnlockAfterSubmissions !== undefined ? solutionUnlockAfterSubmissions : existingSettings.solutionUnlockAfterSubmissions,
           provideLastSubmissionContext: provideLastSubmissionContext !== undefined ? provideLastSubmissionContext : existingSettings.provideLastSubmissionContext,
           // Submission Limits
           maxSubmissionsAllowed: maxSubmissionsAllowed !== undefined ? maxSubmissionsAllowed : existingSettings.maxSubmissionsAllowed,

@@ -776,6 +776,7 @@ const TaskPage: React.FC = () => {
     const [hint, setHint] = useState<string | null>(null);
     const [isGeneratingHint, setIsGeneratingHint] = useState<boolean>(false);
     const [showHintModal, setShowHintModal] = useState<boolean>(false);
+    const [hintsUsedCount, setHintsUsedCount] = useState<number>(0);
 
     // Solution state
     const [solution, setSolution] = useState<string | null>(null);
@@ -1016,6 +1017,13 @@ const TaskPage: React.FC = () => {
             return;
         }
 
+        // Check if user has exceeded max hints allowed
+        const maxHints = contestSettings?.maxHintsAllowed || 0;
+        if (maxHints > 0 && hintsUsedCount >= maxHints) {
+            showToast(`You have used all ${maxHints} hints for this task.`, 'error');
+            return;
+        }
+
         setIsGeneratingHint(true);
         try {
             // Pass empty string for errorLogs for now, or capture from state if available
@@ -1023,6 +1031,13 @@ const TaskPage: React.FC = () => {
             if (result.hint) {
                 setHint(result.hint);
                 setShowHintModal(true);
+                // Increment hints used counter
+                setHintsUsedCount(prev => prev + 1);
+                
+                // Show updated count
+                const newCount = hintsUsedCount + 1;
+                const maxHintsDisplay = maxHints > 0 ? maxHints : '∞';
+                showToast(`Hint ${newCount}/${maxHintsDisplay} used`, 'success');
             }
         } catch (err: any) {
             console.error('Failed to get hint:', err);
@@ -1030,13 +1045,13 @@ const TaskPage: React.FC = () => {
         } finally {
             setIsGeneratingHint(false);
         }
-    }, [task, code, language, showToast, contestSettings, submissions]);
+    }, [task, code, language, showToast, contestSettings, submissions, hintsUsedCount]);
 
     const handleGetSolution = useCallback(async () => {
         if (!task) return;
 
         // Check if solution is unlocked based on submissions
-        const requiredSubmissions = contestSettings?.hintUnlockAfterSubmissions || 0;
+        const requiredSubmissions = contestSettings?.solutionUnlockAfterSubmissions || 0;
         const currentSubmissionCount = submissions.length;
         
         if (requiredSubmissions > 0 && currentSubmissionCount < requiredSubmissions) {
@@ -2322,6 +2337,8 @@ const TaskPage: React.FC = () => {
                     type="hint"
                     content={hint}
                     onClose={() => setShowHintModal(false)}
+                    hintsUsed={hintsUsedCount}
+                    maxHints={contestSettings?.maxHintsAllowed || 0}
                 />
 
                 {/* Solution Modal */}

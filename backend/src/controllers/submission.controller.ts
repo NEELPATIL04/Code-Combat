@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../config/database';
-import { submissions, testCases, tasks, contestParticipants, userTaskProgress, activityLogs } from '../db/schema';
+import { submissions, testCases, tasks, contestParticipants, userTaskProgress, activityLogs, contestSettings } from '../db/schema';
 import { judge0Service } from '../services/judge0.service';
 import { getJudge0LanguageId } from '../utils/judge0.util';
 import { eq, and, desc } from 'drizzle-orm';

@@ -218,6 +218,7 @@ export const contestSettings = pgTable('contest_settings', {
   maxHintsAllowed: integer('max_hints_allowed').default(3),
   hintUnlockAfterSubmissions: integer('hint_unlock_after_submissions').default(0),
   hintUnlockAfterSeconds: integer('hint_unlock_after_seconds').default(0),
+  solutionUnlockAfterSubmissions: integer('solution_unlock_after_submissions').default(0),
   provideLastSubmissionContext: boolean('provide_last_submission_context').default(true),
 
   // Submissions

@@ -9,6 +9,8 @@ interface AIModalProps {
     language?: string;
     onClose: () => void;
     onUseCode?: () => void;
+    hintsUsed?: number;
+    maxHints?: number;
 }
 
 const AIModal: React.FC<AIModalProps> = ({
@@ -18,6 +20,8 @@ const AIModal: React.FC<AIModalProps> = ({
     language = 'python',
     onClose,
     onUseCode,
+    hintsUsed = 0,
+    maxHints = 0,
 }) => {
     if (!isOpen) return null;
 
@@ -149,9 +153,16 @@ const AIModal: React.FC<AIModalProps> = ({
                         >
                             <IconComponent size={18} color={config.iconColor} />
                         </div>
-                        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#fff' }}>
-                            {config.title}
-                        </h3>
+                        <div>
+                            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#fff' }}>
+                                {config.title}
+                            </h3>
+                            {type === 'hint' && maxHints > 0 && (
+                                <span style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.5)', fontWeight: 400 }}>
+                                    {hintsUsed}/{maxHints} hints used
+                                </span>
+                            )}
+                        </div>
                     </div>
                     <button
                         onClick={onClose}

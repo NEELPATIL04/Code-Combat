@@ -23,6 +23,7 @@ interface SettingsData {
     maxHintsAllowed: number | null;
     hintUnlockAfterSubmissions: number | null;
     hintUnlockAfterSeconds: number | null;
+    solutionUnlockAfterSubmissions: number | null;
     provideLastSubmissionContext: boolean;
     // Submission Limits
     maxSubmissionsAllowed: number | null;
@@ -52,6 +53,7 @@ const ContestSettings: React.FC<ContestSettingsProps> = ({ contestId }) => {
         maxHintsAllowed: 3,
         hintUnlockAfterSubmissions: 0,
         hintUnlockAfterSeconds: 0,
+        solutionUnlockAfterSubmissions: 0,
         provideLastSubmissionContext: true,
         // Submission Limits
         maxSubmissionsAllowed: 0,
@@ -498,6 +500,42 @@ const ContestSettings: React.FC<ContestSettingsProps> = ({ contestId }) => {
                                         />
                                         <div style={{ color: '#71717a', fontSize: '0.75rem', marginTop: '4px' }}>
                                             Hints unlock after user spends X seconds on the task (0 = immediate access)
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label style={{
+                                            display: 'block',
+                                            color: '#a1a1aa',
+                                            fontSize: '0.875rem',
+                                            marginBottom: '8px',
+                                            fontWeight: 500
+                                        }}>
+                                            Solution Unlock After Submissions
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="10"
+                                            value={settings.solutionUnlockAfterSubmissions ?? ''}
+                                            onChange={(e) => setSettings({
+                                                ...settings,
+                                                solutionUnlockAfterSubmissions: e.target.value ? parseInt(e.target.value) : 0
+                                            })}
+                                            placeholder="e.g., 3"
+                                            style={{
+                                                width: '100%',
+                                                background: '#18181b',
+                                                border: '1px solid #27272a',
+                                                borderRadius: '6px',
+                                                color: '#fafafa',
+                                                padding: '10px 12px',
+                                                fontSize: '0.875rem',
+                                                outline: 'none'
+                                            }}
+                                        />
+                                        <div style={{ color: '#71717a', fontSize: '0.75rem', marginTop: '4px' }}>
+                                            Solution unlocks after user makes X submissions (0 = immediate access)
                                         </div>
                                     </div>
 
