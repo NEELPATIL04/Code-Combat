@@ -817,6 +817,36 @@ export const getContestTasks = async (req: Request, res: Response, next: NextFun
       .from(contestSettings)
       .where(eq(contestSettings.contestId, contestId));
 
+    // Mark participant as started if they haven't been marked yet
+    const userId = req.user?.userId;
+    if (userId) {
+      const [participant] = await db
+        .select()
+        .from(contestParticipants)
+        .where(
+          and(
+            eq(contestParticipants.contestId, contestId),
+            eq(contestParticipants.userId, userId)
+          )
+        );
+
+      if (participant && !participant.hasStarted) {
+        await db
+          .update(contestParticipants)
+          .set({
+            hasStarted: true,
+            startedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(contestParticipants.contestId, contestId),
+              eq(contestParticipants.userId, userId)
+            )
+          );
+        console.log(`✅ Participant ${userId} marked as started for contest ${contestId}`);
+      }
+    }
+
     return res.status(200).json({
       contest: {
         id: contest.id,
@@ -829,6 +859,16 @@ export const getContestTasks = async (req: Request, res: Response, next: NextFun
         fullScreenMode: settings?.fullScreenModeEnabled ?? contest.fullScreenMode ?? true, // Use settings first, fallback to contest field
       },
       tasks: contestTasks,
+      settings: {
+        aiHintsEnabled: settings?.aiHintsEnabled ?? true,
+        aiModeEnabled: settings?.aiModeEnabled ?? true,
+        testModeEnabled: settings?.testModeEnabled ?? false,
+        maxHintsAllowed: settings?.maxHintsAllowed ?? 3,
+        hintUnlockAfterSubmissions: settings?.hintUnlockAfterSubmissions ?? 0,
+        solutionUnlockAfterSubmissions: settings?.solutionUnlockAfterSubmissions ?? 0,
+        maxSubmissionsAllowed: settings?.maxSubmissionsAllowed ?? 0,
+        allowCopyPaste: settings?.allowCopyPaste ?? false,
+      },
     });
   } catch (error) {
     return next(error);

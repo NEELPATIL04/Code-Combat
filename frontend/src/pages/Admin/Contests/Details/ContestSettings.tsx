@@ -475,42 +475,6 @@ const ContestSettings: React.FC<ContestSettingsProps> = ({ contestId }) => {
                                             marginBottom: '8px',
                                             fontWeight: 500
                                         }}>
-                                            Unlock After Seconds
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            max="3600"
-                                            value={settings.hintUnlockAfterSeconds ?? ''}
-                                            onChange={(e) => setSettings({
-                                                ...settings,
-                                                hintUnlockAfterSeconds: e.target.value ? parseInt(e.target.value) : 0
-                                            })}
-                                            placeholder="e.g., 300 (5 minutes)"
-                                            style={{
-                                                width: '100%',
-                                                background: '#18181b',
-                                                border: '1px solid #27272a',
-                                                borderRadius: '6px',
-                                                color: '#fafafa',
-                                                padding: '10px 12px',
-                                                fontSize: '0.875rem',
-                                                outline: 'none'
-                                            }}
-                                        />
-                                        <div style={{ color: '#71717a', fontSize: '0.75rem', marginTop: '4px' }}>
-                                            Hints unlock after user spends X seconds on the task (0 = immediate access)
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label style={{
-                                            display: 'block',
-                                            color: '#a1a1aa',
-                                            fontSize: '0.875rem',
-                                            marginBottom: '8px',
-                                            fontWeight: 500
-                                        }}>
                                             Solution Unlock After Submissions
                                         </label>
                                         <input
@@ -599,8 +563,8 @@ const ContestSettings: React.FC<ContestSettingsProps> = ({ contestId }) => {
                             </div>
 
                             <ToggleSwitch
-                                label="AI Mode Enabled"
-                                description="Enable full AI assistance mode"
+                                label="AI Code Analysis"
+                                description="Allow participants to analyze/evaluate their code using AI feedback"
                                 checked={settings.aiModeEnabled}
                                 onChange={(checked) => setSettings({ ...settings, aiModeEnabled: checked })}
                             />

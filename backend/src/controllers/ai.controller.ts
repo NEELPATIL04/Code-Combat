@@ -178,19 +178,39 @@ export const getSolution = async (req: Request, res: Response, next: NextFunctio
       .where(eq(contestSettings.contestId, task.contestId));
 
     const aiHintsEnabled = settings?.aiHintsEnabled ?? true;
+    const solutionUnlockAfterSubmissions = settings?.solutionUnlockAfterSubmissions ?? 0;
 
     if (!aiHintsEnabled) {
       res.status(403).json({ message: 'AI solutions are disabled for this contest' });
       return;
     }
 
-    // For now, we don't have a solution threshold in contestSettings
-    // Solutions can be disabled entirely or allowed freely
-    // If you want to add a threshold, add it to contest_settings schema
+    // Check submission threshold for solution unlock
+    if (solutionUnlockAfterSubmissions > 0) {
+      const [submissionCount] = await db
+        .select({ count: count() })
+        .from(submissions)
+        .where(and(eq(submissions.taskId, taskIdInt), eq(submissions.userId, userId)));
+
+      const currentCount = Number(submissionCount?.count || 0);
+      console.log(`📊 User has ${currentCount} submissions, solution requires: ${solutionUnlockAfterSubmissions}`);
+
+      if (currentCount < solutionUnlockAfterSubmissions) {
+        console.log(`⛔ User needs ${solutionUnlockAfterSubmissions - currentCount} more submissions to unlock solution`);
+        res.status(403).json({
+          message: `You need ${solutionUnlockAfterSubmissions - currentCount} more submission(s) to unlock the solution`
+        });
+        return;
+      }
+    }
+
+    // Get boilerplate code for the requested language
+    const boilerplate = task.boilerplateCode?.[language] || task.boilerplateCode?.[language.toLowerCase()] || '';
 
     const solution = await aiService.generateSolution(
       task.description,
       language || 'javascript',
+      boilerplate,
       userId,
       taskIdInt,
       req.body.contestId ? parseInt(req.body.contestId) : undefined
@@ -241,6 +261,19 @@ export const evaluateCode = async (req: Request, res: Response, next: NextFuncti
 
     if (!task) {
       res.status(404).json({ message: 'Task not found' });
+      return;
+    }
+
+    // Check contest settings - aiModeEnabled controls AI analysis
+    const [settings] = await db
+      .select()
+      .from(contestSettings)
+      .where(eq(contestSettings.contestId, task.contestId));
+
+    const aiModeEnabled = settings?.aiModeEnabled ?? true;
+
+    if (!aiModeEnabled) {
+      res.status(403).json({ message: 'AI code analysis is disabled for this contest' });
       return;
     }
 

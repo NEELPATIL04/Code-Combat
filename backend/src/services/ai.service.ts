@@ -72,10 +72,15 @@ export class AIService {
     async generateSolution(
         problemDescription: string,
         language: string,
+        boilerplateCode?: string,
         userId?: number,
         taskId?: number,
         contestId?: number
     ): Promise<string> {
+        const boilerplateSection = boilerplateCode
+            ? `\nBoilerplate/Function Signature (${language}):\n${boilerplateCode}\n\nIMPORTANT: Your solution MUST follow the exact function signature shown in the boilerplate above. Replace only the function body with working logic. Do NOT change the function name, parameters, or return type.\n`
+            : '';
+
         const prompt = `
 You are an expert programmer. Provide a complete, working solution for the following coding problem.
 
@@ -83,10 +88,10 @@ Problem Description:
 ${problemDescription}
 
 Programming Language: ${language}
-
+${boilerplateSection}
 Requirements:
 1. Write complete, executable code in ${language}
-2. Include all necessary imports/includes
+2. ${boilerplateCode ? 'MUST use the exact function signature from the boilerplate above' : 'Include all necessary imports/includes'}
 3. Implement the full solution, not just boilerplate
 4. Handle edge cases appropriately
 5. Use efficient algorithms
@@ -97,6 +102,7 @@ Output Format:
 - No explanations before or after the code
 - No \`\`\` code blocks
 - Just the raw, executable code
+${boilerplateCode ? '- Return ONLY the function body code that fits inside the boilerplate signature' : ''}
     `;
 
         const meta = { userId, taskId, contestId, purpose: 'solution' };

@@ -1158,6 +1158,13 @@ const TaskPage: React.FC = () => {
 
     const handleAnalyze = useCallback(async () => {
         if (!task) return;
+
+        // Check if AI analysis is enabled in contest settings
+        if (contestSettings?.aiModeEnabled === false) {
+            showToast('AI code analysis is disabled for this contest.', 'warning');
+            return;
+        }
+
         setIsAnalyzing(true);
         try {
             const result = await aiAPI.evaluate(task.id, code, language, testCases);
@@ -1171,7 +1178,7 @@ const TaskPage: React.FC = () => {
         } finally {
             setIsAnalyzing(false);
         }
-    }, [task, code, language, showToast]);
+    }, [task, code, language, showToast, contestSettings]);
 
     // Function to request fullscreen
     const requestFullscreen = useCallback((showAlert = false) => {
