@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { User, Monitor } from 'lucide-react';
+import { User, Monitor, Maximize2 } from 'lucide-react';
 import { Socket } from 'socket.io-client';
 
 interface VideoFeedProps {
-    socket: Socket;
+    socket:  Socket;
     targetSocketId: string;
     userId: string;
     isLarge?: boolean;
@@ -13,6 +13,7 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
     const videoRef = useRef<HTMLVideoElement>(null);
     const screenRef = useRef<HTMLVideoElement>(null);
     const peerConnection = useRef<RTCPeerConnection | null>(null);
+    const videoStreamCount = useRef<number>(0);
     const [connectionState, setConnectionState] = useState<string>('connecting');
 
     useEffect(() => {
@@ -29,20 +30,32 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
             };
 
             pc.ontrack = (event) => {
-                // Determine if track is camera or screen based on kind or order?
-                // Usually we can't easily distinguish without metadata. 
-                // However, usually first track is video (camera), second might be screen if both video.
-                // Or we can assume input stream order.
-                // Let's just assign to video elements as they come.
+                const track = event.track;
+                const stream = event.streams[0];
 
-                // Hack: If we receive a track, we check if videoRef is empty, else screenRef.
-                // This assumes order or separate streams. 
-                // Actually, Task.tsx adds camera first, then screen.
+                console.log('📹 Received track:', {
+                    kind: track.kind,
+                    label: track.label,
+                    streamId: stream?.id
+                });
 
-                if (videoRef.current && (!videoRef.current.srcObject || (videoRef.current.srcObject as MediaStream).getTracks().length === 0)) {
-                    videoRef.current.srcObject = new MediaStream([event.track]);
-                } else if (screenRef.current) {
-                    screenRef.current.srcObject = new MediaStream([event.track]);
+                if (track.kind === 'video' && stream) {
+                    // Track which video stream this is
+                    // First video stream = Camera, Second video stream = Screen share
+                    videoStreamCount.current += 1;
+                    const streamIndex = videoStreamCount.current;
+                    
+                    console.log(`🎬 Video stream #${streamIndex} received in VideoFeed`);
+                    
+                    if (streamIndex === 1) {
+                        // First video stream is camera
+                        console.log('📷 Stream #1 → Setting to CAMERA');
+                        videoRef.current!.srcObject = stream;
+                    } else if (streamIndex === 2) {
+                        // Second video stream is screen share
+                        console.log('🖥️ Stream #2 → Setting to SCREEN SHARE');
+                        screenRef.current!.srcObject = stream;
+                    }
                 }
             };
 
@@ -100,7 +113,9 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
             borderRadius: '8px',
             overflow: 'hidden',
             border: '1px solid #27272a',
-            position: 'relative'
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
         }}>
             <div style={{ padding: '8px 12px', borderBottom: '1px solid #27272a', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#fafafa' }}>User: {userId}</span>
@@ -109,20 +124,15 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
                 </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: isLarge ? '1fr 1fr' : '1fr', gap: '1px', background: '#000' }}>
+            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: isLarge ? '1fr 1fr' : '1fr', gap: '1px', background: '#000', position: 'relative' }}>
                 <div style={{ position: 'relative', aspectRatio: '16/9' }}>
                     <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     <div style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <User size={10} /> Camera
                     </div>
                 </div>
-                {(isLarge || screenRef.current?.srcObject) && (
-                    <div style={{ position: 'relative', aspectRatio: '16/9', display: isLarge ? 'block' : 'none' }}>
-                        {/* Only show screen in grid if we want, but user said "small small block of everything" */}
-                        {/* Maybe just show camera in small grid, and both in large? */}
-                        {/* User said "mic feedback then camera feedback ,screen share feedback at realtime" */}
-                        {/* I'll hide screen in small view to save space/bandwidth if feasible, but actually stream is already requested */}
-                        {/* I'll execute what I wrote: grid view. */}
+                {isLarge && (
+                    <div style={{ position: 'relative', aspectRatio: '16/9' }}>
                         <video ref={screenRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         <div style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <Monitor size={10} /> Screen
@@ -130,6 +140,46 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
                     </div>
                 )}
             </div>
+
+            {/* Click to expand indicator */}
+            <div style={{
+                position: 'absolute',
+                top: '44px',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0, 0, 0, 0)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: 0,
+                transition: 'opacity 0.2s, background 0.2s',
+                pointerEvents: 'none',
+                zIndex: 10
+            }} 
+            className="video-feed-overlay"
+            id={`overlay-${targetSocketId}`}>
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '16px',
+                    background: 'rgba(0, 0, 0, 0.8)',
+                    borderRadius: '8px',
+                    backdropFilter: 'blur(4px)'
+                }}>
+                    <Maximize2 size={24} color="#22c55e" />
+                    <span style={{ fontSize: '0.875rem', fontWeight: 500, color: '#fafafa' }}>Click to expand</span>
+                </div>
+            </div>
+
+            <style>{`
+                #overlay-${targetSocketId}:hover {
+                    opacity: 1 !important;
+                    background: rgba(0, 0, 0, 0.4) !important;
+                }
+            `}</style>
         </div>
     );
 };

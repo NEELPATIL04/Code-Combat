@@ -630,3 +630,53 @@ export type NewAiUsageLog = typeof aiUsageLogs.$inferInsert;
 
 export type ContestSettings = typeof contestSettings.$inferSelect;
 export type NewContestSettings = typeof contestSettings.$inferInsert;
+
+/**
+ * Contest Results Table
+ * Stores detailed statistics for each user's contest completion
+ * Includes task-level details like completion status, submissions, hints used, and test results
+ */
+export const contestResults = pgTable('contest_results', {
+  id: serial('id').primaryKey(),
+
+  // Foreign keys
+  contestId: integer('contest_id').notNull().references(() => contests.id, { onDelete: 'cascade' }),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+
+  // Overall contest stats
+  totalScore: integer('total_score').notNull().default(0),
+  totalPossibleScore: integer('total_possible_score').notNull().default(0),
+  percentageScore: integer('percentage_score').notNull().default(0), // 0-100
+
+  // Task completion stats
+  tasksCompleted: integer('tasks_completed').notNull().default(0),
+  totalTasks: integer('total_tasks').notNull().default(0),
+  completionPercentage: integer('completion_percentage').notNull().default(0), // 0-100
+
+  // Detailed task results (JSON array)
+  // Each item: { taskId, title, completed, submissions, aiHintsUsed, testCasesPassed, totalTestCases, score, maxPoints }
+  taskResults: jsonb('task_results').$type<Array<{
+    taskId: number;
+    title: string;
+    completed: boolean;
+    submissions: number;
+    aiHintsUsed: number;
+    solutionUnlocked: boolean;
+    testCasesPassed: number;
+    totalTestCases: number;
+    score: number;
+    maxPoints: number;
+    bestSubmissionId?: number;
+  }>>().notNull().default([]),
+
+  // Timing information
+  startedAt: timestamp('started_at').notNull(),
+  completedAt: timestamp('completed_at').notNull(),
+  timeTaken: integer('time_taken'), // in seconds
+
+  // Metadata
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export type ContestResult = typeof contestResults.$inferSelect;
+export type NewContestResult = typeof contestResults.$inferInsert;

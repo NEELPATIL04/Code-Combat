@@ -38,7 +38,7 @@ const Step1: React.FC<Step1Props> = ({ formData, handleChange, setFormData, read
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', alignItems: 'end' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'end' }}>
                 <div>
                     <label style={labelStyle}>Scheduled Start</label>
                     <input
@@ -61,16 +61,9 @@ const Step1: React.FC<Step1Props> = ({ formData, handleChange, setFormData, read
                         disabled={readOnly}
                     />
                 </div>
-                <div>
-                    <label
-                        style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: readOnly ? 'default' : 'pointer', userSelect: 'none', height: '100%', paddingBottom: '12px' }}
-                        title="Participants will be locked in full-screen mode and cannot leave the tabs during the contest."
-                    >
-                        <input type="checkbox" checked={formData.fullScreenMode} onChange={(e) => setFormData(prev => ({ ...prev, fullScreenMode: e.target.checked }))} style={{ width: '20px', height: '20px', cursor: readOnly ? 'default' : 'pointer', accentColor: '#fafafa' }} disabled={readOnly} />
-                        <span style={{ color: '#fafafa', fontSize: '1rem', fontWeight: 500 }}>Enable Full Screen Mode</span>
-                    </label>
-                </div>
             </div>
+
+            {/* Note: Full Screen Mode is now controlled from Contest Settings tab only */}
 
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <textarea

@@ -172,6 +172,22 @@ export const contestAPI = {
     });
     return handleResponse(response);
   },
+
+  // Get contest results for current user
+  getContestResults: async (contestId: number) => {
+    const response = await fetch(`${API_BASE_URL}/contests/${contestId}/results`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  // Get contest results for a specific user (Admin only)
+  getContestResultsByUser: async (contestId: number, userId: number) => {
+    const response = await fetch(`${API_BASE_URL}/contests/${contestId}/results/${userId}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
 };
 
 /**

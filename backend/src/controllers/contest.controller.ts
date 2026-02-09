@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../config/database';
-import { contests, tasks, contestParticipants, users, testCases } from '../db/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { contests, tasks, contestParticipants, users, testCases, submissions, userTaskProgress, contestResults, contestSettings } from '../db/schema';
+import { eq, and, inArray, desc } from 'drizzle-orm';
 import { hashPassword } from '../utils/password.util';
 
 /**
@@ -590,6 +590,10 @@ export const getMyContests = async (req: Request, res: Response, next: NextFunct
 /**
  * Complete a contest for a participant
  * POST /api/contests/:id/complete
+ * This endpoint:
+ * 1. Marks the participant as completed
+ * 2. Calculates detailed statistics for all tasks
+ * 3. Stores comprehensive results in contest_results table
  */
 export const completeContest = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -600,11 +604,125 @@ export const completeContest = async (req: Request, res: Response, next: NextFun
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
+    // Get participant record to get start time
+    const [participant] = await db
+      .select()
+      .from(contestParticipants)
+      .where(
+        and(
+          eq(contestParticipants.contestId, contestId),
+          eq(contestParticipants.userId, userId)
+        )
+      );
+
+    if (!participant) {
+      return res.status(404).json({ message: 'Contest participant not found' });
+    }
+
+    // Get all tasks for this contest
+    const contestTasks = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.contestId, contestId))
+      .orderBy(tasks.orderIndex);
+
+    if (contestTasks.length === 0) {
+      return res.status(404).json({ message: 'No tasks found for this contest' });
+    }
+
+    // Calculate detailed statistics for each task
+    const taskResults = await Promise.all(
+      contestTasks.map(async (task) => {
+        // Get all submissions for this task by this user
+        const taskSubmissions = await db
+          .select()
+          .from(submissions)
+          .where(
+            and(
+              eq(submissions.taskId, task.id),
+              eq(submissions.userId, userId),
+              eq(submissions.contestId, contestId)
+            )
+          )
+          .orderBy(desc(submissions.score));
+
+        // Get user task progress for AI hints usage
+        const [progress] = await db
+          .select()
+          .from(userTaskProgress)
+          .where(
+            and(
+              eq(userTaskProgress.userId, userId),
+              eq(userTaskProgress.taskId, task.id)
+            )
+          );
+
+        // Get test cases count for this task
+        const taskTestCases = await db
+          .select()
+          .from(testCases)
+          .where(eq(testCases.taskId, task.id));
+
+        const totalTestCases = taskTestCases.length;
+        const bestSubmission = taskSubmissions[0]; // Already sorted by score DESC
+        const testCasesPassed = bestSubmission?.passedTests || 0;
+        const score = bestSubmission?.score || 0;
+        const completed = testCasesPassed === totalTestCases && totalTestCases > 0;
+
+        return {
+          taskId: task.id,
+          title: task.title,
+          completed,
+          submissions: taskSubmissions.length,
+          aiHintsUsed: progress?.hintsUnlocked || 0,
+          solutionUnlocked: progress?.solutionUnlocked || false,
+          testCasesPassed,
+          totalTestCases,
+          score,
+          maxPoints: task.maxPoints || 100,
+          bestSubmissionId: bestSubmission?.id,
+        };
+      })
+    );
+
+    // Calculate overall statistics
+    const totalTasks = contestTasks.length;
+    const tasksCompleted = taskResults.filter(r => r.completed).length;
+    const completionPercentage = totalTasks > 0 ? Math.round((tasksCompleted / totalTasks) * 100) : 0;
+
+    const totalScore = taskResults.reduce((sum, r) => sum + r.score, 0);
+    const totalPossibleScore = taskResults.reduce((sum, r) => sum + r.maxPoints, 0);
+    const percentageScore = totalPossibleScore > 0 ? Math.round((totalScore / totalPossibleScore) * 100) : 0;
+
+    const completedAt = new Date();
+    const startedAt = participant.startedAt || completedAt;
+    const timeTaken = Math.floor((completedAt.getTime() - startedAt.getTime()) / 1000); // in seconds
+
+    // Save contest results
+    const [contestResult] = await db
+      .insert(contestResults)
+      .values({
+        contestId,
+        userId,
+        totalScore,
+        totalPossibleScore,
+        percentageScore,
+        tasksCompleted,
+        totalTasks,
+        completionPercentage,
+        taskResults,
+        startedAt,
+        completedAt,
+        timeTaken,
+      })
+      .returning();
+
     // Update participant record
     const [updatedParticipant] = await db
       .update(contestParticipants)
       .set({
-        completedAt: new Date(),
+        completedAt,
+        score: totalScore,
       })
       .where(
         and(
@@ -614,17 +732,21 @@ export const completeContest = async (req: Request, res: Response, next: NextFun
       )
       .returning();
 
-    console.log(`User ${userId} completed contest ${contestId}. Updated:`, updatedParticipant);
-
-    if (!updatedParticipant) {
-      return res.status(404).json({ message: 'Contest participant not found' });
-    }
+    console.log(`User ${userId} completed contest ${contestId}. Stats:`, {
+      totalScore,
+      percentageScore,
+      tasksCompleted,
+      totalTasks,
+      completionPercentage,
+    });
 
     return res.status(200).json({
       message: 'Contest completed successfully',
-      participant: updatedParticipant
+      participant: updatedParticipant,
+      results: contestResult,
     });
   } catch (error) {
+    console.error('Error completing contest:', error);
     return next(error);
   }
 };
@@ -689,6 +811,12 @@ export const getContestTasks = async (req: Request, res: Response, next: NextFun
       }
     }
 
+    // Get contest settings for fullscreen mode (use settings instead of contest.fullScreenMode)
+    const [settings] = await db
+      .select()
+      .from(contestSettings)
+      .where(eq(contestSettings.contestId, contestId));
+
     return res.status(200).json({
       contest: {
         id: contest.id,
@@ -697,7 +825,7 @@ export const getContestTasks = async (req: Request, res: Response, next: NextFun
         difficulty: contest.difficulty,
         duration: contest.duration,
         status: contest.status,
-        fullScreenMode: contest.fullScreenMode,
+        fullScreenMode: settings?.fullScreenModeEnabled ?? contest.fullScreenMode ?? true, // Use settings first, fallback to contest field
       },
       tasks: contestTasks,
     });
@@ -739,6 +867,128 @@ export const getTaskById = async (req: Request, res: Response, next: NextFunctio
       } : null,
     });
   } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * Get contest results for a user
+ * GET /api/contests/:id/results
+ * Returns detailed statistics about user's performance in the contest
+ */
+export const getContestResults = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const contestId = parseInt(req.params.id as string);
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    // Get contest info
+    const [contest] = await db
+      .select()
+      .from(contests)
+      .where(eq(contests.id, contestId));
+
+    if (!contest) {
+      return res.status(404).json({ message: 'Contest not found' });
+    }
+
+    // Get contest results
+    const [results] = await db
+      .select()
+      .from(contestResults)
+      .where(
+        and(
+          eq(contestResults.contestId, contestId),
+          eq(contestResults.userId, userId)
+        )
+      );
+
+    if (!results) {
+      return res.status(404).json({ message: 'Contest results not found. Please complete the contest first.' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      contest: {
+        id: contest.id,
+        title: contest.title,
+        difficulty: contest.difficulty,
+        duration: contest.duration,
+      },
+      results,
+    });
+  } catch (error) {
+    console.error('Error fetching contest results:', error);
+    return next(error);
+  }
+};
+
+/**
+ * Get contest results for a specific user (Admin only)
+ * GET /api/contests/:contestId/results/:userId
+ */
+export const getContestResultsByUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const contestId = parseInt(req.params.contestId as string);
+    const userId = parseInt(req.params.userId as string);
+
+    // Get contest info
+    const [contest] = await db
+      .select()
+      .from(contests)
+      .where(eq(contests.id, contestId));
+
+    if (!contest) {
+      return res.status(404).json({ message: 'Contest not found' });
+    }
+
+    // Get user info
+    const [userInfo] = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+      })
+      .from(users)
+      .where(eq(users.id, userId));
+
+    if (!userInfo) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Get contest results
+    const [results] = await db
+      .select()
+      .from(contestResults)
+      .where(
+        and(
+          eq(contestResults.contestId, contestId),
+          eq(contestResults.userId, userId)
+        )
+      );
+
+    if (!results) {
+      return res.status(404).json({ message: 'Contest results not found for this user.' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      contest: {
+        id: contest.id,
+        title: contest.title,
+        difficulty: contest.difficulty,
+        duration: contest.duration,
+      },
+      user: userInfo,
+      results,
+    });
+  } catch (error) {
+    console.error('Error fetching contest results by user:', error);
     return next(error);
   }
 };

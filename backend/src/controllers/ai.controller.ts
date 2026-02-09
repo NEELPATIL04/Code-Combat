@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { aiService } from '../services/ai.service';
 // Fix import path to point to actual db configuration
 import { db } from '../config/database';
-import { tasks, submissions, userTaskProgress } from '../db/schema';
+import { tasks, submissions, userTaskProgress, contestSettings } from '../db/schema';
 import { eq, and, count, sql } from 'drizzle-orm';
 
 export const getHint = async (req: Request, res: Response, next: NextFunction) => {
@@ -10,27 +10,53 @@ export const getHint = async (req: Request, res: Response, next: NextFunction) =
     const { taskId, userCode, language, errorLogs } = req.body;
     const userId = (req as any).user.id;
 
-    // Fetch task config
+    // Fetch task to get contest ID
     const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId));
     if (!task) {
       res.status(404).json({ message: 'Task not found' });
       return;
     }
 
-    if (!task.aiConfig?.hintsEnabled) {
-      res.status(403).json({ message: 'Hints are disabled for this task' });
+    // Fetch contest settings instead of task.aiConfig
+    const [settings] = await db
+      .select()
+      .from(contestSettings)
+      .where(eq(contestSettings.contestId, task.contestId));
+
+    // If no settings found, use defaults (hints enabled by default)
+    const aiHintsEnabled = settings?.aiHintsEnabled ?? true;
+    const hintUnlockAfterSubmissions = settings?.hintUnlockAfterSubmissions ?? 0;
+    const maxHintsAllowed = settings?.maxHintsAllowed ?? 3;
+
+    if (!aiHintsEnabled) {
+      res.status(403).json({ message: 'AI hints are disabled for this contest' });
       return;
     }
 
-    if (task.aiConfig.hintThreshold > 0) {
+    // Check if user has exceeded max hints
+    const [progress] = await db
+      .select()
+      .from(userTaskProgress)
+      .where(and(eq(userTaskProgress.userId, userId), eq(userTaskProgress.taskId, taskId)));
+
+    const hintsUsed = progress?.hintsUnlocked || 0;
+    if (maxHintsAllowed > 0 && hintsUsed >= maxHintsAllowed) {
+      res.status(403).json({ message: `You have reached the maximum of ${maxHintsAllowed} hints for this task` });
+      return;
+    }
+
+    // Check submission threshold
+    if (hintUnlockAfterSubmissions > 0) {
       const [submissionCount] = await db
         .select({ count: count() })
         .from(submissions)
         .where(and(eq(submissions.taskId, taskId), eq(submissions.userId, userId)));
 
       const currentCount = submissionCount?.count || 0;
-      if (currentCount < task.aiConfig.hintThreshold) {
-        res.status(403).json({ message: `You need ${task.aiConfig.hintThreshold - currentCount} more submissions to unlock hint` });
+      if (currentCount < hintUnlockAfterSubmissions) {
+        res.status(403).json({
+          message: `You need ${hintUnlockAfterSubmissions - currentCount} more submission(s) to unlock hints`
+        });
         return;
       }
     }
@@ -78,23 +104,22 @@ export const getSolution = async (req: Request, res: Response, next: NextFunctio
       return;
     }
 
-    if (!task.aiConfig?.hintsEnabled) {
-      res.status(403).json({ message: 'AI solutions are disabled for this task' });
+    // Fetch contest settings instead of task.aiConfig
+    const [settings] = await db
+      .select()
+      .from(contestSettings)
+      .where(eq(contestSettings.contestId, task.contestId));
+
+    const aiHintsEnabled = settings?.aiHintsEnabled ?? true;
+
+    if (!aiHintsEnabled) {
+      res.status(403).json({ message: 'AI solutions are disabled for this contest' });
       return;
     }
 
-    if (task.aiConfig.solutionThreshold > 0) {
-      const [submissionCount] = await db
-        .select({ count: count() })
-        .from(submissions)
-        .where(and(eq(submissions.taskId, taskId), eq(submissions.userId, userId)));
-
-      const currentCount = submissionCount?.count || 0;
-      if (currentCount < task.aiConfig.solutionThreshold) {
-        res.status(403).json({ message: `You need ${task.aiConfig.solutionThreshold - currentCount} more submissions to unlock solution` });
-        return;
-      }
-    }
+    // For now, we don't have a solution threshold in contestSettings
+    // Solutions can be disabled entirely or allowed freely
+    // If you want to add a threshold, add it to contest_settings schema
 
     const solution = await aiService.generateSolution(
       task.description,

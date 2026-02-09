@@ -76,74 +76,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, is
                 </div>
             </div>
 
-            {/* AI Configuration */}
-            <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(234, 179, 8, 0.05)', borderRadius: '8px', border: '1px solid rgba(234, 179, 8, 0.2)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                    <Brain size={16} color="#fbbf24" />
-                    <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#fbbf24', margin: 0 }}>AI Assistance</h3>
-                </div>
-
-                <div style={{ marginBottom: '12px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                        <input
-                            type="checkbox"
-                            checked={taskInput.aiConfig?.hintsEnabled ?? true}
-                            onChange={(e) => setTaskInput(prev => ({
-                                ...prev,
-                                aiConfig: {
-                                    hintsEnabled: e.target.checked,
-                                    hintThreshold: prev.aiConfig?.hintThreshold ?? 2,
-                                    solutionThreshold: prev.aiConfig?.solutionThreshold ?? 5
-                                }
-                            }))}
-                            style={{ accentColor: '#fbbf24' }}
-                        />
-                        <span style={{ fontSize: '0.875rem', color: '#fafafa' }}>Enable Hints & AI Solutions</span>
-                    </label>
-                    <p style={{ margin: '4px 0 0 24px', fontSize: '0.75rem', color: '#a1a1aa' }}>Allow students to request hints, view solutions and get AI feedback.</p>
-                </div>
-
-                {(taskInput.aiConfig?.hintsEnabled ?? true) && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', paddingLeft: '24px' }}>
-                        <div>
-                            <label style={labelStyle}>Hint Threshold</label>
-                            <input
-                                type="number"
-                                value={taskInput.aiConfig?.hintThreshold ?? 2}
-                                onChange={(e) => setTaskInput(prev => ({
-                                    ...prev,
-                                    aiConfig: {
-                                        ...prev.aiConfig!,
-                                        hintThreshold: parseInt(e.target.value) || 0
-                                    }
-                                }))}
-                                min="0"
-                                style={inputStyle}
-                            />
-                            <p style={{ margin: '4px 0 0', fontSize: '0.7rem', color: '#71717a' }}>Attempts before hint unlock</p>
-                        </div>
-                        <div>
-                            <label style={labelStyle}>Solution Threshold</label>
-                            <input
-                                type="number"
-                                value={taskInput.aiConfig?.solutionThreshold ?? 5}
-                                onChange={(e) => setTaskInput(prev => ({
-                                    ...prev,
-                                    aiConfig: {
-                                        ...prev.aiConfig!,
-                                        solutionThreshold: parseInt(e.target.value) || 0
-                                    }
-                                }))}
-                                min="0"
-                                style={inputStyle}
-                            />
-                            <p style={{ margin: '4px 0 0', fontSize: '0.7rem', color: '#71717a' }}>Attempts before solution unlock</p>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-
+            {/* Note: AI Configuration is now controlled from Contest Settings tab only */}
 
             <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#fafafa', marginTop: '24px', marginBottom: '12px', paddingTop: '24px', borderTop: '1px solid #27272a' }}>Code & Test Cases</h3>
 

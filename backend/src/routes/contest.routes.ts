@@ -11,6 +11,8 @@ import {
   getMyContests,
   getContestTasks,
   completeContest,
+  getContestResults,
+  getContestResultsByUser,
 } from '../controllers/contest.controller';
 import {
   getContestSettings,
@@ -89,6 +91,20 @@ router.post('/:id/start', authenticate, requireRole(['admin', 'super_admin']), s
  * Requires: Authentication
  */
 router.post('/:id/complete', authenticate, completeContest);
+
+/**
+ * GET /api/contests/:id/results
+ * Get contest results for current user
+ * Requires: Authentication
+ */
+router.get('/:id/results', authenticate, getContestResults);
+
+/**
+ * GET /api/contests/:contestId/results/:userId
+ * Get contest results for a specific user (Admin only)
+ * Requires: Authentication + Admin role
+ */
+router.get('/:contestId/results/:userId', authenticate, requireRole(['admin', 'super_admin']), getContestResultsByUser);
 
 /**
  * GET /api/contests/:id/settings
