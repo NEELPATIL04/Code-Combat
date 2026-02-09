@@ -60,6 +60,8 @@ export async function login(req: Request, res: Response): Promise<void> {
       message: 'Login successful',
       role: user.role,
       username: user.username,
+      userId: user.id,
+      email: user.email,
       token,
     };
 
@@ -145,6 +147,8 @@ export async function register(req: Request, res: Response): Promise<void> {
       message: 'User registered successfully',
       role: newUser.role,
       username: newUser.username,
+      userId: newUser.id,
+      email: newUser.email,
       token,
     });
   } catch (error) {

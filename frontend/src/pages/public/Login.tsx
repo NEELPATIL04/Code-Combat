@@ -21,6 +21,8 @@ interface LoginResponse {
     message: string;
     role: string;
     username: string;
+    userId: number;
+    email: string;
     token: string;
 }
 
@@ -92,6 +94,8 @@ const Login: React.FC = () => {
             sessionStorage.setItem('token', data.token);
             sessionStorage.setItem('username', data.username);
             sessionStorage.setItem('role', data.role);
+            sessionStorage.setItem('userId', data.userId.toString());
+            sessionStorage.setItem('email', data.email);
 
             if (data.role === 'admin' || data.role === 'super_admin') {
                 navigate('/admin');

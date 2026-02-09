@@ -145,115 +145,26 @@ router.get('/:id/settings', authenticate, getContestSettings);
 router.put('/:id/settings', authenticate, requireRole(['admin', 'super_admin']), updateContestSettings);
 
 /**
- * DELETE /api/contests/:id/settings
- * Delete contest settings
- * Requires: Authentication + Admin role
+ * Contest Settings Routes
  */
+router.get('/:id/settings', authenticate, getContestSettings);
+router.put('/:id/settings', authenticate, requireRole(['admin', 'super_admin']), updateContestSettings);
 router.delete('/:id/settings', authenticate, requireRole(['admin', 'super_admin']), deleteContestSettings);
 
 /**
- * GET /api/contests/:id/settings
- * Get contest settings
- * Requires: Authentication
- */
-router.get('/:id/settings', authenticate, getContestSettings);
-
-/**
- * PUT /api/contests/:id/settings
- * Update contest settings
- * Requires: Authentication + Admin role
- */
-router.put('/:id/settings', authenticate, requireRole(['admin', 'super_admin']), updateContestSettings);
-
-/**
- * POST /api/contests/:id/activity
- * Log user activity
- * Requires: Authentication
+ * Activity Log Routes
  */
 router.post('/:id/activity', authenticate, logActivity);
-
-/**
- * GET /api/contests/:id/activity
- * Get all activity logs for contest
- * Requires: Authentication + Admin role
- */
-router.get('/:id/activity', authenticate, requireRole(['admin', 'super_admin']), getContestActivityLogs);
-
-/**
- * GET /api/contests/:id/activity/stats
- * Get activity statistics
- * Requires: Authentication + Admin role
- */
 router.get('/:id/activity/stats', authenticate, requireRole(['admin', 'super_admin']), getActivityStats);
-
-/**
- * GET /api/contests/:id/activity/user/:userId
- * Get activity logs for specific user
- * Requires: Authentication + Admin role
- */
 router.get('/:id/activity/user/:userId', authenticate, requireRole(['admin', 'super_admin']), getUserActivityLogs);
-
-/**
- * DELETE /api/contests/:id/activity
- * Clear all activity logs
- * Requires: Authentication + Admin role
- */
+router.get('/:id/activity', authenticate, requireRole(['admin', 'super_admin']), getContestActivityLogs);
 router.delete('/:id/activity', authenticate, requireRole(['admin', 'super_admin']), clearActivityLogs);
 
 /**
- * GET /api/contests/:id
- * Get single contest by ID
- * Requires: Authentication
- * IMPORTANT: This must come AFTER specific routes like /:id/tasks
+ * Base Contest Routes (must come LAST to avoid conflicts)
  */
 router.get('/:id', authenticate, getContestById);
-
-/**
- * PUT /api/contests/:id
- * Update contest
- * Requires: Authentication + Admin role
- */
 router.put('/:id', authenticate, requireRole(['admin', 'super_admin']), updateContest);
-
-/**
- * DELETE /api/contests/:id
- * Delete contest
- * Requires: Authentication + Admin role
- */
 router.delete('/:id', authenticate, requireRole(['admin', 'super_admin']), deleteContest);
-
-/**
- * Activity Log Routes
- * Hosted under /api/contests/:id/activity
- */
-router.post(
-  '/:id/activity',
-  authenticate,
-  logActivity
-);
-
-router.get(
-  '/:id/activity',
-  authenticate,
-  getContestActivityLogs // Allow all authenticated users to view logs (or restrict?) - Controller checks restrictions usually, or we restrict here?
-  // Previous file showed requireRole(['admin', 'super_admin']) for getContestActivityLogs in activityLogs.routes.ts
-  // Let's assume admins only for full logs, but maybe specific user logs are open?
-  // Actually, let's look at getContestActivityLogs usage in frontend. It's for admin.
-);
-
-router.get(
-  '/:id/activity/stats',
-  authenticate,
-  requireRole(['admin', 'super_admin']),
-  getActivityStats
-);
-
-/**
- * Activity Log Routes
- */
-router.post('/:id/activity', authenticate, logActivity);
-router.get('/:id/activity', authenticate, requireRole(['admin', 'super_admin']), getContestActivityLogs);
-router.get('/:id/activity/stats', authenticate, requireRole(['admin', 'super_admin']), getActivityStats);
-router.delete('/:id/activity', authenticate, requireRole(['admin', 'super_admin']), clearActivityLogs);
 
 export default router;

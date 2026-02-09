@@ -22,6 +22,8 @@ export interface LoginResponse {
   message: string;    // Success message
   role: UserRole;     // User's role (for routing)
   username: string;   // User's username (for display)
+  userId: number;     // User's ID (for socket and API calls)
+  email: string;      // User's email
   token: string;      // JWT token (for subsequent requests)
 }
 
