@@ -11,7 +11,7 @@ import { wrapCodeWithTestRunner, DEFAULT_TEST_RUNNERS, RESULT_DELIMITER } from '
 function parseStdout(stdout: string | null): { consoleOutput: string; actualResult: string } {
   if (!stdout) return { consoleOutput: '', actualResult: '' };
 
-  const delimiterStr = '---CODECOMBAT_RESULT---';
+  const delimiterStr = RESULT_DELIMITER.trim();
   const idx = stdout.indexOf(delimiterStr);
 
   if (idx === -1) {
