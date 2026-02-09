@@ -210,11 +210,11 @@ const Login: React.FC = () => {
 
     const inputStyle: React.CSSProperties = {
         width: '100%',
-        padding: '10px 14px',
-        fontSize: '0.875rem',
+        padding: '8px 12px',
+        fontSize: '0.8rem',
         background: 'rgba(255, 255, 255, 0.05)',
         border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '8px',
+        borderRadius: '6px',
         color: '#ffffff',
         outline: 'none',
         boxSizing: 'border-box' as const,
@@ -228,16 +228,16 @@ const Login: React.FC = () => {
 
     const labelStyle: React.CSSProperties = {
         display: 'block',
-        fontSize: '0.75rem',
+        fontSize: '0.7rem',
         textTransform: 'uppercase' as const,
-        marginBottom: '8px',
+        marginBottom: '5px',
         fontWeight: 500,
         color: 'rgba(255, 255, 255, 0.5)',
         letterSpacing: '0.1em',
     };
 
     const fieldErrorStyle: React.CSSProperties = {
-        fontSize: '0.75rem',
+        fontSize: '0.7rem',
         color: '#ef4444',
         marginTop: '4px',
         display: 'flex',
@@ -336,7 +336,7 @@ const Login: React.FC = () => {
 
                     {/* Welcome Content */}
                     <div style={{ maxWidth: '600px' }}>
-                        <h1 style={{ fontSize: '4rem', fontWeight: 600, lineHeight: 1.2, margin: '0 0 24px', color: '#ffffff' }}>
+                        <h1 style={{ fontSize: '3.2rem', fontWeight: 600, lineHeight: 1.2, margin: '0 0 24px', color: '#ffffff' }}>
                             Welcome,
                             <br />
                             <span style={{
@@ -360,20 +360,20 @@ const Login: React.FC = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
-                    padding: '60px',
+                    padding: '40px',
                     background: 'rgba(20, 20, 20, 0.6)',
                     borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
                     overflowY: 'auto',
                 }}>
                     {/* Form - centered */}
-                    <form style={{ width: '100%', maxWidth: '400px', margin: 'auto' }} onSubmit={handleSubmit}>
+                    <form style={{ width: '100%', maxWidth: '340px', margin: 'auto' }} onSubmit={handleSubmit}>
                         {/* Toggle tabs */}
                         <div style={{
                             display: 'flex',
-                            marginBottom: '28px',
+                            marginBottom: '18px',
                             background: 'rgba(255, 255, 255, 0.04)',
-                            borderRadius: '10px',
-                            padding: '4px',
+                            borderRadius: '8px',
+                            padding: '3px',
                             border: '1px solid rgba(255, 255, 255, 0.06)',
                         }}>
                             <button
@@ -381,11 +381,11 @@ const Login: React.FC = () => {
                                 onClick={() => { if (isRegisterMode) toggleMode(); }}
                                 style={{
                                     flex: 1,
-                                    padding: '10px 16px',
-                                    fontSize: '0.85rem',
+                                    padding: '7px 12px',
+                                    fontSize: '0.78rem',
                                     fontWeight: 600,
                                     border: 'none',
-                                    borderRadius: '8px',
+                                    borderRadius: '6px',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease',
                                     background: !isRegisterMode ? 'rgba(253, 230, 138, 0.15)' : 'transparent',
@@ -400,11 +400,11 @@ const Login: React.FC = () => {
                                 onClick={() => { if (!isRegisterMode) toggleMode(); }}
                                 style={{
                                     flex: 1,
-                                    padding: '10px 16px',
-                                    fontSize: '0.85rem',
+                                    padding: '7px 12px',
+                                    fontSize: '0.78rem',
                                     fontWeight: 600,
                                     border: 'none',
-                                    borderRadius: '8px',
+                                    borderRadius: '6px',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease',
                                     background: isRegisterMode ? 'rgba(253, 230, 138, 0.15)' : 'transparent',
@@ -417,8 +417,8 @@ const Login: React.FC = () => {
                         </div>
 
                         <p style={{
-                            fontSize: '0.875rem',
-                            margin: '0 0 24px',
+                            fontSize: '0.78rem',
+                            margin: '0 0 16px',
                             lineHeight: 1.5,
                             textAlign: 'center',
                             color: 'rgba(255, 255, 255, 0.5)'
@@ -429,7 +429,7 @@ const Login: React.FC = () => {
                         </p>
 
                         {/* Username */}
-                        <div style={{ marginBottom: '18px' }}>
+                        <div style={{ marginBottom: '14px' }}>
                             <label style={labelStyle}>CODENAME</label>
                             <input
                                 type="text"
@@ -445,7 +445,7 @@ const Login: React.FC = () => {
 
                         {/* Email - only for register */}
                         {isRegisterMode && (
-                            <div style={{ marginBottom: '18px' }}>
+                            <div style={{ marginBottom: '14px' }}>
                                 <label style={labelStyle}>EMAIL</label>
                                 <div style={{ position: 'relative' }}>
                                     <input
@@ -476,7 +476,7 @@ const Login: React.FC = () => {
                         )}
 
                         {/* Password */}
-                        <div style={{ marginBottom: '18px' }}>
+                        <div style={{ marginBottom: '14px' }}>
                             <label style={labelStyle}>
                                 {isRegisterMode ? 'PASSWORD (min 8 characters)' : 'ACCESS KEY'}
                             </label>
@@ -515,7 +515,7 @@ const Login: React.FC = () => {
 
                         {/* Confirm Password - only for register */}
                         {isRegisterMode && (
-                            <div style={{ marginBottom: '18px' }}>
+                            <div style={{ marginBottom: '14px' }}>
                                 <label style={labelStyle}>CONFIRM PASSWORD</label>
                                 <input
                                     type="password"
@@ -543,13 +543,13 @@ const Login: React.FC = () => {
                         {/* Error message */}
                         {error && (
                             <div style={{
-                                padding: '10px 14px',
-                                marginBottom: '16px',
-                                fontSize: '0.85rem',
+                                padding: '8px 10px',
+                                marginBottom: '12px',
+                                fontSize: '0.78rem',
                                 background: 'rgba(239, 68, 68, 0.1)',
                                 border: '1px solid rgba(239, 68, 68, 0.3)',
                                 color: '#ef4444',
-                                borderRadius: '8px',
+                                borderRadius: '6px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '8px',
@@ -562,13 +562,13 @@ const Login: React.FC = () => {
                         {/* Success message */}
                         {success && (
                             <div style={{
-                                padding: '10px 14px',
-                                marginBottom: '16px',
-                                fontSize: '0.85rem',
+                                padding: '8px 10px',
+                                marginBottom: '12px',
+                                fontSize: '0.78rem',
                                 background: 'rgba(16, 185, 129, 0.1)',
                                 border: '1px solid rgba(16, 185, 129, 0.3)',
                                 color: '#34d399',
-                                borderRadius: '8px',
+                                borderRadius: '6px',
                             }}>
                                 {success}
                             </div>
@@ -583,16 +583,16 @@ const Login: React.FC = () => {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                gap: '8px',
-                                padding: '12px 16px',
+                                gap: '6px',
+                                padding: '9px 14px',
                                 border: 'none',
-                                fontSize: '0.875rem',
+                                fontSize: '0.8rem',
                                 fontWeight: 500,
                                 cursor: loading || (isRegisterMode && (!!emailError || !!passwordError)) ? 'not-allowed' : 'pointer',
                                 background: '#ffffff',
                                 color: '#000000',
-                                borderRadius: '8px',
-                                marginTop: '8px',
+                                borderRadius: '6px',
+                                marginTop: '6px',
                                 opacity: loading || (isRegisterMode && (!!emailError || !!passwordError)) ? 0.5 : 1,
                                 transition: 'opacity 0.2s ease',
                             }}
@@ -607,8 +607,8 @@ const Login: React.FC = () => {
                         {/* Toggle link */}
                         <p style={{
                             textAlign: 'center',
-                            marginTop: '20px',
-                            fontSize: '0.85rem',
+                            marginTop: '14px',
+                            fontSize: '0.78rem',
                             color: 'rgba(255, 255, 255, 0.4)',
                         }}>
                             {isRegisterMode ? 'Already have an account?' : "Don't have an account?"}{' '}
@@ -620,7 +620,7 @@ const Login: React.FC = () => {
                                     border: 'none',
                                     color: '#FDE68A',
                                     cursor: 'pointer',
-                                    fontSize: '0.85rem',
+                                    fontSize: '0.78rem',
                                     fontWeight: 600,
                                     padding: 0,
                                     textDecoration: 'underline',
@@ -635,10 +635,10 @@ const Login: React.FC = () => {
                     {/* Copyright - at bottom */}
                     <p style={{
                         width: '100%',
-                        maxWidth: '400px',
+                        maxWidth: '340px',
                         margin: '0 auto',
-                        paddingBottom: '20px',
-                        fontSize: '0.75rem',
+                        paddingBottom: '12px',
+                        fontSize: '0.7rem',
                         textAlign: 'center',
                         color: 'rgba(255, 255, 255, 0.4)'
                     }}>
