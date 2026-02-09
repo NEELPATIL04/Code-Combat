@@ -193,10 +193,14 @@ class Judge0Service {
 
     for (const testCase of params.testCases) {
       try {
-        // Wrap user code with boilerplate for this test case
-        let finalCode = params.sourceCode;
+        // Determine if this is a stdin-based template or function-call-based template
+        const templateUsesStdin = params.testRunnerTemplate && !params.testRunnerTemplate.includes('{{TEST_INPUT}}');
 
-        if (params.functionName && testCase.input) {
+        let finalCode = params.sourceCode;
+        let stdinInput = undefined;
+
+        if (params.testRunnerTemplate) {
+          // Always wrap code with template (which includes boilerplate)
           finalCode = wrapCodeWithTestRunner({
             userCode: params.sourceCode,
             language: params.language,
@@ -205,17 +209,27 @@ class Judge0Service {
             testRunnerTemplate: params.testRunnerTemplate,
           });
 
-          console.log('🔧 Wrapped code for test:', {
-            language: params.language,
-            functionName: params.functionName,
-            input: testCase.input.substring(0, 50) + '...',
-          });
+          // If template uses stdin (reads from fs or sys.stdin), pass test input as stdin
+          if (templateUsesStdin) {
+            stdinInput = testCase.input;
+            console.log('🔧 Using stdin-based execution:', {
+              language: params.language,
+              functionName: params.functionName,
+              stdinLength: stdinInput.length,
+            });
+          } else {
+            console.log('🔧 Using function-call-based execution:', {
+              language: params.language,
+              functionName: params.functionName,
+              testInput: testCase.input.substring(0, 50) + '...',
+            });
+          }
         }
 
         const result = await this.submitAndWait({
           sourceCode: finalCode,
           language: params.language,
-          stdin: undefined, // No stdin needed, test data is in the code
+          stdin: stdinInput,
           expectedOutput: testCase.expectedOutput,
         });
 
