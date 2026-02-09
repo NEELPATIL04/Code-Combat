@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { getJudge0LanguageId, Judge0Submission, Judge0Result } from '../utils/judge0.util';
-import { wrapCodeWithTestRunner } from '../utils/codeWrapper.util';
+import { wrapCodeWithTestRunner, DEFAULT_TEST_RUNNERS } from '../utils/codeWrapper.util';
 
 const JUDGE0_URL = process.env.JUDGE0_URL || 'http://localhost:2358';
 const JUDGE0_API_KEY = process.env.JUDGE0_API_KEY;
@@ -193,37 +193,38 @@ class Judge0Service {
 
     for (const testCase of params.testCases) {
       try {
-        // Determine if this is a stdin-based template or function-call-based template
-        const templateUsesStdin = params.testRunnerTemplate && !params.testRunnerTemplate.includes('{{TEST_INPUT}}');
-
         let finalCode = params.sourceCode;
-        let stdinInput = undefined;
+        let stdinInput: string | undefined = undefined;
 
-        if (params.testRunnerTemplate) {
-          // Always wrap code with template (which includes boilerplate)
-          finalCode = wrapCodeWithTestRunner({
-            userCode: params.sourceCode,
+        // Always wrap code with test runner (custom template or DEFAULT_TEST_RUNNERS fallback)
+        // wrapCodeWithTestRunner handles fallback to DEFAULT_TEST_RUNNERS internally
+        finalCode = wrapCodeWithTestRunner({
+          userCode: params.sourceCode,
+          language: params.language,
+          functionName: params.functionName,
+          testInput: testCase.input,
+          testRunnerTemplate: params.testRunnerTemplate,
+        });
+
+        // Determine if stdin is needed:
+        //   Custom templates without {{TEST_INPUT}} are stdin-based (read from stdin)
+        //   Default templates embed test input inline via {{TEST_INPUT}} (no stdin needed)
+        const effectiveTemplate = params.testRunnerTemplate || (params.functionName ? DEFAULT_TEST_RUNNERS[params.language] : null);
+        const isStdinBased = effectiveTemplate ? !effectiveTemplate.includes('{{TEST_INPUT}}') : false;
+
+        if (isStdinBased) {
+          stdinInput = testCase.input;
+          console.log('🔧 Using stdin-based execution:', {
             language: params.language,
             functionName: params.functionName,
-            testInput: testCase.input,
-            testRunnerTemplate: params.testRunnerTemplate,
+            stdinLength: stdinInput.length,
           });
-
-          // If template uses stdin (reads from fs or sys.stdin), pass test input as stdin
-          if (templateUsesStdin) {
-            stdinInput = testCase.input;
-            console.log('🔧 Using stdin-based execution:', {
-              language: params.language,
-              functionName: params.functionName,
-              stdinLength: stdinInput.length,
-            });
-          } else {
-            console.log('🔧 Using function-call-based execution:', {
-              language: params.language,
-              functionName: params.functionName,
-              testInput: testCase.input.substring(0, 50) + '...',
-            });
-          }
+        } else {
+          console.log('🔧 Using function-call-based execution:', {
+            language: params.language,
+            functionName: params.functionName,
+            testInput: (testCase.input || '').substring(0, 50),
+          });
         }
 
         const result = await this.submitAndWait({
