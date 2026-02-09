@@ -129,10 +129,12 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
     allowCopyPaste = true,
     onCopyPasteAttempt,
 }) => {
-    // Lock/unlock state
-    const hintLocked = hintUnlockAfterSubmissions > 0 && submissionCount < hintUnlockAfterSubmissions;
-    const solutionLocked = solutionUnlockAfterSubmissions > 0 && submissionCount < solutionUnlockAfterSubmissions;
-    const analyzeLocked = !aiModeEnabled;
+    // Lock/unlock state — only lock when there's a real positive threshold
+    const hintThreshold = Number(hintUnlockAfterSubmissions) || 0;
+    const solutionThreshold = Number(solutionUnlockAfterSubmissions) || 0;
+    const hintLocked = hintThreshold > 0 && submissionCount < hintThreshold;
+    const solutionLocked = solutionThreshold > 0 && submissionCount < solutionThreshold;
+    // AI analysis: no lock concept — button simply hidden when disabled
 
     // Track previous lock state to detect unlock transitions
     const prevHintLockedRef = React.useRef(hintLocked);
@@ -274,7 +276,7 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
                             onGetHint();
                         }}
                         disabled={hintLocked || isGeneratingHint || isRunning}
-                        title={hintLocked ? `Unlocks after ${hintUnlockAfterSubmissions} submissions (${submissionCount}/${hintUnlockAfterSubmissions})` : 'Get AI Hint'}
+                        title={hintLocked ? `Unlocks after ${hintThreshold} submissions (${submissionCount}/${hintThreshold})` : 'Get AI Hint'}
                         style={{
                             display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px',
                             background: hintLocked ? 'rgba(255,255,255,0.04)' : 'rgba(234, 179, 8, 0.15)',
@@ -298,7 +300,7 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
                             <Lightbulb size={14} />
                         )}
                         {hintLocked
-                            ? `Hint (${submissionCount}/${hintUnlockAfterSubmissions})`
+                            ? `Hint (${submissionCount}/${hintThreshold})`
                             : isGeneratingHint ? 'Thinking...' : 'Get Hint'}
                     </button>
                 )}
@@ -313,7 +315,7 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
                             onGetSolution();
                         }}
                         disabled={solutionLocked || isGeneratingSolution || isRunning}
-                        title={solutionLocked ? `Unlocks after ${solutionUnlockAfterSubmissions} submissions (${submissionCount}/${solutionUnlockAfterSubmissions})` : 'Get Full Solution'}
+                        title={solutionLocked ? `Unlocks after ${solutionThreshold} submissions (${submissionCount}/${solutionThreshold})` : 'Get Full Solution'}
                         style={{
                             display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px',
                             background: solutionLocked ? 'rgba(255,255,255,0.04)' : 'rgba(239, 68, 68, 0.15)',
@@ -337,36 +339,35 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
                             <Unlock size={14} />
                         )}
                         {solutionLocked
-                            ? `Solution (${submissionCount}/${solutionUnlockAfterSubmissions})`
+                            ? `Solution (${submissionCount}/${solutionThreshold})`
                             : isGeneratingSolution ? 'Unlocking...' : 'Get Solution'}
                     </button>
                 )}
 
-                {/* AI Feedback / Analyze Button */}
-                {aiConfig?.hintsEnabled && (
+                {/* AI Feedback / Analyze Button — only shown when AI mode is enabled */}
+                {aiConfig?.hintsEnabled && aiModeEnabled && (
                     <button
                         onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            if (analyzeLocked) return;
                             onAnalyze();
                         }}
-                        disabled={analyzeLocked || isAnalyzing || isRunning}
-                        title={analyzeLocked ? 'AI analysis is disabled for this contest' : 'Get AI code feedback'}
+                        disabled={isAnalyzing || isRunning}
+                        title="Get AI code feedback"
                         style={{
                             display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px',
-                            background: analyzeLocked ? 'rgba(255,255,255,0.04)' : 'rgba(59, 130, 246, 0.15)',
-                            border: analyzeLocked ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(59, 130, 246, 0.3)',
+                            background: 'rgba(59, 130, 246, 0.15)',
+                            border: '1px solid rgba(59, 130, 246, 0.3)',
                             borderRadius: 6,
-                            color: analyzeLocked ? 'rgba(255,255,255,0.3)' : '#60a5fa',
+                            color: '#60a5fa',
                             fontSize: 13, fontWeight: 500,
-                            cursor: analyzeLocked ? 'not-allowed' : (isAnalyzing || isRunning) ? 'not-allowed' : 'pointer',
-                            opacity: (isAnalyzing || isRunning) && !analyzeLocked ? 0.6 : 1,
+                            cursor: (isAnalyzing || isRunning) ? 'not-allowed' : 'pointer',
+                            opacity: (isAnalyzing || isRunning) ? 0.6 : 1,
                             transition: 'all 0.3s ease',
                         }}
                     >
-                        {analyzeLocked ? <Lock size={14} /> : <MessageSquare size={14} />}
-                        {analyzeLocked ? 'Analysis Locked' : isAnalyzing ? 'Analyzing...' : 'AI Feedback'}
+                        <MessageSquare size={14} />
+                        {isAnalyzing ? 'Analyzing...' : 'AI Feedback'}
                     </button>
                 )}
                 <button
@@ -951,10 +952,16 @@ const TaskPage: React.FC = () => {
                 const defaultSettings = {
                     testModeEnabled: false,
                     aiHintsEnabled: true,
+                    aiModeEnabled: true,
                     fullScreenModeEnabled: false, // Default to false to avoid lockout issues on error
+                    allowCopyPaste: false,
                     requireCamera: false,
                     requireMicrophone: false,
-                    requireScreenShare: false
+                    requireScreenShare: false,
+                    hintUnlockAfterSubmissions: 0,
+                    solutionUnlockAfterSubmissions: 0,
+                    maxHintsAllowed: 3,
+                    maxSubmissionsAllowed: 0,
                 };
 
                 setContestSettings(defaultSettings);
@@ -1587,6 +1594,11 @@ const TaskPage: React.FC = () => {
                     setTask(data.tasks[0]);
                     setCurrentTaskIndex(0);
                     setContest(data.contest);
+
+                    // Merge settings from tasks endpoint (ensures AI settings are available)
+                    if (data.settings) {
+                        setContestSettings((prev: any) => prev ? { ...prev, ...data.settings } : data.settings);
+                    }
 
                     // Check contest state on load (for pause/end persistence)
                     if (data.contest) {
