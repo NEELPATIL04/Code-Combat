@@ -255,12 +255,17 @@ class Judge0Service {
           sourceCode: finalCode,
           language: params.language,
           stdin: stdinInput,
-          expectedOutput: testCase.expectedOutput,
+          // NOTE: Do NOT send expectedOutput to Judge0 — our RESULT_DELIMITER in
+          // stdout would cause Judge0's own comparison to fail. We do our own
+          // comparison below using parseStdout().
         });
 
         const { consoleOutput, actualResult } = parseStdout(result.stdout);
         const expectedOutput = testCase.expectedOutput.trim();
-        const passed = actualResult === expectedOutput && result.status.id === 3; // 3 = Accepted
+        // Status 3 = Accepted (ran OK), 4 = Wrong Answer (ran OK but Judge0 comparison failed)
+        // Both mean the code executed successfully. We only care about our own comparison.
+        const executedSuccessfully = result.status.id === 3 || result.status.id === 4;
+        const passed = executedSuccessfully && actualResult === expectedOutput;
 
         results.push({
           passed,
