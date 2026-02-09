@@ -367,61 +367,22 @@ const Login: React.FC = () => {
                 }}>
                     {/* Form - centered */}
                     <form style={{ width: '100%', maxWidth: '340px', margin: 'auto' }} onSubmit={handleSubmit}>
-                        {/* Toggle tabs */}
-                        <div style={{
-                            display: 'flex',
-                            marginBottom: '18px',
-                            background: 'rgba(255, 255, 255, 0.04)',
-                            borderRadius: '8px',
-                            padding: '3px',
-                            border: '1px solid rgba(255, 255, 255, 0.06)',
+                        {/* Form heading */}
+                        <h2 style={{
+                            fontSize: '1.3rem',
+                            fontWeight: 600,
+                            textAlign: 'center',
+                            margin: '0 0 6px',
+                            color: '#ffffff',
                         }}>
-                            <button
-                                type="button"
-                                onClick={() => { if (isRegisterMode) toggleMode(); }}
-                                style={{
-                                    flex: 1,
-                                    padding: '7px 12px',
-                                    fontSize: '0.78rem',
-                                    fontWeight: 600,
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    background: !isRegisterMode ? 'rgba(253, 230, 138, 0.15)' : 'transparent',
-                                    color: !isRegisterMode ? '#FDE68A' : 'rgba(255, 255, 255, 0.4)',
-                                    boxShadow: !isRegisterMode ? '0 2px 8px rgba(253, 230, 138, 0.1)' : 'none',
-                                }}
-                            >
-                                Login
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => { if (!isRegisterMode) toggleMode(); }}
-                                style={{
-                                    flex: 1,
-                                    padding: '7px 12px',
-                                    fontSize: '0.78rem',
-                                    fontWeight: 600,
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    background: isRegisterMode ? 'rgba(253, 230, 138, 0.15)' : 'transparent',
-                                    color: isRegisterMode ? '#FDE68A' : 'rgba(255, 255, 255, 0.4)',
-                                    boxShadow: isRegisterMode ? '0 2px 8px rgba(253, 230, 138, 0.1)' : 'none',
-                                }}
-                            >
-                                Create Account
-                            </button>
-                        </div>
-
+                            {isRegisterMode ? 'Create Account' : 'Login'}
+                        </h2>
                         <p style={{
                             fontSize: '0.78rem',
-                            margin: '0 0 16px',
+                            margin: '0 0 18px',
                             lineHeight: 1.5,
                             textAlign: 'center',
-                            color: 'rgba(255, 255, 255, 0.5)'
+                            color: 'rgba(255, 255, 255, 0.45)'
                         }}>
                             {isRegisterMode
                                 ? 'Create your player account to join the battle arena.'
