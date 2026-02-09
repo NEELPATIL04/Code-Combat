@@ -233,6 +233,8 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
       status = 'accepted';
     } else if (results.some(r => r.error?.includes('Compilation Error'))) {
       status = 'compilation_error';
+    } else if (results.some(r => r.error?.includes('Time Limit Exceeded'))) {
+      status = 'time_limit_exceeded';
     } else if (results.some(r => r.error && !r.error.includes('Wrong Answer'))) {
       status = 'runtime_error';
     }

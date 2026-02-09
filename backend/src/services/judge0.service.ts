@@ -25,6 +25,220 @@ function parseStdout(stdout: string | null): { consoleOutput: string; actualResu
   return { consoleOutput, actualResult };
 }
 
+// ═══════════════════════════════════════════════════════
+// ERROR FORMATTING — User-friendly error messages
+// ═══════════════════════════════════════════════════════
+
+/**
+ * Error type classification with emoji + actionable suggestion
+ */
+const ERROR_CLASSIFICATIONS: Record<string, { label: string; emoji: string; suggestion: string }> = {
+  compilation_error: {
+    label: 'Compilation Error',
+    emoji: '🔴',
+    suggestion: 'Check your syntax — look for missing brackets, semicolons, or typos.',
+  },
+  syntax_error: {
+    label: 'Syntax Error',
+    emoji: '🔴',
+    suggestion: 'You have a syntax mistake. Check for missing parentheses, brackets, or semicolons near the indicated line.',
+  },
+  type_error: {
+    label: 'Type Error',
+    emoji: '🟠',
+    suggestion: 'You\'re using a value incorrectly — check that all variables and methods exist and are the right type.',
+  },
+  reference_error: {
+    label: 'Reference Error',
+    emoji: '🟠',
+    suggestion: 'You\'re using a variable or function that doesn\'t exist. Check for typos in variable names.',
+  },
+  runtime_error: {
+    label: 'Runtime Error',
+    emoji: '🟠',
+    suggestion: 'Your code crashed during execution. Check for null/undefined access, array out-of-bounds, or division by zero.',
+  },
+  index_out_of_bounds: {
+    label: 'Index Out of Bounds',
+    emoji: '🟠',
+    suggestion: 'You\'re accessing an array/list index that doesn\'t exist. Check your loop bounds and array lengths.',
+  },
+  null_pointer: {
+    label: 'Null Pointer Error',
+    emoji: '🟠',
+    suggestion: 'You\'re trying to use a null or undefined value. Check that all objects are properly initialized.',
+  },
+  stack_overflow: {
+    label: 'Stack Overflow',
+    emoji: '🔴',
+    suggestion: 'Your code has infinite recursion. Make sure recursive functions have a proper base case.',
+  },
+  time_limit_exceeded: {
+    label: 'Time Limit Exceeded',
+    emoji: '⏱️',
+    suggestion: 'Your code took too long. Optimize your algorithm or check for infinite loops.',
+  },
+  memory_limit_exceeded: {
+    label: 'Memory Limit Exceeded',
+    emoji: '💾',
+    suggestion: 'Your code used too much memory. Check for large unnecessary data structures or infinite growth.',
+  },
+  internal_error: {
+    label: 'Internal Error',
+    emoji: '⚙️',
+    suggestion: 'An internal system error occurred. Please try submitting again.',
+  },
+};
+
+/**
+ * Classify the specific error type from the raw error text
+ */
+function classifyError(statusId: number, rawError: string, language: string): string {
+  const lower = rawError.toLowerCase();
+
+  // Status-based classification first
+  if (statusId === 5) return 'time_limit_exceeded';
+  if (statusId === 6) {
+    // Compilation error — check for more specific types
+    if (language === 'typescript' && lower.includes('error ts')) return 'compilation_error';
+    return 'compilation_error';
+  }
+  if (statusId === 13 || statusId === 14) return 'internal_error';
+
+  // Content-based classification for runtime errors (status 7-12, or status 3/4 with stderr)
+  if (lower.includes('syntaxerror')) return 'syntax_error';
+  if (lower.includes('typeerror') || lower.includes('is not a function') || lower.includes('is not a constructor')) return 'type_error';
+  if (lower.includes('referenceerror') || lower.includes('is not defined')) return 'reference_error';
+  if (lower.includes('rangeerror') || lower.includes('stack overflow') || lower.includes('maximum call stack')) return 'stack_overflow';
+  if (lower.includes('outofbounds') || lower.includes('out of bounds') || lower.includes('out_of_range') || lower.includes('indexerror')) return 'index_out_of_bounds';
+  if (lower.includes('nullpointer') || lower.includes('null pointer') || lower.includes('cannot read properties of null') || lower.includes('cannot read property')) return 'null_pointer';
+
+  // Default based on status
+  if (statusId >= 7 && statusId <= 12) return 'runtime_error';
+  return 'runtime_error';
+}
+
+/**
+ * Clean up and extract the meaningful part of an error message.
+ * Strips internal paths, long stack traces, and sandbox artifacts.
+ */
+function cleanErrorText(rawError: string, language: string): string {
+  let lines = rawError.split('\n');
+
+  if (language === 'javascript' || language === 'typescript') {
+    // Strip Node.js internal stack trace lines
+    lines = lines.filter(line => {
+      const trimmed = line.trim();
+      return !trimmed.startsWith('at Module.') &&
+             !trimmed.startsWith('at Object.Module.') &&
+             !trimmed.startsWith('at Function.Module.') &&
+             !trimmed.startsWith('at internal/') &&
+             !trimmed.includes('internal/modules/cjs/loader.js') &&
+             !trimmed.includes('internal/main/run_main_module.js') &&
+             !trimmed.includes('node:internal/');
+    });
+
+    // Replace sandbox paths /box/script.js → "Your code"
+    lines = lines.map(line =>
+      line.replace(/\/box\/script\.(js|ts)/g, 'Your code')
+    );
+  }
+
+  if (language === 'java') {
+    // Clean up Java exception messages
+    // Keep the exception type + message + relevant stack trace lines (Main.java only)
+    const relevantLines: string[] = [];
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('at ') && !trimmed.includes('Main.java')) {
+        continue; // Skip framework/JDK stack trace lines
+      }
+      if (trimmed.startsWith('Exception in thread')) {
+        // Extract just the exception: "ArrayIndexOutOfBoundsException: Index 6 out of bounds for length 5"
+        const match = trimmed.match(/:\s*(\w+(?:\.\w+)*Exception:?.*)$/);
+        if (match) {
+          relevantLines.push(match[1].trim());
+          continue;
+        }
+      }
+      // Keep "at Main.xxx(Main.java:N)" but clean it up
+      if (trimmed.startsWith('at Main.')) {
+        const lineMatch = trimmed.match(/Main\.java:(\d+)/);
+        if (lineMatch) {
+          relevantLines.push(`  → at line ${lineMatch[1]}`);
+          continue;
+        }
+      }
+      relevantLines.push(line);
+    }
+    lines = relevantLines;
+  }
+
+  if (language === 'cpp' || language === 'c') {
+    // Clean up C++ error messages
+    lines = lines.filter(line => {
+      const trimmed = line.trim();
+      // Remove "run: line 1: ... Aborted (core dumped) ..." noise
+      return !trimmed.startsWith('run: line') && !trimmed.includes('core dumped');
+    });
+
+    // Clean up compilation error paths: main.cpp:14:9 → Line 14, Col 9
+    lines = lines.map(line =>
+      line.replace(/main\.cpp:(\d+):(\d+):/g, 'Line $1, Col $2:')
+        .replace(/main\.cpp:(\d+):/g, 'Line $1:')
+    );
+  }
+
+  // Remove empty lines at start/end
+  let result = lines.join('\n').trim();
+
+  // Truncate very long error messages (max ~500 chars for readability)
+  if (result.length > 500) {
+    result = result.substring(0, 500) + '\n... (error truncated)';
+  }
+
+  return result;
+}
+
+/**
+ * Format a Judge0 error into a user-friendly, actionable error message.
+ *
+ * Returns a structured error string like:
+ *   🔴 Compilation Error: expected ',' or ';' before 'for'
+ *      Line 14, Col 9
+ *   💡 Check your syntax — look for missing brackets, semicolons, or typos.
+ *
+ * Or undefined if there's no error.
+ */
+function formatErrorMessage(
+  statusId: number,
+  stderr: string | null,
+  compileOutput: string | null,
+  language: string,
+): string | undefined {
+  const rawError = stderr || compileOutput;
+  if (!rawError || rawError.trim() === '') return undefined;
+
+  // Classify the error type
+  const errorType = classifyError(statusId, rawError, language);
+  const classification = ERROR_CLASSIFICATIONS[errorType] || ERROR_CLASSIFICATIONS.runtime_error;
+
+  // Clean the error text
+  const cleanedError = cleanErrorText(rawError, language);
+
+  // Build the formatted message
+  let formatted = `${classification.emoji} ${classification.label}`;
+
+  if (cleanedError) {
+    formatted += `\n${cleanedError}`;
+  }
+
+  // Add actionable suggestion
+  formatted += `\n\n💡 ${classification.suggestion}`;
+
+  return formatted;
+}
+
 const JUDGE0_URL = process.env.JUDGE0_URL || 'http://localhost:2358';
 const JUDGE0_API_KEY = process.env.JUDGE0_API_KEY;
 const MOCK_MODE = process.env.JUDGE0_MOCK_MODE === 'true';
@@ -231,10 +445,16 @@ class Judge0Service {
           testRunnerTemplate: params.testRunnerTemplate,
         });
 
+        // Fix TypeScript compilation: Judge0's TS compiler defaults to ES5 which
+        // doesn't include Promise, Map, Set, etc. Prepend the ES2015 lib reference.
+        const codeToSubmit = params.language === 'typescript'
+          ? `/// <reference lib="es2015" />\n${finalCode}`
+          : finalCode;
+
         const stdinInput = isStdinBased ? testCase.input : undefined;
 
         const result = await this.submitAndWait({
-          sourceCode: finalCode,
+          sourceCode: codeToSubmit,
           language: params.language,
           stdin: stdinInput,
           // NOTE: Do NOT send expectedOutput to Judge0 — our RESULT_DELIMITER in
@@ -249,13 +469,20 @@ class Judge0Service {
         const executedSuccessfully = result.status.id === 3 || result.status.id === 4;
         const passed = executedSuccessfully && actualResult === expectedOutput;
 
+        // Format error message — only show for actual errors, not for successful runs
+        const hasError = result.status.id >= 5 || (result.stderr && result.stderr.trim() !== '');
+        const formattedError = hasError
+          ? formatErrorMessage(result.status.id, result.stderr, result.compile_output, params.language)
+          : undefined;
+
         return {
           passed,
           input: testCase.input,
           expectedOutput: testCase.expectedOutput,
-          actualOutput: actualResult || result.stderr || 'No output',
+          // actualOutput should only show program output, NOT error text
+          actualOutput: actualResult || (executedSuccessfully ? '' : 'No output'),
           consoleOutput: consoleOutput || undefined,
-          error: result.stderr || result.compile_output || undefined,
+          error: formattedError,
           executionTime: result.time ? parseFloat(result.time) * 1000 : undefined,
           memory: result.memory || undefined,
         };
