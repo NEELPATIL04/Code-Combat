@@ -34,7 +34,25 @@ export const getAuthHeaders = (): HeadersInit => {
  * Handle API response and throw errors if needed
  */
 const handleResponse = async (response: Response) => {
-  const data = await response.json();
+  // Check if response has content
+  const contentType = response.headers.get('content-type');
+  const hasJson = contentType && contentType.includes('application/json');
+  
+  let data;
+  try {
+    // Only parse JSON if content-type indicates JSON
+    if (hasJson) {
+      data = await response.json();
+    } else {
+      // If not JSON, try to read as text
+      const text = await response.text();
+      data = { message: text || 'Request failed' };
+    }
+  } catch (err) {
+    // If JSON parsing fails, create error object
+    data = { message: 'Failed to parse server response' };
+  }
+
   if (!response.ok) {
     // Handle 401 Unauthorized errors
     if (response.status === 401) {
@@ -46,7 +64,7 @@ const handleResponse = async (response: Response) => {
       }
       throw new Error('Invalid or expired token. Please login again.');
     }
-    throw new Error(data.message || 'API request failed');
+    throw new Error(data.message || `Request failed with status ${response.status}`);
   }
   return data;
 };

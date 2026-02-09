@@ -825,6 +825,7 @@ export const getContestTasks = async (req: Request, res: Response, next: NextFun
         difficulty: contest.difficulty,
         duration: contest.duration,
         status: contest.status,
+        contestState: contest.contestState, // Add contestState for pause/resume/end
         fullScreenMode: settings?.fullScreenModeEnabled ?? contest.fullScreenMode ?? true, // Use settings first, fallback to contest field
       },
       tasks: contestTasks,

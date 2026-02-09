@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Play, Send, XCircle, Clock, ChevronRight, Check, X, GripHorizontal, Minimize2, Lightbulb, Brain, Unlock, MessageSquare, CheckCircle2 } from 'lucide-react';
+import { Play, Send, XCircle, Clock, ChevronRight, Check, X, GripHorizontal, Minimize2, Lightbulb, Brain, Unlock, MessageSquare, CheckCircle2, Pause, StopCircle } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import MediaCheckHelper from '../../components/MediaCheckHelper';
 import TaskSidebar from '../../components/TaskSidebar';
@@ -34,6 +34,7 @@ interface Contest {
     title: string;
     duration: number;
     status: string;
+    contestState?: 'running' | 'paused' | 'ended';
     fullScreenMode?: boolean;
 }
 
@@ -786,6 +787,9 @@ const TaskPage: React.FC = () => {
     const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
     const [showEvaluationModal, setShowEvaluationModal] = useState<boolean>(false);
 
+    // Submission history state - moved here before callbacks that use it
+    const [submissions, setSubmissions] = useState<SubmissionHistory[]>([]);
+
     // Media & Socket State
     const { user } = useAuth();
     const { socket } = useSocket();
@@ -956,22 +960,28 @@ const TaskPage: React.FC = () => {
             showToast('Contest ended - Submitting your work...', 'error');
 
             // Auto-submit current code if requested
-            if (data.autoSubmit && task) {
+            if (data.autoSubmit && task && contest) {
                 try {
                     console.log('📤 Auto-submitting due to contest end');
                     // Submit current code immediately
                     const currentCode = codeRef.current;
-                    await submissionAPI.submit({
-                        taskId: task.id,
-                        contestId: contest?.id || Number(contestId),
-                        code: currentCode,
-                        language: language,
-                    });
-                    console.log('✅ Auto-submit successful');
-                    showToast('Your work has been submitted', 'success');
-                } catch (error) {
+                    
+                    // Only submit if there's actual code
+                    if (currentCode && currentCode.trim()) {
+                        await submissionAPI.submit({
+                            taskId: task.id,
+                            contestId: contest.id,
+                            code: currentCode,
+                            language: language,
+                        });
+                        console.log('✅ Auto-submit successful');
+                        showToast('Your work has been submitted', 'success');
+                    } else {
+                        console.log('⚠️ No code to submit');
+                    }
+                } catch (error: any) {
                     console.error('Failed to auto-submit:', error);
-                    showToast('Failed to auto-submit. Redirecting...', 'error');
+                    showToast(error?.message || 'Failed to auto-submit. Redirecting...', 'error');
                 }
             }
 
@@ -996,6 +1006,16 @@ const TaskPage: React.FC = () => {
 
     const handleGetHint = useCallback(async () => {
         if (!task) return;
+
+        // Check if hints are unlocked based on submissions
+        const requiredSubmissions = contestSettings?.hintUnlockAfterSubmissions || 0;
+        const currentSubmissionCount = submissions.length;
+        
+        if (requiredSubmissions > 0 && currentSubmissionCount < requiredSubmissions) {
+            showToast(`Hints will unlock after ${requiredSubmissions} submissions. You have ${currentSubmissionCount} submissions.`, 'warning');
+            return;
+        }
+
         setIsGeneratingHint(true);
         try {
             // Pass empty string for errorLogs for now, or capture from state if available
@@ -1010,10 +1030,20 @@ const TaskPage: React.FC = () => {
         } finally {
             setIsGeneratingHint(false);
         }
-    }, [task, code, language, showToast]);
+    }, [task, code, language, showToast, contestSettings, submissions]);
 
     const handleGetSolution = useCallback(async () => {
         if (!task) return;
+
+        // Check if solution is unlocked based on submissions
+        const requiredSubmissions = contestSettings?.hintUnlockAfterSubmissions || 0;
+        const currentSubmissionCount = submissions.length;
+        
+        if (requiredSubmissions > 0 && currentSubmissionCount < requiredSubmissions) {
+            showToast(`AI Solution will unlock after ${requiredSubmissions} submissions. You have ${currentSubmissionCount} submissions.`, 'warning');
+            return;
+        }
+
         if (!window.confirm('Are you sure? Viewing the solution will forfeit points for this task.')) return;
 
         setIsGeneratingSolution(true);
@@ -1029,7 +1059,7 @@ const TaskPage: React.FC = () => {
         } finally {
             setIsGeneratingSolution(false);
         }
-    }, [task, language, showToast]);
+    }, [task, language, showToast, contestSettings, submissions]);
 
     const handleAnalyze = useCallback(async () => {
         if (!task) return;
@@ -1197,9 +1227,6 @@ const TaskPage: React.FC = () => {
     const [showTestCases, setShowTestCases] = useState<boolean>(false);
     const [isRunning, setIsRunning] = useState<boolean>(false);
     const [testCases, setTestCases] = useState<TestCase[]>([]);
-
-    // Submission history
-    const [submissions, setSubmissions] = useState<SubmissionHistory[]>([]);
 
     // Drag and Drop handlers
     const handleDragStart = useCallback((panel: PanelType) => (e: React.DragEvent) => {
@@ -1678,6 +1705,16 @@ const TaskPage: React.FC = () => {
     const handleSubmit = useCallback(async () => {
         const currentCode = codeRef.current;
         console.log('Submitting code solution...');
+
+        // Check submission limit
+        const maxSubmissions = contestSettings?.maxSubmissionsAllowed || 0;
+        const currentSubmissionCount = submissions.length;
+        
+        if (maxSubmissions > 0 && currentSubmissionCount >= maxSubmissions) {
+            showToast(`You have reached the submission limit (${maxSubmissions} submissions). No more submissions allowed for this task.`, 'error');
+            return;
+        }
+
         setIsRunning(true);
         setShowTestCases(true);
 
@@ -1764,6 +1801,10 @@ const TaskPage: React.FC = () => {
             }
         } catch (error: any) {
             console.error('❌ Submit error:', error);
+            
+            // Show user-friendly error message
+            const errorMessage = error?.message || 'Failed to submit code. Please try again.';
+            showToast(errorMessage, 'error');
 
             // Add failed submission to history
             setSubmissions((prev: SubmissionHistory[]) => {
@@ -1780,14 +1821,14 @@ const TaskPage: React.FC = () => {
 
             setTestCases((prevCases: TestCase[]) => prevCases.map(tc => ({
                 ...tc,
-                actualOutput: `Error: ${error.message}`,
+                actualOutput: `Error: ${error.message || 'Submission failed'}`,
                 passed: false,
                 consoleOutput: '',
             })));
         }
 
         setIsRunning(false);
-    }, [language, task, contest, fetchSubmissionHistory, contestId, logUserActivity]);
+    }, [language, task, contest, fetchSubmissionHistory, contestId, logUserActivity, contestSettings, submissions, showToast]);
 
     const handleFinishContest = useCallback(async () => {
         hasExited.current = true;

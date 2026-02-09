@@ -151,6 +151,34 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
       });
     }
 
+    // Get contest settings to check submission limits
+    const [settings] = await db
+      .select()
+      .from(contestSettings)
+      .where(eq(contestSettings.contestId, contestId))
+      .limit(1);
+
+    // Check submission limit
+    if (settings?.maxSubmissionsAllowed && settings.maxSubmissionsAllowed > 0) {
+      const existingSubmissions = await db
+        .select()
+        .from(submissions)
+        .where(
+          and(
+            eq(submissions.userId, userId),
+            eq(submissions.taskId, taskId),
+            eq(submissions.contestId, contestId)
+          )
+        );
+
+      if (existingSubmissions.length >= settings.maxSubmissionsAllowed) {
+        return res.status(403).json({
+          success: false,
+          message: `You have reached the maximum submission limit (${settings.maxSubmissionsAllowed}) for this task.`,
+        });
+      }
+    }
+
     // Get test cases
     const taskTestCases = await db
       .select()
