@@ -3,7 +3,7 @@ import { aiService } from '../services/ai.service';
 // Fix import path to point to actual db configuration
 import { db } from '../config/database';
 import { tasks, submissions, userTaskProgress, contestSettings } from '../db/schema';
-import { eq, and, count, sql } from 'drizzle-orm';
+import { eq, and, count, } from 'drizzle-orm';
 
 export const getHint = async (req: Request, res: Response, next: NextFunction) => {
   try {
