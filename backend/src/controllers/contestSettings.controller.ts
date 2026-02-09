@@ -183,6 +183,7 @@ export const updateContestSettings = async (req: Request, res: Response, next: N
           maxHintsAllowed: maxHintsAllowed ?? 3,
           hintUnlockAfterSubmissions: hintUnlockAfterSubmissions ?? 0,
           hintUnlockAfterSeconds: hintUnlockAfterSeconds ?? 0,
+          solutionUnlockAfterSubmissions: solutionUnlockAfterSubmissions ?? 0,
           provideLastSubmissionContext: provideLastSubmissionContext ?? true,
           // Submission Limits
           maxSubmissionsAllowed: maxSubmissionsAllowed ?? 0,

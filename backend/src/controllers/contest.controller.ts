@@ -195,31 +195,29 @@ export const getContestById = async (req: Request, res: Response, next: NextFunc
       return res.status(404).json({ message: 'Contest not found' });
     }
 
-    // Get tasks
-    const contestTasks = await db
-      .select()
-      .from(tasks)
-      .where(eq(tasks.contestId, contestId))
-      .orderBy(tasks.orderIndex);
-
-    console.log(`Fetched ${contestTasks.length} tasks for contest ${contestId}`);
-
-    // Get participants with user details
-    const participants = await db
-      .select({
-        id: contestParticipants.id,
-        userId: contestParticipants.userId,
-        hasStarted: contestParticipants.hasStarted,
-        startedAt: contestParticipants.startedAt,
-        score: contestParticipants.score,
-        username: users.username,
-        email: users.email,
-        firstName: users.firstName,
-        lastName: users.lastName,
-      })
-      .from(contestParticipants)
-      .leftJoin(users, eq(contestParticipants.userId, users.id))
-      .where(eq(contestParticipants.contestId, contestId));
+    // Get tasks and participants in parallel
+    const [contestTasks, participants] = await Promise.all([
+      db
+        .select()
+        .from(tasks)
+        .where(eq(tasks.contestId, contestId))
+        .orderBy(tasks.orderIndex),
+      db
+        .select({
+          id: contestParticipants.id,
+          userId: contestParticipants.userId,
+          hasStarted: contestParticipants.hasStarted,
+          startedAt: contestParticipants.startedAt,
+          score: contestParticipants.score,
+          username: users.username,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+        })
+        .from(contestParticipants)
+        .leftJoin(users, eq(contestParticipants.userId, users.id))
+        .where(eq(contestParticipants.contestId, contestId)),
+    ]);
 
     return res.status(200).json({
       contest: {
@@ -389,13 +387,13 @@ export const deleteContest = async (req: Request, res: Response, next: NextFunct
       return res.status(404).json({ message: 'Contest not found' });
     }
 
-    // Delete associated tasks
-    await db.delete(tasks).where(eq(tasks.contestId, contestId));
+    // Delete associated tasks and participants in parallel
+    await Promise.all([
+      db.delete(tasks).where(eq(tasks.contestId, contestId)),
+      db.delete(contestParticipants).where(eq(contestParticipants.contestId, contestId)),
+    ]);
 
-    // Delete associated participants
-    await db.delete(contestParticipants).where(eq(contestParticipants.contestId, contestId));
-
-    // Delete contest
+    // Delete contest (must be after dependents are gone)
     await db.delete(contests).where(eq(contests.id, contestId));
 
     return res.status(200).json({ message: 'Contest deleted successfully' });
@@ -630,38 +628,38 @@ export const completeContest = async (req: Request, res: Response, next: NextFun
       return res.status(404).json({ message: 'No tasks found for this contest' });
     }
 
-    // Calculate detailed statistics for each task
+    // Calculate detailed statistics for each task using Promise.all
     const taskResults = await Promise.all(
       contestTasks.map(async (task) => {
-        // Get all submissions for this task by this user
-        const taskSubmissions = await db
-          .select()
-          .from(submissions)
-          .where(
-            and(
-              eq(submissions.taskId, task.id),
-              eq(submissions.userId, userId),
-              eq(submissions.contestId, contestId)
+        // Fetch submissions, progress, and test cases in PARALLEL
+        const [taskSubmissions, progressRows, taskTestCases] = await Promise.all([
+          db
+            .select()
+            .from(submissions)
+            .where(
+              and(
+                eq(submissions.taskId, task.id),
+                eq(submissions.userId, userId),
+                eq(submissions.contestId, contestId)
+              )
             )
-          )
-          .orderBy(desc(submissions.score));
+            .orderBy(desc(submissions.score)),
+          db
+            .select()
+            .from(userTaskProgress)
+            .where(
+              and(
+                eq(userTaskProgress.userId, userId),
+                eq(userTaskProgress.taskId, task.id)
+              )
+            ),
+          db
+            .select()
+            .from(testCases)
+            .where(eq(testCases.taskId, task.id)),
+        ]);
 
-        // Get user task progress for AI hints usage
-        const [progress] = await db
-          .select()
-          .from(userTaskProgress)
-          .where(
-            and(
-              eq(userTaskProgress.userId, userId),
-              eq(userTaskProgress.taskId, task.id)
-            )
-          );
-
-        // Get test cases count for this task
-        const taskTestCases = await db
-          .select()
-          .from(testCases)
-          .where(eq(testCases.taskId, task.id));
+        const progress = progressRows[0] || null;
 
         const totalTestCases = taskTestCases.length;
         const bestSubmission = taskSubmissions[0]; // Already sorted by score DESC
@@ -788,7 +786,8 @@ export const getContestTasks = async (req: Request, res: Response, next: NextFun
       .where(eq(tasks.contestId, contestId))
       .orderBy(tasks.orderIndex);
 
-    // Fetch test cases for all tasks
+    // Build tasks with test cases
+    let tasksResponse: any[] = contestTasks as any[];
     if (contestTasks.length > 0) {
       const taskIds = contestTasks.map(t => t.id);
       const allTestCases = await db
@@ -804,47 +803,51 @@ export const getContestTasks = async (req: Request, res: Response, next: NextFun
         .where(inArray(testCases.taskId, taskIds))
         .orderBy(testCases.orderIndex);
 
-      // Attach test cases to tasks
-      for (const task of contestTasks) {
-        // @ts-ignore
-        task.testCases = allTestCases.filter(tc => tc.taskId === task.id);
-      }
+      tasksResponse = contestTasks.map(task => ({
+        ...task,
+        testCases: allTestCases.filter(tc => tc.taskId === task.id),
+      }));
     }
 
-    // Get contest settings for fullscreen mode (use settings instead of contest.fullScreenMode)
-    const [settings] = await db
-      .select()
-      .from(contestSettings)
-      .where(eq(contestSettings.contestId, contestId));
-
-    // Mark participant as started if they haven't been marked yet
+    // Fetch settings and participant lookup IN PARALLEL
     const userId = req.user?.userId;
-    if (userId) {
-      const [participant] = await db
+    const [settingsRow, participant] = await Promise.all([
+      db
         .select()
-        .from(contestParticipants)
+        .from(contestSettings)
+        .where(eq(contestSettings.contestId, contestId))
+        .then(rows => rows[0] || null),
+      userId
+        ? db
+            .select()
+            .from(contestParticipants)
+            .where(
+              and(
+                eq(contestParticipants.contestId, contestId),
+                eq(contestParticipants.userId, userId)
+              )
+            )
+            .then(rows => rows[0] || null)
+        : Promise.resolve(null),
+    ]);
+
+    const settings = settingsRow;
+
+    // Mark participant as started if not already
+    if (userId && participant && !participant.hasStarted) {
+      await db
+        .update(contestParticipants)
+        .set({
+          hasStarted: true,
+          startedAt: new Date(),
+        })
         .where(
           and(
             eq(contestParticipants.contestId, contestId),
             eq(contestParticipants.userId, userId)
           )
         );
-
-      if (participant && !participant.hasStarted) {
-        await db
-          .update(contestParticipants)
-          .set({
-            hasStarted: true,
-            startedAt: new Date(),
-          })
-          .where(
-            and(
-              eq(contestParticipants.contestId, contestId),
-              eq(contestParticipants.userId, userId)
-            )
-          );
-        console.log(`✅ Participant ${userId} marked as started for contest ${contestId}`);
-      }
+      console.log(`✅ Participant ${userId} marked as started for contest ${contestId}`);
     }
 
     return res.status(200).json({
@@ -855,10 +858,10 @@ export const getContestTasks = async (req: Request, res: Response, next: NextFun
         difficulty: contest.difficulty,
         duration: contest.duration,
         status: contest.status,
-        contestState: contest.contestState, // Add contestState for pause/resume/end
-        fullScreenMode: settings?.fullScreenModeEnabled ?? contest.fullScreenMode ?? true, // Use settings first, fallback to contest field
+        contestState: contest.contestState,
+        fullScreenMode: settings?.fullScreenModeEnabled ?? contest.fullScreenMode ?? true,
       },
-      tasks: contestTasks,
+      tasks: tasksResponse,
       settings: {
         aiHintsEnabled: settings?.aiHintsEnabled ?? true,
         aiModeEnabled: settings?.aiModeEnabled ?? true,
@@ -1230,41 +1233,40 @@ export const resetContest = async (req: Request, res: Response, next: NextFuncti
     const contestTasks = await db.select({ id: tasks.id }).from(tasks).where(eq(tasks.contestId, contestId));
     const taskIds = contestTasks.map(t => t.id);
 
-    // Delete submissions for this contest
-    await db.delete(submissions).where(eq(submissions.contestId, contestId));
+    // Delete submissions, task progress, and results in parallel
+    await Promise.all([
+      db.delete(submissions).where(eq(submissions.contestId, contestId)),
+      taskIds.length > 0
+        ? db.delete(userTaskProgress).where(inArray(userTaskProgress.taskId, taskIds))
+        : Promise.resolve(),
+      db.delete(contestResults).where(eq(contestResults.contestId, contestId)),
+    ]);
 
-    // Delete user task progress for contest tasks
-    if (taskIds.length > 0) {
-      await db.delete(userTaskProgress).where(inArray(userTaskProgress.taskId, taskIds));
-    }
-
-    // Delete contest results
-    await db.delete(contestResults).where(eq(contestResults.contestId, contestId));
-
-    // Reset all participant records
-    await db
-      .update(contestParticipants)
-      .set({
-        hasStarted: false,
-        startedAt: null,
-        score: 0,
-        rank: null,
-        completedAt: null,
-      })
-      .where(eq(contestParticipants.contestId, contestId));
-
-    // Reset contest state back to upcoming
-    const [updatedContest] = await db
-      .update(contests)
-      .set({
-        status: 'upcoming',
-        contestState: 'running',
-        isStarted: false,
-        startedAt: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(contests.id, contestId))
-      .returning();
+    // Reset all participant records and contest state in parallel
+    const [, updatedContest] = await Promise.all([
+      db
+        .update(contestParticipants)
+        .set({
+          hasStarted: false,
+          startedAt: null,
+          score: 0,
+          rank: null,
+          completedAt: null,
+        })
+        .where(eq(contestParticipants.contestId, contestId)),
+      db
+        .update(contests)
+        .set({
+          status: 'upcoming',
+          contestState: 'running',
+          isStarted: false,
+          startedAt: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(contests.id, contestId))
+        .returning()
+        .then(rows => rows[0]),
+    ]);
 
     // Notify all connected participants
     const io = req.app.get('io');
@@ -1409,22 +1411,20 @@ export const resetUserContest = async (req: Request, res: Response, next: NextFu
     const contestTasks = await db.select({ id: tasks.id }).from(tasks).where(eq(tasks.contestId, contestId));
     const taskIds = contestTasks.map(t => t.id);
 
-    // Delete user's submissions for this contest
-    await db.delete(submissions).where(
-      and(eq(submissions.contestId, contestId), eq(submissions.userId, targetUserId))
-    );
-
-    // Delete user's task progress for contest tasks
-    if (taskIds.length > 0) {
-      await db.delete(userTaskProgress).where(
-        and(inArray(userTaskProgress.taskId, taskIds), eq(userTaskProgress.userId, targetUserId))
-      );
-    }
-
-    // Delete user's contest results
-    await db.delete(contestResults).where(
-      and(eq(contestResults.contestId, contestId), eq(contestResults.userId, targetUserId))
-    );
+    // Delete user's submissions, progress, and results in parallel
+    await Promise.all([
+      db.delete(submissions).where(
+        and(eq(submissions.contestId, contestId), eq(submissions.userId, targetUserId))
+      ),
+      taskIds.length > 0
+        ? db.delete(userTaskProgress).where(
+            and(inArray(userTaskProgress.taskId, taskIds), eq(userTaskProgress.userId, targetUserId))
+          )
+        : Promise.resolve(),
+      db.delete(contestResults).where(
+        and(eq(contestResults.contestId, contestId), eq(contestResults.userId, targetUserId))
+      ),
+    ]);
 
     // Reset participant record
     await db

@@ -17,38 +17,29 @@ export const getAllUsers = async (_req: Request, res: Response, next: NextFuncti
       createdAt: users.createdAt,
     }).from(users);
 
-    // Enrich users with stats (contest count, submission count, success rate)
-    // Note: For large datasets, this should be optimized with aggregation queries/joins
+    // Enrich users with stats using Promise.all for both outer and inner parallelization
     const usersWithStats = await Promise.all(allUsers.map(async (user) => {
-      // 1. Contest Count
-      const contestParticipation = await db
-        .select({ count: contestParticipants.id })
-        .from(contestParticipants)
-        .where(eq(contestParticipants.userId, user.id));
-
-      const contestCount = contestParticipation.length;
-
-      // Debug log
-      if (contestCount > 0 || user.username.includes('player')) {
-        console.log(`[Stats] User: ${user.username} (ID: ${user.id}) - Contests: ${contestCount}`);
-      }
-
-      // 2. Submission Count
-      const submissionCount = await db
-        .select({ count: submissions.id })
-        .from(submissions)
-        .where(eq(submissions.userId, user.id))
-        .then(res => res.length);
-
-      // 3. Accepted Submission Count
-      const acceptedCount = await db
-        .select({ count: submissions.id })
-        .from(submissions)
-        .where(and(
-          eq(submissions.userId, user.id),
-          eq(submissions.status, 'accepted')
-        ))
-        .then(res => res.length);
+      // Run all 3 stat queries per user in PARALLEL
+      const [contestCount, submissionCount, acceptedCount] = await Promise.all([
+        db
+          .select({ count: contestParticipants.id })
+          .from(contestParticipants)
+          .where(eq(contestParticipants.userId, user.id))
+          .then(r => r.length),
+        db
+          .select({ count: submissions.id })
+          .from(submissions)
+          .where(eq(submissions.userId, user.id))
+          .then(r => r.length),
+        db
+          .select({ count: submissions.id })
+          .from(submissions)
+          .where(and(
+            eq(submissions.userId, user.id),
+            eq(submissions.status, 'accepted')
+          ))
+          .then(r => r.length),
+      ]);
 
       const successRate = submissionCount > 0
         ? Math.round((acceptedCount / submissionCount) * 100)

@@ -213,16 +213,17 @@ class Judge0Service {
     executionTime?: number;
     memory?: number;
   }>> {
-    const results = [];
+    // Determine stdin mode once (same for all test cases since same template/language)
+    const effectiveTemplate = params.testRunnerTemplate || (params.functionName ? DEFAULT_TEST_RUNNERS[params.language] : null);
+    const isStdinBased = effectiveTemplate ? !effectiveTemplate.includes('{{TEST_INPUT}}') : false;
 
-    for (const testCase of params.testCases) {
-      try {
-        let finalCode = params.sourceCode;
-        let stdinInput: string | undefined = undefined;
+    console.log(`⚡ Executing ${params.testCases.length} test cases in PARALLEL (${params.language}, stdin=${isStdinBased})`);
 
-        // Always wrap code with test runner (custom template or DEFAULT_TEST_RUNNERS fallback)
-        // wrapCodeWithTestRunner handles fallback to DEFAULT_TEST_RUNNERS internally
-        finalCode = wrapCodeWithTestRunner({
+    // Execute ALL test cases concurrently with Promise.allSettled for resilience
+    const settled = await Promise.allSettled(
+      params.testCases.map(async (testCase) => {
+        // Wrap code with test runner per test case (input may differ)
+        const finalCode = wrapCodeWithTestRunner({
           userCode: params.sourceCode,
           language: params.language,
           functionName: params.functionName,
@@ -230,26 +231,7 @@ class Judge0Service {
           testRunnerTemplate: params.testRunnerTemplate,
         });
 
-        // Determine if stdin is needed:
-        //   Custom templates without {{TEST_INPUT}} are stdin-based (read from stdin)
-        //   Default templates embed test input inline via {{TEST_INPUT}} (no stdin needed)
-        const effectiveTemplate = params.testRunnerTemplate || (params.functionName ? DEFAULT_TEST_RUNNERS[params.language] : null);
-        const isStdinBased = effectiveTemplate ? !effectiveTemplate.includes('{{TEST_INPUT}}') : false;
-
-        if (isStdinBased) {
-          stdinInput = testCase.input;
-          console.log('🔧 Using stdin-based execution:', {
-            language: params.language,
-            functionName: params.functionName,
-            stdinLength: stdinInput.length,
-          });
-        } else {
-          console.log('🔧 Using function-call-based execution:', {
-            language: params.language,
-            functionName: params.functionName,
-            testInput: (testCase.input || '').substring(0, 50),
-          });
-        }
+        const stdinInput = isStdinBased ? testCase.input : undefined;
 
         const result = await this.submitAndWait({
           sourceCode: finalCode,
@@ -267,27 +249,36 @@ class Judge0Service {
         const executedSuccessfully = result.status.id === 3 || result.status.id === 4;
         const passed = executedSuccessfully && actualResult === expectedOutput;
 
-        results.push({
+        return {
           passed,
           input: testCase.input,
           expectedOutput: testCase.expectedOutput,
           actualOutput: actualResult || result.stderr || 'No output',
           consoleOutput: consoleOutput || undefined,
           error: result.stderr || result.compile_output || undefined,
-          executionTime: result.time ? parseFloat(result.time) * 1000 : undefined, // Convert to ms
+          executionTime: result.time ? parseFloat(result.time) * 1000 : undefined,
           memory: result.memory || undefined,
-        });
-      } catch (error: any) {
-        results.push({
-          passed: false,
-          input: testCase.input,
-          expectedOutput: testCase.expectedOutput,
-          actualOutput: '',
-          error: error.message,
-        });
-      }
-    }
+        };
+      })
+    );
 
+    // Map settled results back — fulfilled = success, rejected = error
+    const results = settled.map((outcome, index) => {
+      if (outcome.status === 'fulfilled') {
+        return outcome.value;
+      }
+      // Rejected — return error result for this test case
+      const testCase = params.testCases[index];
+      return {
+        passed: false,
+        input: testCase.input,
+        expectedOutput: testCase.expectedOutput,
+        actualOutput: '',
+        error: (outcome.reason as Error)?.message || 'Unknown execution error',
+      };
+    });
+
+    console.log(`✅ All ${params.testCases.length} test cases completed: ${results.filter(r => r.passed).length} passed`);
     return results;
   }
 
