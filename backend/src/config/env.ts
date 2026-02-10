@@ -53,6 +53,6 @@ export const env = {
   JWT_SECRET: process.env.JWT_SECRET!,
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '24h',
 
-  // CORS allowed origin
-  CORS_ORIGIN: process.env.CORS_ORIGIN!,
+  // CORS allowed origins (comma-separated for multiple origins)
+  CORS_ORIGIN: process.env.CORS_ORIGIN!.split(',').map(o => o.trim()),
 } as const;

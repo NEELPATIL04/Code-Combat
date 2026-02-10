@@ -24,7 +24,8 @@ const io = new Server(httpServer, {
     origin: env.CORS_ORIGIN,
     methods: ["GET", "POST"],
     credentials: true
-  }
+  },
+  allowEIO3: true,
 });
 
 // Make io accessible to our routers and controllers
@@ -96,10 +97,17 @@ io.on('connection', (socket: any) => {
  */
 
 // Enable CORS (Cross-Origin Resource Sharing)
-// Allows frontend on different port to make requests
+// Allows frontend on different port/origin to make requests
 app.use(cors({
-  origin: env.CORS_ORIGIN,  // Only allow requests from frontend
-  credentials: true,         // Allow cookies and authentication headers
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, or same-origin)
+    if (!origin) return callback(null, true);
+    if (env.CORS_ORIGIN.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS: Origin ${origin} not allowed`));
+  },
+  credentials: true,
 }));
 
 // Parse JSON request bodies

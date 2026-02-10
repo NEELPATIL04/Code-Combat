@@ -219,6 +219,10 @@ export const getContestById = async (req: Request, res: Response, next: NextFunc
         .where(eq(contestParticipants.contestId, contestId)),
     ]);
 
+    // Check user role - only admins see hidden test cases
+    const userRole = (req as any).user?.role;
+    const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+
     return res.status(200).json({
       contest: {
         ...contest,
@@ -227,7 +231,11 @@ export const getContestById = async (req: Request, res: Response, next: NextFunc
             .select()
             .from(testCases)
             .where(eq(testCases.taskId, task.id));
-          return { ...task, testCases: taskTestCases };
+          // Non-admin users only see visible test cases (hidden ones stripped)
+          const filteredTestCases = isAdmin
+            ? taskTestCases
+            : taskTestCases.filter(tc => !tc.isHidden).map(({ isHidden, ...tc }) => tc);
+          return { ...task, testCases: filteredTestCases };
         })),
         participants,
       },
@@ -805,7 +813,10 @@ export const getContestTasks = async (req: Request, res: Response, next: NextFun
 
       tasksResponse = contestTasks.map(task => ({
         ...task,
-        testCases: allTestCases.filter(tc => tc.taskId === task.id),
+        // Only send VISIBLE test cases to participants (hide hidden ones)
+        testCases: allTestCases
+          .filter(tc => tc.taskId === task.id && !tc.isHidden)
+          .map(({ isHidden, ...tc }) => tc), // Strip isHidden field from response
       }));
     }
 

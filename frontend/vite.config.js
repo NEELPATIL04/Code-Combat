@@ -40,6 +40,12 @@ export default defineConfig(({ mode }) => {
           target: proxyTarget,
           changeOrigin: true,
           secure: false,
+        },
+        '/socket.io': {
+          target: proxyTarget,
+          changeOrigin: true,
+          secure: false,
+          ws: true,
         }
       }
     }

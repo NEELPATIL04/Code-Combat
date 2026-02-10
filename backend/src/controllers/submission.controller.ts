@@ -36,11 +36,11 @@ export const runCode = async (req: Request, res: Response, next: NextFunction) =
       });
     }
 
-    // Get test cases for the task
+    // Get ONLY VISIBLE test cases for Run (not hidden ones)
     const taskTestCases = await db
       .select()
       .from(testCases)
-      .where(eq(testCases.taskId, taskId))
+      .where(and(eq(testCases.taskId, taskId), eq(testCases.isHidden, false)))
       .orderBy(testCases.orderIndex);
 
     if (taskTestCases.length === 0) {
@@ -54,13 +54,13 @@ export const runCode = async (req: Request, res: Response, next: NextFunction) =
     const testRunnerTemplate = task.testRunnerTemplate?.[language];
 
     // Log for debugging
-    console.log('📋 Task Details (Run):', {
+    console.log('📋 Task Details (Run - visible only):', {
       taskId: task.id,
       functionName: task.functionName,
       language,
       hasTestRunnerTemplate: !!testRunnerTemplate,
       availableLanguages: task.testRunnerTemplate ? Object.keys(task.testRunnerTemplate) : [],
-      testCaseCount: taskTestCases.length,
+      visibleTestCaseCount: taskTestCases.length,
     });
 
     // Execute code against test cases
@@ -179,7 +179,7 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
       }
     }
 
-    // Get test cases
+    // Get ALL test cases (visible + hidden) for Submit
     const taskTestCases = await db
       .select()
       .from(testCases)
@@ -196,15 +196,20 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
     // Get test runner template for this language
     const testRunnerTemplate = task.testRunnerTemplate?.[language];
 
+    const visibleCount = taskTestCases.filter(tc => !tc.isHidden).length;
+    const hiddenCount = taskTestCases.filter(tc => tc.isHidden).length;
+
     // Log for debugging
-    console.log('📋 Task Details (Submit):', {
+    console.log('📋 Task Details (Submit - all test cases):', {
       taskId: task.id,
       userId,
       functionName: task.functionName,
       language,
       hasTestRunnerTemplate: !!testRunnerTemplate,
       availableLanguages: task.testRunnerTemplate ? Object.keys(task.testRunnerTemplate) : [],
-      testCaseCount: taskTestCases.length,
+      totalTestCases: taskTestCases.length,
+      visibleTestCases: visibleCount,
+      hiddenTestCases: hiddenCount,
     });
 
     // Execute code against test cases
@@ -314,6 +319,11 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
       });
     }
 
+    // Separate visible and hidden results
+    const visibleResults = results.filter((_, i) => !taskTestCases[i].isHidden);
+    const hiddenResults = results.filter((_, i) => taskTestCases[i].isHidden);
+    const hiddenPassed = hiddenResults.filter(r => r.passed).length;
+
     return res.json({
       success: true,
       message: allPassed ? 'All test cases passed!' : 'Some test cases failed',
@@ -323,7 +333,8 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
         passed: passedCount,
         total: totalCount,
         score,
-        results: results.map((result, index) => ({
+        // Only send detailed results for VISIBLE test cases
+        results: visibleResults.map((result, index) => ({
           testCase: index + 1,
           passed: result.passed,
           input: result.input,
@@ -334,6 +345,11 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
           executionTime: result.executionTime,
           memory: result.memory,
         })),
+        // Summary for hidden test cases (no input/output details)
+        hiddenTestCases: {
+          total: hiddenResults.length,
+          passed: hiddenPassed,
+        },
       },
     });
   } catch (error: any) {
@@ -352,7 +368,19 @@ export const getTaskSubmissions = async (req: Request, res: Response, next: Next
     const userId = (req as any).user?.userId;
 
     const userSubmissions = await db
-      .select()
+      .select({
+        id: submissions.id,
+        taskId: submissions.taskId,
+        contestId: submissions.contestId,
+        language: submissions.language,
+        status: submissions.status,
+        passedTests: submissions.passedTests,
+        totalTests: submissions.totalTests,
+        executionTime: submissions.executionTime,
+        memoryUsed: submissions.memoryUsed,
+        score: submissions.score,
+        submittedAt: submissions.submittedAt,
+      })
       .from(submissions)
       .where(
         and(
