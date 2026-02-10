@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Monitor as MonitorIcon } from 'lucide-react';
 import { useSocket } from '../../../../context/SocketContext';
+import { useAuth } from '../../../../hooks/useAuth';
 import VideoFeed from '../../../../components/VideoFeed';
 import VideoFeedModal from '../../../../components/VideoFeedModal';
 import { contestAPI } from '../../../../utils/api';
@@ -16,6 +17,7 @@ interface SelectedParticipant {
 
 const Monitor: React.FC<MonitorProps> = ({ contestId }) => {
     const { socket } = useSocket();
+    const { user } = useAuth();
     const [activeParticipants, setActiveParticipants] = useState<{ socketId: string, userId: string }[]>([]);
     const [selectedParticipant, setSelectedParticipant] = useState<SelectedParticipant | null>(null);
 
@@ -47,11 +49,21 @@ const Monitor: React.FC<MonitorProps> = ({ contestId }) => {
 
         const handleActiveParticipants = (participants: { socketId: string, userId: string }[]) => {
             console.log(`👥 Monitor: Received active participants:`, participants);
-            setActiveParticipants(participants);
+            // Filter out the current admin user from the participants list
+            const filtered = participants.filter(p => String(p.userId) !== String(user?.id));
+            console.log(`👥 Monitor: Filtered participants (excluding self):`, filtered);
+            setActiveParticipants(filtered);
         };
 
         const handleParticipantJoined = ({ userId, socketId }: { userId: string, socketId: string }) => {
             console.log(`✅ Monitor: Participant joined -`, { userId, socketId });
+
+            // Don't add self to participants list
+            if (String(userId) === String(user?.id)) {
+                console.log(`⏩ Monitor: Ignoring self (admin user ${userId})`);
+                return;
+            }
+
             setActiveParticipants(prev => {
                 // Check if this participant is already in the list with same socketId
                 const existingIndex = prev.findIndex(p => p.userId === userId && p.socketId === socketId);
