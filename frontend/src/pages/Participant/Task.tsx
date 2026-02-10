@@ -1058,6 +1058,9 @@ const TaskPage: React.FC = () => {
         socket.on('connect', joinContest);
 
         return () => {
+            // Leave contest when component unmounts (user navigates away)
+            console.log(`👋 Leaving contest room: contest-${contestId}`);
+            socket.emit('leave-contest', { contestId, userId: user.id });
             socket.off('connect', joinContest);
         };
     }, [socket, contestId, user, mediaVerified]);

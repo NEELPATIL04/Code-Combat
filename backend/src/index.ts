@@ -69,6 +69,21 @@ io.on('connection', (socket: any) => {
     io.to(`admin-contest-${contestIdStr}`).emit('participant-joined', { userId: userIdStr, socketId: socket.id });
   });
 
+  socket.on('leave-contest', ({ contestId, userId }: { contestId: string | number, userId: string | number }) => {
+    const contestIdStr = String(contestId);
+    const userIdStr = String(userId);
+
+    // Remove from contest room
+    socket.leave(`contest-${contestIdStr}`);
+
+    // Notify admins that participant left
+    io.to(`admin-contest-${contestIdStr}`).emit('participant-left', { socketId: socket.id });
+    console.log(`👋 User ${userIdStr} left contest ${contestIdStr} (socket: ${socket.id})`);
+
+    // Remove from connected users
+    connectedUsers.delete(socket.id);
+  });
+
   socket.on('join-monitor', ({ contestId }: { contestId: string | number }) => {
     const contestIdStr = String(contestId);
     socket.join(`admin-contest-${contestIdStr}`);
