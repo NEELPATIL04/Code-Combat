@@ -72,20 +72,23 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
                 pc.ontrack = (event) => {
                     const track = event.track;
                     const stream = event.streams[0] || new MediaStream([track]);
+                    const transceiver = event.transceiver;
 
-                    console.log('📹 Received track:', {
+                    console.log('📹 VideoFeed received track:', {
                         kind: track.kind,
                         label: track.label,
                         readyState: track.readyState,
                         muted: track.muted,
-                        streamId: stream?.id
+                        streamId: stream?.id,
+                        transceiverMid: transceiver?.mid,
+                        transceiverDirection: transceiver?.direction
                     });
 
                     if (track.kind === 'video') {
                         videoStreamCount.current += 1;
                         const streamIndex = videoStreamCount.current;
 
-                        console.log(`🎬 Video stream #${streamIndex} received in VideoFeed`);
+                        console.log(`🎬 Video stream #${streamIndex} received in VideoFeed (transceiver mid: ${transceiver?.mid})`);
 
                         if (streamIndex === 1 && videoRef.current) {
                             console.log('📷 Stream #1 → Setting to CAMERA');
@@ -105,6 +108,8 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
                                 if (screenRef.current) forcePlay(screenRef.current, 'Screen');
                             };
                         }
+                    } else if (track.kind === 'audio') {
+                        console.log('🎤 Audio track received (muted for grid view)');
                     }
                 };
 

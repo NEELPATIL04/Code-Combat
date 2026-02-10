@@ -1119,32 +1119,48 @@ const TaskPage: React.FC = () => {
                     screenTrackStates: streams?.screen?.getTracks().map(t => `${t.kind}:${t.readyState}`) ?? [],
                 });
 
-                // Add tracks after setRemoteDescription — reuses offer's transceivers
+                // Add tracks in specific order to match admin's transceiver expectations:
+                // 1. Audio (from camera)
+                // 2. Video (from camera)
+                // 3. Video (from screen)
+
+                // Add audio track first (from camera stream)
                 if (streams?.camera) {
-                    const cameraTracks = streams.camera.getTracks();
-                    cameraTracks.forEach(track => {
-                        if (track.readyState === 'live' && streams.camera) {
-                            pc.addTrack(track, streams.camera);
-                        } else {
-                            console.warn(`⚠️ Skipping ended camera track: ${track.kind}`);
-                        }
-                    });
-                    console.log('📷 Added camera tracks:', cameraTracks.filter(t => t.readyState === 'live').length);
+                    const audioTrack = streams.camera.getAudioTracks()[0];
+                    if (audioTrack && audioTrack.readyState === 'live') {
+                        pc.addTrack(audioTrack, streams.camera);
+                        console.log('🎤 Added microphone audio track');
+                    } else {
+                        console.warn('⚠️ No live audio track available');
+                    }
                 } else {
-                    console.warn('⚠️ No camera stream available for WebRTC');
+                    console.warn('⚠️ No camera stream available for audio');
                 }
-                if (streams?.screen) {
-                    const screenTracks = streams.screen.getTracks();
-                    screenTracks.forEach(track => {
-                        if (track.readyState === 'live' && streams.screen) {
-                            pc.addTrack(track, streams.screen);
-                        } else {
-                            console.warn(`⚠️ Skipping ended screen track: ${track.kind}`);
-                        }
-                    });
-                    console.log('🖥️ Added screen tracks:', screenTracks.filter(t => t.readyState === 'live').length);
+
+                // Add camera video track second
+                if (streams?.camera) {
+                    const videoTrack = streams.camera.getVideoTracks()[0];
+                    if (videoTrack && videoTrack.readyState === 'live') {
+                        pc.addTrack(videoTrack, streams.camera);
+                        console.log('📷 Added camera video track');
+                    } else {
+                        console.warn('⚠️ No live camera video track available');
+                    }
                 } else {
-                    console.warn('⚠️ No screen stream available for WebRTC');
+                    console.warn('⚠️ No camera stream available for video');
+                }
+
+                // Add screen video track third
+                if (streams?.screen) {
+                    const screenVideoTrack = streams.screen.getVideoTracks()[0];
+                    if (screenVideoTrack && screenVideoTrack.readyState === 'live') {
+                        pc.addTrack(screenVideoTrack, streams.screen);
+                        console.log('🖥️ Added screen share video track');
+                    } else {
+                        console.warn('⚠️ No live screen video track available');
+                    }
+                } else {
+                    console.warn('⚠️ No screen stream available for screen share');
                 }
 
                 const answer = await pc.createAnswer();

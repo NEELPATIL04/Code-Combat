@@ -71,24 +71,27 @@ const VideoFeedModal: React.FC<VideoFeedModalProps> = ({ socket, targetSocketId,
             };
 
             pc.ontrack = (event) => {
-                console.log('📹 Modal received track:', {
-                    kind: event.track.kind,
-                    label: event.track.label,
-                    readyState: event.track.readyState,
-                    muted: event.track.muted,
-                    streamId: event.streams[0]?.id,
-                    streamVideoTracks: event.streams[0]?.getVideoTracks().length
-                });
-                
                 const track = event.track;
                 const stream = event.streams[0] || new MediaStream([track]);
+                const transceiver = event.transceiver;
+
+                console.log('📹 VideoFeedModal received track:', {
+                    kind: track.kind,
+                    label: track.label,
+                    readyState: track.readyState,
+                    muted: track.muted,
+                    streamId: stream?.id,
+                    streamVideoTracks: stream?.getVideoTracks().length,
+                    transceiverMid: transceiver?.mid,
+                    transceiverDirection: transceiver?.direction
+                });
 
                 if (track.kind === 'video') {
                     videoStreamCount.current += 1;
                     const streamIndex = videoStreamCount.current;
-                    
-                    console.log(`🎬 Video stream #${streamIndex} received in Modal`);
-                    
+
+                    console.log(`🎬 Video stream #${streamIndex} received in Modal (transceiver mid: ${transceiver?.mid})`);
+
                     if (streamIndex === 1) {
                         console.log('📷 Stream #1 → Setting to CAMERA (left panel)');
                         if (cameraVideoRef.current) {
@@ -113,13 +116,17 @@ const VideoFeedModal: React.FC<VideoFeedModalProps> = ({ socket, targetSocketId,
                         };
                     }
                 } else if (track.kind === 'audio') {
-                    console.log('🎤 Setting audio track');
+                    console.log('🎤 Setting audio track in Modal');
                     if (cameraAudioRef.current) {
                         cameraAudioRef.current.srcObject = stream;
                         cameraAudioRef.current.muted = isMuted;
                         forcePlay(cameraAudioRef.current, 'Modal Audio');
                     }
                     setHasAudio(true);
+                    track.onunmute = () => {
+                        console.log('🎤 Modal audio track unmuted, forcing play');
+                        if (cameraAudioRef.current) forcePlay(cameraAudioRef.current, 'Modal Audio');
+                    };
                 }
             };
 
