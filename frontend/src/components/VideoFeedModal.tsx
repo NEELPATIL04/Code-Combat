@@ -57,6 +57,12 @@ const VideoFeedModal: React.FC<VideoFeedModalProps> = ({ socket, targetSocketId,
     };
 
     useEffect(() => {
+        // Prevent re-running if peer connection already exists
+        if (peerConnection.current) {
+            console.log('⏩ VideoFeedModal: Peer connection already exists, skipping setup');
+            return;
+        }
+
         console.log(`🔌 VideoFeedModal: Setting up connection for participant ${userId} (socket: ${targetSocketId})`);
         console.log(`🔌 Socket connected:`, socket.connected);
         console.log(`🔌 Socket ID:`, socket.id);
@@ -537,4 +543,11 @@ const VideoFeedModal: React.FC<VideoFeedModalProps> = ({ socket, targetSocketId,
     );
 };
 
-export default VideoFeedModal;
+export default React.memo(VideoFeedModal, (prevProps, nextProps) => {
+    // Only re-render if these specific props change
+    return (
+        prevProps.targetSocketId === nextProps.targetSocketId &&
+        prevProps.userId === nextProps.userId &&
+        prevProps.contestId === nextProps.contestId
+    );
+});

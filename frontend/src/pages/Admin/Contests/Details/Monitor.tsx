@@ -53,8 +53,15 @@ const Monitor: React.FC<MonitorProps> = ({ contestId }) => {
         const handleParticipantJoined = ({ userId, socketId }: { userId: string, socketId: string }) => {
             console.log(`✅ Monitor: Participant joined -`, { userId, socketId });
             setActiveParticipants(prev => {
+                // Check if this participant is already in the list with same socketId
+                const existingIndex = prev.findIndex(p => p.userId === userId && p.socketId === socketId);
+                if (existingIndex !== -1) {
+                    console.log(`⏩ Monitor: Participant already exists, skipping update`);
+                    return prev; // No change needed, return same reference to prevent re-render
+                }
+
                 // Remove any existing entry for this userId (handles reconnects/multi-tab)
-                const filtered = prev.filter(p => p.userId !== userId && p.socketId !== socketId);
+                const filtered = prev.filter(p => p.userId !== userId);
                 const updated = [...filtered, { userId, socketId }];
                 console.log(`📊 Monitor: Active participants updated:`, updated);
                 return updated;
