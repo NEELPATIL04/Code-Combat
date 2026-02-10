@@ -12,6 +12,8 @@ interface VideoFeedModalProps {
 }
 
 const VideoFeedModal: React.FC<VideoFeedModalProps> = ({ socket, targetSocketId, userId, contestId, onClose }) => {
+    console.log('🎬 VideoFeedModal component rendered!', { targetSocketId, userId });
+
     const cameraVideoRef = useRef<HTMLVideoElement>(null);
     const screenVideoRef = useRef<HTMLVideoElement>(null);
     const cameraAudioRef = useRef<HTMLAudioElement>(null);
