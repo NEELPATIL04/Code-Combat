@@ -113,8 +113,9 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
                     }
                 };
 
-                // Add transceivers for receiving video
-                pc.addTransceiver('video', { direction: 'recvonly' });
+                // Add transceivers for receiving media (audio + 2 video to match participant tracks)
+                pc.addTransceiver('audio', { direction: 'recvonly' }); // For microphone audio
+                pc.addTransceiver('video', { direction: 'recvonly' }); // For camera
                 pc.addTransceiver('video', { direction: 'recvonly' }); // For screen
 
                 const offer = await pc.createOffer();

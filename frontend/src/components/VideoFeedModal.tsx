@@ -94,6 +94,18 @@ const VideoFeedModal: React.FC<VideoFeedModalProps> = ({ socket, targetSocketId,
                 setConnectionState(pc.connectionState);
             };
 
+            // Fallback: some browsers only fire ICE state changes
+            pc.oniceconnectionstatechange = () => {
+                console.log('ICE connection state:', pc.iceConnectionState);
+                if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+                    setConnectionState('connected');
+                } else if (pc.iceConnectionState === 'failed') {
+                    setConnectionState('failed');
+                } else if (pc.iceConnectionState === 'disconnected') {
+                    setConnectionState('reconnecting');
+                }
+            };
+
             // Add transceivers for receiving media
             pc.addTransceiver('audio', { direction: 'recvonly' }); // For microphone
             pc.addTransceiver('video', { direction: 'recvonly' }); // For camera

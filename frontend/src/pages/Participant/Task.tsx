@@ -1035,13 +1035,20 @@ const TaskPage: React.FC = () => {
         fetchSettings();
     }, [contestId]);
 
-    // Join contest room as soon as socket and user are available (for pause/resume events)
+    // Ref to always have the latest localStreams without causing useEffect re-runs
+    const localStreamsRef = useRef(localStreams);
     useEffect(() => {
-        if (!socket || !user || !contestId) {
+        localStreamsRef.current = localStreams;
+    }, [localStreams]);
+
+    // Join contest room ONLY after media is verified (so admin gets offer when streams are ready)
+    useEffect(() => {
+        if (!socket || !user || !contestId || !mediaVerified) {
             console.log('🚪 Not ready to join contest:', { 
                 socket: !!socket, 
                 user: !!user, 
-                contestId 
+                contestId,
+                mediaVerified
             });
             return;
         }
@@ -1049,37 +1056,51 @@ const TaskPage: React.FC = () => {
         console.log(`🚪 Joining contest room: contest-${contestId} as user ${user.id}`);
         socket.emit('join-contest', { contestId, userId: user.id });
         console.log(`✅ Emitted join-contest event`);
-    }, [socket, contestId, user]);
+    }, [socket, contestId, user, mediaVerified]);
 
     useEffect(() => {
-        // Only need socket and contestId — localStreams may be null when camera/screen not required
+        // Only need socket and contestId — localStreams accessed via ref to avoid teardown on stream change
         if (!socket || !user || !contestId) return;
 
         const handleOffer = async ({ sender, payload }: { sender: string, payload: RTCSessionDescriptionInit }) => {
             try {
                 console.log('📥 Received WebRTC offer from admin:', sender);
+                
+                // Close existing connection to this sender if any (re-offer scenario)
+                const existingPc = peerConnections.current.get(sender);
+                if (existingPc) {
+                    console.log('🔄 Closing existing connection for re-offer from:', sender);
+                    existingPc.close();
+                    peerConnections.current.delete(sender);
+                }
+
                 const pc = new RTCPeerConnection({
                     iceServers: [
                         { urls: 'stun:stun.l.google.com:19302' },
                         { urls: 'stun:stun1.l.google.com:19302' },
                         { urls: 'stun:stun2.l.google.com:19302' },
+                        { urls: 'stun:stun3.l.google.com:19302' },
+                        { urls: 'stun:stun4.l.google.com:19302' },
                     ]
                 });
 
                 peerConnections.current.set(sender, pc);
 
+                // Read streams from ref (always latest value, no stale closure)
+                const streams = localStreamsRef.current;
+
                 // Add tracks if available (camera and screen streams)
-                if (localStreams?.camera) {
-                    const cameraTracks = localStreams.camera.getTracks();
+                if (streams?.camera) {
+                    const cameraTracks = streams.camera.getTracks();
                     cameraTracks.forEach(track => {
-                        if (localStreams.camera) pc.addTrack(track, localStreams.camera);
+                        if (streams.camera) pc.addTrack(track, streams.camera);
                     });
                     console.log('📷 Added camera tracks:', cameraTracks.length);
                 }
-                if (localStreams?.screen) {
-                    const screenTracks = localStreams.screen.getTracks();
+                if (streams?.screen) {
+                    const screenTracks = streams.screen.getTracks();
                     screenTracks.forEach(track => {
-                        if (localStreams.screen) pc.addTrack(track, localStreams.screen);
+                        if (streams.screen) pc.addTrack(track, streams.screen);
                     });
                     console.log('🖥️ Added screen tracks:', screenTracks.length);
                 }
@@ -1092,6 +1113,10 @@ const TaskPage: React.FC = () => {
 
                 pc.oniceconnectionstatechange = () => {
                     console.log(`🧊 Participant ICE state → ${pc.iceConnectionState} (for admin ${sender})`);
+                };
+
+                pc.onconnectionstatechange = () => {
+                    console.log(`🔗 Participant connection state → ${pc.connectionState} (for admin ${sender})`);
                 };
 
                 await pc.setRemoteDescription(new RTCSessionDescription(payload));
@@ -1125,7 +1150,7 @@ const TaskPage: React.FC = () => {
             peerConnections.current.forEach(pc => pc.close());
             peerConnections.current.clear();
         };
-    }, [socket, localStreams, user, contestId]);
+    }, [socket, user, contestId]);
 
     // Socket listeners for contest state changes (pause/resume/end)
     useEffect(() => {

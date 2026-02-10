@@ -61,10 +61,14 @@ const MediaCheckHelper: React.FC<MediaCheckHelperProps> = ({
     };
 
     useEffect(() => {
-        if (cameraPermission === 'granted' && micPermission === 'granted' && screenPermission === 'granted' && cameraStream && screenStream) {
+        const cameraOk = !requiredPermissions.camera || (cameraPermission === 'granted' && !!cameraStream);
+        const micOk = !requiredPermissions.microphone || micPermission === 'granted';
+        const screenOk = !requiredPermissions.screen || (screenPermission === 'granted' && !!screenStream);
+
+        if (cameraOk && micOk && screenOk) {
             onPermissionsGranted({ camera: cameraStream, screen: screenStream });
         }
-    }, [cameraPermission, micPermission, screenPermission, cameraStream, screenStream, onPermissionsGranted]);
+    }, [cameraPermission, micPermission, screenPermission, cameraStream, screenStream, onPermissionsGranted, requiredPermissions]);
 
     return (
         <div style={{ padding: '24px', background: '#09090b', borderRadius: '12px', border: '1px solid #27272a', maxWidth: '800px', margin: '0 auto' }}>
