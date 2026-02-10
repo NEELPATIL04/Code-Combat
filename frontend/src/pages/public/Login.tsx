@@ -2,11 +2,8 @@ import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Mail, AlertCircle } from 'lucide-react';
 
-// Get API URL from environment
-const LOCAL_BACKEND = import.meta.env.VITE_LOCAL_BACKEND_URL || 'http://localhost:5000/api';
-const LIVE_BACKEND = import.meta.env.VITE_LIVE_BACKEND_URL || 'http://49.13.223.175:5000/api';
-const backendMode = import.meta.env.VITE_BACKEND_MODE || 'local';
-const API_URL = backendMode === 'live' ? LIVE_BACKEND : LOCAL_BACKEND;
+// API URL - uses relative path; Vite proxy (dev) or Nginx (prod) handles routing
+const API_URL = '/api';
 
 interface Star {
     id: number;
