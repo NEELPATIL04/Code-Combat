@@ -42,7 +42,20 @@ const MediaCheckHelper: React.FC<MediaCheckHelperProps> = ({
 
     const requestScreenShare = async () => {
         try {
-            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+            const stream = await navigator.mediaDevices.getDisplayMedia({
+                video: {
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 },
+                    frameRate: { ideal: 15, max: 30 },
+                },
+                audio: false
+            });
+            // Tell the browser this is screen content (text/detail) so it optimises
+            // encoding for sharpness rather than motion smoothness
+            const screenTrack = stream.getVideoTracks()[0];
+            if (screenTrack && 'contentHint' in screenTrack) {
+                screenTrack.contentHint = 'detail';
+            }
             setScreenPermission('granted');
             setScreenStream(stream);
             if (screenRef.current) {

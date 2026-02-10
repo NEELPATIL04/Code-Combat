@@ -240,15 +240,15 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
                 </span>
             </div>
 
-            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: isLarge ? '1fr 1fr' : '1fr 1fr', gap: '1px', background: '#000', position: 'relative' }}>
-                <div style={{ position: 'relative', aspectRatio: '16/9' }}>
+            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: '#000', position: 'relative', minHeight: '140px' }}>
+                <div style={{ position: 'relative', overflow: 'hidden', background: '#000' }}>
                     <video ref={setVideoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     <div style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <User size={10} /> Camera
                     </div>
                 </div>
-                <div style={{ position: 'relative', aspectRatio: '16/9' }}>
-                    <video ref={setScreenRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{ position: 'relative', overflow: 'hidden', background: '#000' }}>
+                    <video ref={setScreenRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                     <div style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <Monitor size={10} /> Screen
                     </div>
