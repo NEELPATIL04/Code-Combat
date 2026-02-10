@@ -23,6 +23,25 @@ const VideoFeedModal: React.FC<VideoFeedModalProps> = ({ socket, targetSocketId,
     const [hasScreen, setHasScreen] = useState<boolean>(false);
     const [hasAudio, setHasAudio] = useState<boolean>(false);
 
+    // Workaround for React's muted attribute bug — set imperatively via ref callback
+    const setCameraVideoRef = (el: HTMLVideoElement | null) => {
+        (cameraVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+        if (el) el.muted = true; // Camera video always muted (audio via separate element)
+    };
+    const setScreenVideoRef = (el: HTMLVideoElement | null) => {
+        (screenVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+        if (el) el.muted = true;
+    };
+
+    // Helper to force-play a media element
+    const forcePlay = (el: HTMLVideoElement | HTMLAudioElement, label: string) => {
+        if (el instanceof HTMLVideoElement) el.muted = true;
+        const playPromise = el.play();
+        if (playPromise) {
+            playPromise.catch(err => console.warn(`⚠️ ${label} play() blocked:`, err.message));
+        }
+    };
+
     const handleMuteToggle = (newMutedState: boolean) => {
         setIsMuted(newMutedState);
         // Log mute/unmute actions
@@ -52,39 +71,54 @@ const VideoFeedModal: React.FC<VideoFeedModalProps> = ({ socket, targetSocketId,
             };
 
             pc.ontrack = (event) => {
-                console.log('📹 Received track:', {
+                console.log('📹 Modal received track:', {
                     kind: event.track.kind,
                     label: event.track.label,
+                    readyState: event.track.readyState,
+                    muted: event.track.muted,
                     streamId: event.streams[0]?.id,
-                    streamLabel: event.streams[0]?.getVideoTracks().length
+                    streamVideoTracks: event.streams[0]?.getVideoTracks().length
                 });
                 
                 const track = event.track;
-                const stream = event.streams[0];
+                const stream = event.streams[0] || new MediaStream([track]);
 
-                if (track.kind === 'video' && stream) {
-                    // Track which video stream this is
-                    // First video stream = Camera, Second video stream = Screen share
+                if (track.kind === 'video') {
                     videoStreamCount.current += 1;
                     const streamIndex = videoStreamCount.current;
                     
-                    console.log(`🎬 Video stream #${streamIndex} received`);
+                    console.log(`🎬 Video stream #${streamIndex} received in Modal`);
                     
                     if (streamIndex === 1) {
-                        // First video stream is camera
                         console.log('📷 Stream #1 → Setting to CAMERA (left panel)');
-                        cameraVideoRef.current!.srcObject = stream;
+                        if (cameraVideoRef.current) {
+                            cameraVideoRef.current.srcObject = stream;
+                            forcePlay(cameraVideoRef.current, 'Modal Camera');
+                        }
                         setHasCamera(true);
+                        track.onunmute = () => {
+                            console.log('📷 Modal camera track unmuted, forcing play');
+                            if (cameraVideoRef.current) forcePlay(cameraVideoRef.current, 'Modal Camera');
+                        };
                     } else if (streamIndex === 2) {
-                        // Second video stream is screen share
                         console.log('🖥️ Stream #2 → Setting to SCREEN SHARE (right panel)');
-                        screenVideoRef.current!.srcObject = stream;
+                        if (screenVideoRef.current) {
+                            screenVideoRef.current.srcObject = stream;
+                            forcePlay(screenVideoRef.current, 'Modal Screen');
+                        }
                         setHasScreen(true);
+                        track.onunmute = () => {
+                            console.log('🖥️ Modal screen track unmuted, forcing play');
+                            if (screenVideoRef.current) forcePlay(screenVideoRef.current, 'Modal Screen');
+                        };
                     }
                 } else if (track.kind === 'audio') {
                     console.log('🎤 Setting audio track');
-                    cameraAudioRef.current!.srcObject = event.streams[0];
-                    cameraAudioRef.current!.muted = isMuted;
+                    if (cameraAudioRef.current) {
+                        cameraAudioRef.current.srcObject = stream;
+                        cameraAudioRef.current.muted = isMuted;
+                        forcePlay(cameraAudioRef.current, 'Modal Audio');
+                    }
                     setHasAudio(true);
                 }
             };
@@ -343,9 +377,10 @@ const VideoFeedModal: React.FC<VideoFeedModalProps> = ({ socket, targetSocketId,
 
                         <div style={{ flex: 1, position: 'relative', background: '#000' }}>
                             <video
-                                ref={cameraVideoRef}
+                                ref={setCameraVideoRef}
                                 autoPlay
                                 playsInline
+                                muted
                                 style={{
                                     width: '100%',
                                     height: '100%',
@@ -424,9 +459,10 @@ const VideoFeedModal: React.FC<VideoFeedModalProps> = ({ socket, targetSocketId,
 
                         <div style={{ flex: 1, position: 'relative', background: '#000' }}>
                             <video
-                                ref={screenVideoRef}
+                                ref={setScreenVideoRef}
                                 autoPlay
                                 playsInline
+                                muted
                                 style={{
                                     width: '100%',
                                     height: '100%',

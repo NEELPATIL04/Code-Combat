@@ -841,24 +841,10 @@ const TaskPage: React.FC = () => {
     // Timer state
     const [time, setTime] = useState<number>(45 * 60);
 
-    // Editor state
-    const [language, setLanguage] = useState<string>(() => {
-        // Try to restore language from localStorage
-        if (contestId) {
-            const savedLang = localStorage.getItem(`task_${contestId}_language`);
-            if (savedLang) return savedLang;
-        }
-        return 'javascript';
-    });
-    const [code, setCode] = useState<string>(() => {
-        // Try to restore code from localStorage
-        if (contestId) {
-            const savedCode = localStorage.getItem(`task_${contestId}_code`);
-            if (savedCode) return savedCode;
-        }
-        // Return empty string initially, will be set from backend boilerplate when task loads
-        return '';
-    });
+    // Editor state — initial values are just defaults; the "Initialize Language and Code" useEffect
+    // will set the correct boilerplate/saved code once the task loads from the backend.
+    const [language, setLanguage] = useState<string>('javascript');
+    const [code, setCode] = useState<string>('');
     const codeRef = useRef<string>(code);
     const debounceTimer = useRef<any>(null);
 
@@ -1008,7 +994,7 @@ const TaskPage: React.FC = () => {
                         if (!requireCamera && !requireMicrophone && !requireScreenShare) {
                             setMediaVerified(true);
                         }
-                        setLoading(false); // <--- Added this
+                        // NOTE: Do NOT setLoading(false) here — fetchTaskData controls loading
                         return;
                     }
                 }
@@ -1037,7 +1023,7 @@ const TaskPage: React.FC = () => {
                 setContestSettings(defaultSettings);
                 setMediaVerified(true); // Auto-verify if we can't load strict settings
                 setSettingsError(null); // Clear error since we are recovering
-                setLoading(false); // <--- Added this
+                // NOTE: Do NOT setLoading(false) here — fetchTaskData controls loading
             }
         };
         fetchSettings();
@@ -1104,25 +1090,6 @@ const TaskPage: React.FC = () => {
 
                 peerConnections.current.set(sender, pc);
 
-                // Read streams from ref (always latest value, no stale closure)
-                const streams = localStreamsRef.current;
-
-                // Add tracks if available (camera and screen streams)
-                if (streams?.camera) {
-                    const cameraTracks = streams.camera.getTracks();
-                    cameraTracks.forEach(track => {
-                        if (streams.camera) pc.addTrack(track, streams.camera);
-                    });
-                    console.log('📷 Added camera tracks:', cameraTracks.length);
-                }
-                if (streams?.screen) {
-                    const screenTracks = streams.screen.getTracks();
-                    screenTracks.forEach(track => {
-                        if (streams.screen) pc.addTrack(track, streams.screen);
-                    });
-                    console.log('🖥️ Added screen tracks:', screenTracks.length);
-                }
-
                 pc.onicecandidate = (event) => {
                     if (event.candidate) {
                         socket.emit('ice-candidate', { target: sender, candidate: event.candidate });
@@ -1137,7 +1104,49 @@ const TaskPage: React.FC = () => {
                     console.log(`🔗 Participant connection state → ${pc.connectionState} (for admin ${sender})`);
                 };
 
+                // IMPORTANT: Set remote description FIRST so the offer's transceivers are created,
+                // then add tracks — they'll reuse existing transceivers with correct matching.
                 await pc.setRemoteDescription(new RTCSessionDescription(payload));
+
+                // Read streams from ref (always latest value, no stale closure)
+                const streams = localStreamsRef.current;
+                console.log('📡 localStreamsRef.current:', {
+                    hasCamera: !!streams?.camera,
+                    cameraTrackCount: streams?.camera?.getTracks().length ?? 0,
+                    cameraTrackStates: streams?.camera?.getTracks().map(t => `${t.kind}:${t.readyState}`) ?? [],
+                    hasScreen: !!streams?.screen,
+                    screenTrackCount: streams?.screen?.getTracks().length ?? 0,
+                    screenTrackStates: streams?.screen?.getTracks().map(t => `${t.kind}:${t.readyState}`) ?? [],
+                });
+
+                // Add tracks after setRemoteDescription — reuses offer's transceivers
+                if (streams?.camera) {
+                    const cameraTracks = streams.camera.getTracks();
+                    cameraTracks.forEach(track => {
+                        if (track.readyState === 'live' && streams.camera) {
+                            pc.addTrack(track, streams.camera);
+                        } else {
+                            console.warn(`⚠️ Skipping ended camera track: ${track.kind}`);
+                        }
+                    });
+                    console.log('📷 Added camera tracks:', cameraTracks.filter(t => t.readyState === 'live').length);
+                } else {
+                    console.warn('⚠️ No camera stream available for WebRTC');
+                }
+                if (streams?.screen) {
+                    const screenTracks = streams.screen.getTracks();
+                    screenTracks.forEach(track => {
+                        if (track.readyState === 'live' && streams.screen) {
+                            pc.addTrack(track, streams.screen);
+                        } else {
+                            console.warn(`⚠️ Skipping ended screen track: ${track.kind}`);
+                        }
+                    });
+                    console.log('🖥️ Added screen tracks:', screenTracks.filter(t => t.readyState === 'live').length);
+                } else {
+                    console.warn('⚠️ No screen stream available for WebRTC');
+                }
+
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
 
@@ -1859,29 +1868,30 @@ const TaskPage: React.FC = () => {
             initialLang = savedLang;
         }
 
-        // Avoid resetting if already set (prevent infinite loops or overwrites)
-        setLanguage(prev => {
-            if (prev && task.allowedLanguages.includes(prev)) return prev;
-            return initialLang;
-        });
+        // Determine the effective language to use
+        // Priority: savedLang (per-task) > first allowed language
+        const effectiveLang = (savedLang && task.allowedLanguages.includes(savedLang))
+            ? savedLang
+            : initialLang;
 
-        // Set code only if not already set or if explicitly needed
+        setLanguage(effectiveLang);
+
+        // Set code — use boilerplate for the EFFECTIVE language
         console.log('🔄 Initializing code for task:', task.id);
         console.log('📦 Available boilerplate languages:', task.boilerplateCode ? Object.keys(task.boilerplateCode) : 'None');
         console.log('💾 Saved code exists:', !!savedCode);
+        console.log('🔤 Effective language:', effectiveLang);
 
-        // IMPORTANT: Always prefer backend boilerplate over cached code to reflect admin changes
-        // Only use saved code if it's different from boilerplate (i.e., user made changes)
-        const boiler = task.boilerplateCode?.[initialLang] || '';
+        const boiler = task.boilerplateCode?.[effectiveLang] || '';
 
-        if (savedCode && savedCode !== boiler) {
+        if (savedCode && savedCode !== boiler && savedCode.trim() !== '') {
             // User has made changes - keep their work
             console.log('📝 Loading saved code from localStorage (user modified)');
             setCode(savedCode);
+            codeRef.current = savedCode;
         } else {
             // Use fresh boilerplate from backend
-            console.log('🎯 Loading boilerplate for', initialLang, ':', boiler ? `${boiler.length} chars` : 'Empty');
-            console.log('📄 Boilerplate preview:', boiler.substring(0, 100));
+            console.log('🎯 Loading boilerplate for', effectiveLang, ':', boiler ? `${boiler.length} chars` : 'Empty');
             setCode(boiler);
             codeRef.current = boiler;
 

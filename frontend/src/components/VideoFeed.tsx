@@ -28,6 +28,25 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
     const maxRetries = 3;
     const isMounted = useRef(true);
 
+    // Workaround for React's muted attribute bug — set it imperatively via ref callback
+    const setVideoRef = (el: HTMLVideoElement | null) => {
+        (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+        if (el) el.muted = true;
+    };
+    const setScreenRef = (el: HTMLVideoElement | null) => {
+        (screenRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+        if (el) el.muted = true;
+    };
+
+    // Helper to force-play a video element
+    const forcePlay = (video: HTMLVideoElement, label: string) => {
+        video.muted = true; // Ensure muted for autoplay policy
+        const playPromise = video.play();
+        if (playPromise) {
+            playPromise.catch(err => console.warn(`⚠️ ${label} play() blocked:`, err.message));
+        }
+    };
+
     useEffect(() => {
         isMounted.current = true;
 
@@ -52,15 +71,17 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
 
                 pc.ontrack = (event) => {
                     const track = event.track;
-                    const stream = event.streams[0];
+                    const stream = event.streams[0] || new MediaStream([track]);
 
                     console.log('📹 Received track:', {
                         kind: track.kind,
                         label: track.label,
+                        readyState: track.readyState,
+                        muted: track.muted,
                         streamId: stream?.id
                     });
 
-                    if (track.kind === 'video' && stream) {
+                    if (track.kind === 'video') {
                         videoStreamCount.current += 1;
                         const streamIndex = videoStreamCount.current;
 
@@ -69,9 +90,20 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
                         if (streamIndex === 1 && videoRef.current) {
                             console.log('📷 Stream #1 → Setting to CAMERA');
                             videoRef.current.srcObject = stream;
+                            forcePlay(videoRef.current, 'Camera');
+                            // Also play when track becomes unmuted (media starts flowing)
+                            track.onunmute = () => {
+                                console.log('📷 Camera track unmuted, forcing play');
+                                if (videoRef.current) forcePlay(videoRef.current, 'Camera');
+                            };
                         } else if (streamIndex === 2 && screenRef.current) {
                             console.log('🖥️ Stream #2 → Setting to SCREEN SHARE');
                             screenRef.current.srcObject = stream;
+                            forcePlay(screenRef.current, 'Screen');
+                            track.onunmute = () => {
+                                console.log('🖥️ Screen track unmuted, forcing play');
+                                if (screenRef.current) forcePlay(screenRef.current, 'Screen');
+                            };
                         }
                     }
                 };
@@ -188,13 +220,13 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
 
             <div style={{ flex: 1, display: 'grid', gridTemplateColumns: isLarge ? '1fr 1fr' : '1fr 1fr', gap: '1px', background: '#000', position: 'relative' }}>
                 <div style={{ position: 'relative', aspectRatio: '16/9' }}>
-                    <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <video ref={setVideoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     <div style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <User size={10} /> Camera
                     </div>
                 </div>
                 <div style={{ position: 'relative', aspectRatio: '16/9' }}>
-                    <video ref={screenRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <video ref={setScreenRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     <div style={{ position: 'absolute', bottom: '4px', left: '4px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <Monitor size={10} /> Screen
                     </div>
