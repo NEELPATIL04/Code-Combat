@@ -445,15 +445,17 @@ const ContestDetails: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredParticipants.length === 0 ? (
+                            {(() => {
+                                const totalMaxPoints = contest.tasks?.reduce((sum: number, t: any) => sum + (t.maxPoints || 100), 0) || 0;
+                                return filteredParticipants.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} style={{ padding: '60px', textAlign: 'center', color: '#71717a' }}>
+                                    <td colSpan={6} style={{ padding: '60px', textAlign: 'center', color: '#71717a' }}>
                                         No participants match your search.
                                     </td>
                                 </tr>
                             ) : (
-                                filteredParticipants.map((p, idx) => (
-                                    <tr key={p.id} style={{
+                                filteredParticipants.map((p, idx) => {
+                                    return (<tr key={p.id} style={{
                                         borderBottom: idx === filteredParticipants.length - 1 ? 'none' : '1px solid #27272a',
                                         transition: 'background 0.2s'
                                     }}
@@ -524,19 +526,28 @@ const ContestDetails: React.FC = () => {
                                         </td>
                                         <td style={tdStyle}>
                                             <div style={{ color: '#fafafa', fontWeight: 600, fontSize: '1rem' }}>
-                                                {p.score} <span style={{ color: '#71717a', fontSize: '0.75rem', fontWeight: 400 }}>pts</span>
+                                                {p.score} <span style={{ color: '#71717a', fontSize: '0.75rem', fontWeight: 400 }}>/ {totalMaxPoints} pts</span>
                                             </div>
                                         </td>
                                         <td style={tdStyle}>
-                                            <div style={{ width: '140px', height: '6px', background: '#18181b', borderRadius: '4px', overflow: 'hidden', border: '1px solid #27272a' }}>
-                                                <div style={{
-                                                    width: `${Math.min(100, (p.score / ((contest.tasks?.length || 0) * 100 || 1)) * 100)}%`,
-                                                    height: '100%',
-                                                    background: '#3b82f6',
-                                                    borderRadius: '4px',
-                                                    transition: 'width 0.5s ease-out'
-                                                }}></div>
-                                            </div>
+                                            {(() => {
+                                                const pct = totalMaxPoints > 0 ? Math.min(100, Math.round((p.score / totalMaxPoints) * 100)) : 0;
+                                                const barColor = pct >= 80 ? '#22c55e' : pct >= 50 ? '#f59e0b' : pct >= 25 ? '#f97316' : '#ef4444';
+                                                return (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        <div style={{ width: '120px', height: '6px', background: '#18181b', borderRadius: '4px', overflow: 'hidden', border: '1px solid #27272a' }}>
+                                                            <div style={{
+                                                                width: `${pct}%`,
+                                                                height: '100%',
+                                                                background: barColor,
+                                                                borderRadius: '4px',
+                                                                transition: 'width 0.5s ease-out'
+                                                            }}></div>
+                                                        </div>
+                                                        <span style={{ color: barColor, fontSize: '0.75rem', fontWeight: 600, minWidth: '36px' }}>{pct}%</span>
+                                                    </div>
+                                                );
+                                            })()}
                                         </td>
                                         <td style={tdStyle}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative' }}>
@@ -644,8 +655,10 @@ const ContestDetails: React.FC = () => {
                                             </div>
                                         </td>
                                     </tr>
-                                ))
-                            )}
+                                );
+                                })
+                            );
+                            })()}
                         </tbody>
                     </table>
                 </div>
