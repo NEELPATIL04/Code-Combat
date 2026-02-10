@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 export const useAuth = () => {
   const isAuthenticated = () => {
     const token = sessionStorage.getItem('token');
@@ -23,12 +25,18 @@ export const useAuth = () => {
     sessionStorage.clear();
   };
 
-  // User object for components that need user info
-  const user = {
-    id: sessionStorage.getItem('userId'),
-    name: sessionStorage.getItem('username'),
-    email: sessionStorage.getItem('email')
-  };
+  // Read values once
+  const userId = sessionStorage.getItem('userId');
+  const userName = sessionStorage.getItem('username');
+  const userEmail = sessionStorage.getItem('email');
+
+  // Memoize so the same object reference is returned when values haven't changed
+  // This prevents useEffect deps from firing on every render
+  const user = useMemo(() => ({
+    id: userId,
+    name: userName,
+    email: userEmail
+  }), [userId, userName, userEmail]);
 
   return {
     isAuthenticated,

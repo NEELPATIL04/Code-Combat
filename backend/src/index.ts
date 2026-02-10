@@ -43,6 +43,13 @@ io.on('connection', (socket: any) => {
     const contestIdStr = String(contestId);
     const userIdStr = String(userId);
 
+    // If this exact socket is already registered for this contest, skip (prevents duplicate join events)
+    const existingEntry = connectedUsers.get(socket.id);
+    if (existingEntry && existingEntry.userId === userIdStr && existingEntry.contestId === contestIdStr) {
+      console.log(`⏩ Socket ${socket.id} already registered for user ${userIdStr} in contest ${contestIdStr}, skipping`);
+      return;
+    }
+
     // Evict any previous socket for the same userId in the same contest (handles reconnects + multi-tab)
     for (const [oldSid, data] of connectedUsers.entries()) {
       if (data.userId === userIdStr && data.contestId === contestIdStr && oldSid !== socket.id) {

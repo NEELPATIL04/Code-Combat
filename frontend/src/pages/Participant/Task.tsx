@@ -1029,13 +1029,20 @@ const TaskPage: React.FC = () => {
         fetchSettings();
     }, [contestId]);
 
+    // Stable ref for user.id so we can use it in effects without causing re-runs
+    const userIdRef = useRef(user?.id);
+    useEffect(() => { userIdRef.current = user?.id; }, [user?.id]);
+
+    // Track whether we've already joined to avoid redundant join/leave cycles
+    const hasJoinedRef = useRef(false);
+
     // Join contest room ONLY after media is verified (so admin gets offer when streams are ready)
     // Also re-join on socket reconnect (socket object ref is stable, but socket.id changes)
     useEffect(() => {
-        if (!socket || !user || !contestId || !mediaVerified) {
+        if (!socket || !user?.id || !contestId || !mediaVerified) {
             console.log('🚪 Not ready to join contest:', { 
                 socket: !!socket, 
-                user: !!user, 
+                userId: user?.id, 
                 contestId,
                 mediaVerified
             });
@@ -1043,11 +1050,13 @@ const TaskPage: React.FC = () => {
         }
 
         const joinContest = () => {
-            console.log(`🚪 Joining contest room: contest-${contestId} as user ${user.id} (socket: ${socket.id})`);
-            socket.emit('join-contest', { contestId, userId: user.id });
+            const uid = userIdRef.current;
+            console.log(`🚪 Joining contest room: contest-${contestId} as user ${uid} (socket: ${socket.id})`);
+            socket.emit('join-contest', { contestId, userId: uid });
             // Close stale peer connections so fresh offers from admin are accepted
             peerConnections.current.forEach(pc => pc.close());
             peerConnections.current.clear();
+            hasJoinedRef.current = true;
             console.log(`✅ Emitted join-contest event, cleared stale peer connections`);
         };
 
@@ -1059,15 +1068,18 @@ const TaskPage: React.FC = () => {
 
         return () => {
             // Leave contest when component unmounts (user navigates away)
+            hasJoinedRef.current = false;
             console.log(`👋 Leaving contest room: contest-${contestId}`);
-            socket.emit('leave-contest', { contestId, userId: user.id });
+            socket.emit('leave-contest', { contestId, userId: userIdRef.current });
             socket.off('connect', joinContest);
         };
-    }, [socket, contestId, user, mediaVerified]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [socket, contestId, mediaVerified]);
 
     useEffect(() => {
         // Only need socket and contestId — localStreams accessed via ref to avoid teardown on stream change
-        if (!socket || !user || !contestId) return;
+        // user.id accessed via userIdRef for stable deps
+        if (!socket || !userIdRef.current || !contestId) return;
 
         const handleOffer = async ({ sender, payload }: { sender: string, payload: RTCSessionDescriptionInit }) => {
             try {
@@ -1196,7 +1208,8 @@ const TaskPage: React.FC = () => {
             peerConnections.current.forEach(pc => pc.close());
             peerConnections.current.clear();
         };
-    }, [socket, user, contestId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [socket, contestId]);
 
     // Socket listeners for contest state changes (pause/resume/end)
     useEffect(() => {
@@ -2352,7 +2365,7 @@ const TaskPage: React.FC = () => {
         );
     };
 
-    console.log('Contest:', contest?.title);
+    // Removed render-level console.log to reduce noise
 
     if (loading) {
         return (
