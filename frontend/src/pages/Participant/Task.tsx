@@ -937,6 +937,48 @@ const TaskPage: React.FC = () => {
     const [settingsError, setSettingsError] = useState<string | null>(null);
     const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
 
+    // Helper to stop all media streams and peer connections
+    const stopAllMedia = useCallback(() => {
+        console.log('🛑 Stopping all media streams and peer connections');
+        // Stop camera stream tracks
+        if (localStreams?.camera) {
+            localStreams.camera.getTracks().forEach(track => {
+                track.stop();
+                console.log('📷 Stopped camera track:', track.kind);
+            });
+        }
+        // Stop screen share stream tracks
+        if (localStreams?.screen) {
+            localStreams.screen.getTracks().forEach(track => {
+                track.stop();
+                console.log('🖥️ Stopped screen track:', track.kind);
+            });
+        }
+        // Close all peer connections
+        peerConnections.current.forEach((pc, id) => {
+            pc.close();
+            console.log('🔌 Closed peer connection:', id);
+        });
+        peerConnections.current.clear();
+        setLocalStreams(null);
+    }, [localStreams]);
+
+    // Cleanup media on component unmount
+    useEffect(() => {
+        return () => {
+            console.log('🧹 Task component unmounting — cleaning up media');
+            // Stop all tracks directly from localStreams ref
+            if (localStreams?.camera) {
+                localStreams.camera.getTracks().forEach(track => track.stop());
+            }
+            if (localStreams?.screen) {
+                localStreams.screen.getTracks().forEach(track => track.stop());
+            }
+            peerConnections.current.forEach(pc => pc.close());
+            peerConnections.current.clear();
+        };
+    }, [localStreams]);
+
     useEffect(() => {
         const fetchSettings = async () => {
             if (!contestId) return;
@@ -1008,32 +1050,36 @@ const TaskPage: React.FC = () => {
     }, [socket, contestId, user]);
 
     useEffect(() => {
-        if (!socket || !mediaVerified || !localStreams || !user || !contestId) return;
+        // Only need socket and contestId — localStreams may be null when camera/screen not required
+        if (!socket || !user || !contestId) return;
 
         const handleOffer = async ({ sender, payload }: { sender: string, payload: RTCSessionDescriptionInit }) => {
             try {
+                console.log('📥 Received WebRTC offer from admin:', sender);
                 const pc = new RTCPeerConnection({
-                    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] // Use public STUN
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' },
+                    ]
                 });
 
                 peerConnections.current.set(sender, pc);
 
-                // Add tracks
-                if (localStreams.camera) {
+                // Add tracks if available (camera and screen streams)
+                if (localStreams?.camera) {
                     const cameraTracks = localStreams.camera.getTracks();
-                    if (cameraTracks.length > 0) {
-                        cameraTracks.forEach(track => {
-                            if (localStreams.camera) pc.addTrack(track, localStreams.camera);
-                        });
-                    }
+                    cameraTracks.forEach(track => {
+                        if (localStreams.camera) pc.addTrack(track, localStreams.camera);
+                    });
+                    console.log('📷 Added camera tracks:', cameraTracks.length);
                 }
-                if (localStreams.screen) {
+                if (localStreams?.screen) {
                     const screenTracks = localStreams.screen.getTracks();
-                    if (screenTracks.length > 0) {
-                        screenTracks.forEach(track => {
-                            if (localStreams.screen) pc.addTrack(track, localStreams.screen);
-                        });
-                    }
+                    screenTracks.forEach(track => {
+                        if (localStreams.screen) pc.addTrack(track, localStreams.screen);
+                    });
+                    console.log('🖥️ Added screen tracks:', screenTracks.length);
                 }
 
                 pc.onicecandidate = (event) => {
@@ -1042,10 +1088,15 @@ const TaskPage: React.FC = () => {
                     }
                 };
 
+                pc.oniceconnectionstatechange = () => {
+                    console.log(`🧊 Participant ICE state → ${pc.iceConnectionState} (for admin ${sender})`);
+                };
+
                 await pc.setRemoteDescription(new RTCSessionDescription(payload));
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
 
+                console.log('📤 Sending answer to admin:', sender);
                 socket.emit('answer', { target: sender, payload: answer });
             } catch (err) {
                 console.error("Error handling offer:", err);
@@ -1072,7 +1123,7 @@ const TaskPage: React.FC = () => {
             peerConnections.current.forEach(pc => pc.close());
             peerConnections.current.clear();
         };
-    }, [socket, mediaVerified, localStreams, user, contestId]);
+    }, [socket, localStreams, user, contestId]);
 
     // Socket listeners for contest state changes (pause/resume/end)
     useEffect(() => {
@@ -1105,6 +1156,9 @@ const TaskPage: React.FC = () => {
             setContestEnded(true);
             setEndMessage(data.message || 'Contest has ended');
             showToast('Contest ended - Submitting your work...', 'error');
+
+            // Stop all media streams and peer connections
+            stopAllMedia();
 
             // Auto-submit current code if requested
             if (data.autoSubmit && task && contest) {
@@ -1162,6 +1216,7 @@ const TaskPage: React.FC = () => {
         const handleUserContestReset = (data: { contestId: number, userId: number, message: string }) => {
             if (data.userId === currentUserId) {
                 console.log('🔄 User-specific reset event received:', data);
+                stopAllMedia();
                 showToast('Your contest has been reset by the administrator. Redirecting...', 'error');
                 setTimeout(() => {
                     navigate('/participant/contests');
@@ -1175,6 +1230,9 @@ const TaskPage: React.FC = () => {
                 setContestEnded(true);
                 setEndMessage(data.message || 'Your contest has been ended by the administrator');
                 showToast('Contest ended - Submitting your work...', 'error');
+
+                // Stop all media streams and peer connections
+                stopAllMedia();
 
                 if (data.autoSubmit && task && contest) {
                     try {
@@ -1202,6 +1260,7 @@ const TaskPage: React.FC = () => {
 
         const handleContestReset = (data: { contestId: number, message: string }) => {
             console.log('🔄 Contest reset event received:', data);
+            stopAllMedia();
             showToast('Contest has been reset by the administrator. Redirecting...', 'error');
             setTimeout(() => {
                 navigate('/participant/contests');
@@ -1229,7 +1288,7 @@ const TaskPage: React.FC = () => {
             socket.off('user-contest-ended', handleUserContestEnded);
             console.log('🧹 Pause/resume/end listeners cleaned up');
         };
-    }, [socket, contestId, task, contest, navigate, showToast, language]);
+    }, [socket, contestId, task, contest, navigate, showToast, language, stopAllMedia]);
 
     const handleGetHint = useCallback(async () => {
         if (!task) return;
@@ -2086,6 +2145,8 @@ const TaskPage: React.FC = () => {
 
     const handleFinishContest = useCallback(async () => {
         hasExited.current = true;
+        // Stop all media streams and peer connections
+        stopAllMedia();
         if (document.fullscreenElement) {
             document.exitFullscreen().catch(() => { });
         }
@@ -2102,7 +2163,7 @@ const TaskPage: React.FC = () => {
         } else {
             navigate('/player');
         }
-    }, [contestId, navigate]);
+    }, [contestId, navigate, stopAllMedia]);
 
     const handleTestCaseTabChange = useCallback((index: number) => {
         setTestCaseActiveTab(index);

@@ -9,6 +9,14 @@ interface VideoFeedProps {
     isLarge?: boolean;
 }
 
+const ICE_SERVERS: RTCIceServer[] = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+];
+
 const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, isLarge = false }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const screenRef = useRef<HTMLVideoElement>(null);
@@ -16,62 +24,107 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
     const videoStreamCount = useRef<number>(0);
     const [connectionState, setConnectionState] = useState<string>('connecting');
     const [isHovered, setIsHovered] = useState(false);
+    const retryCount = useRef<number>(0);
+    const maxRetries = 3;
+    const isMounted = useRef(true);
 
     useEffect(() => {
+        isMounted.current = true;
+
         const setupConnection = async () => {
-            const pc = new RTCPeerConnection({
-                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-            });
-            peerConnection.current = pc;
-
-            pc.onicecandidate = (event) => {
-                if (event.candidate) {
-                    socket.emit('ice-candidate', { target: targetSocketId, candidate: event.candidate });
+            try {
+                // Close previous connection if exists
+                if (peerConnection.current) {
+                    peerConnection.current.close();
+                    peerConnection.current = null;
                 }
-            };
+                videoStreamCount.current = 0;
 
-            pc.ontrack = (event) => {
-                const track = event.track;
-                const stream = event.streams[0];
+                const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+                peerConnection.current = pc;
 
-                console.log('📹 Received track:', {
-                    kind: track.kind,
-                    label: track.label,
-                    streamId: stream?.id
-                });
-
-                if (track.kind === 'video' && stream) {
-                    // Track which video stream this is
-                    // First video stream = Camera, Second video stream = Screen share
-                    videoStreamCount.current += 1;
-                    const streamIndex = videoStreamCount.current;
-
-                    console.log(`🎬 Video stream #${streamIndex} received in VideoFeed`);
-
-                    if (streamIndex === 1) {
-                        // First video stream is camera
-                        console.log('📷 Stream #1 → Setting to CAMERA');
-                        videoRef.current!.srcObject = stream;
-                    } else if (streamIndex === 2) {
-                        // Second video stream is screen share
-                        console.log('🖥️ Stream #2 → Setting to SCREEN SHARE');
-                        screenRef.current!.srcObject = stream;
+                pc.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        console.log('🧊 Sending ICE candidate to', targetSocketId);
+                        socket.emit('ice-candidate', { target: targetSocketId, candidate: event.candidate });
                     }
-                }
-            };
+                };
 
-            pc.onconnectionstatechange = () => {
-                setConnectionState(pc.connectionState);
-            };
+                pc.ontrack = (event) => {
+                    const track = event.track;
+                    const stream = event.streams[0];
 
-            // Create Offer (Admin initiates)
-            // Actually, usually we add a transceiver to receive video?
-            pc.addTransceiver('video', { direction: 'recvonly' });
-            pc.addTransceiver('video', { direction: 'recvonly' }); // For screen
+                    console.log('📹 Received track:', {
+                        kind: track.kind,
+                        label: track.label,
+                        streamId: stream?.id
+                    });
 
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            socket.emit('offer', { target: targetSocketId, payload: offer });
+                    if (track.kind === 'video' && stream) {
+                        videoStreamCount.current += 1;
+                        const streamIndex = videoStreamCount.current;
+
+                        console.log(`🎬 Video stream #${streamIndex} received in VideoFeed`);
+
+                        if (streamIndex === 1 && videoRef.current) {
+                            console.log('📷 Stream #1 → Setting to CAMERA');
+                            videoRef.current.srcObject = stream;
+                        } else if (streamIndex === 2 && screenRef.current) {
+                            console.log('🖥️ Stream #2 → Setting to SCREEN SHARE');
+                            screenRef.current.srcObject = stream;
+                        }
+                    }
+                };
+
+                // Track both connection state and ICE connection state
+                pc.onconnectionstatechange = () => {
+                    console.log(`🔗 Connection state for ${userId}: ${pc.connectionState}`);
+                    if (isMounted.current) {
+                        setConnectionState(pc.connectionState);
+                    }
+                    // Retry on failure
+                    if (pc.connectionState === 'failed' && retryCount.current < maxRetries) {
+                        retryCount.current++;
+                        console.log(`🔄 Retrying connection (${retryCount.current}/${maxRetries})...`);
+                        setTimeout(() => {
+                            if (isMounted.current) setupConnection();
+                        }, 2000);
+                    }
+                };
+
+                pc.oniceconnectionstatechange = () => {
+                    console.log(`🧊 ICE state for ${userId}: ${pc.iceConnectionState}`);
+                    // Use ICE connection state as fallback indicator
+                    if (isMounted.current) {
+                        if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+                            setConnectionState('connected');
+                        } else if (pc.iceConnectionState === 'failed') {
+                            setConnectionState('failed');
+                            if (retryCount.current < maxRetries) {
+                                retryCount.current++;
+                                console.log(`🔄 ICE failed, retrying (${retryCount.current}/${maxRetries})...`);
+                                setTimeout(() => {
+                                    if (isMounted.current) setupConnection();
+                                }, 2000);
+                            }
+                        } else if (pc.iceConnectionState === 'disconnected') {
+                            setConnectionState('reconnecting');
+                        }
+                    }
+                };
+
+                // Add transceivers for receiving video
+                pc.addTransceiver('video', { direction: 'recvonly' });
+                pc.addTransceiver('video', { direction: 'recvonly' }); // For screen
+
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                console.log('📤 Sending offer to', targetSocketId);
+                socket.emit('offer', { target: targetSocketId, payload: offer });
+            } catch (err) {
+                console.error('Error setting up WebRTC connection:', err);
+                if (isMounted.current) setConnectionState('failed');
+            }
         };
 
         setupConnection();
@@ -79,6 +132,7 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
         const handleAnswer = async ({ sender, payload }: { sender: string, payload: RTCSessionDescriptionInit }) => {
             if (sender === targetSocketId && peerConnection.current) {
                 try {
+                    console.log('📥 Received answer from', sender);
                     await peerConnection.current.setRemoteDescription(new RTCSessionDescription(payload));
                 } catch (err) {
                     console.error("Error setting remote description:", err);
@@ -100,10 +154,12 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
         socket.on('ice-candidate', handleIceCandidate);
 
         return () => {
+            isMounted.current = false;
             socket.off('answer', handleAnswer);
             socket.off('ice-candidate', handleIceCandidate);
             if (peerConnection.current) {
                 peerConnection.current.close();
+                peerConnection.current = null;
             }
         };
     }, [socket, targetSocketId]);

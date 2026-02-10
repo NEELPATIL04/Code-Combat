@@ -65,14 +65,17 @@ io.on('connection', (socket: any) => {
 
   // WebRTC Signaling
   socket.on('offer', ({ target, payload }: { target: string, payload: any }) => {
+    console.log(`📤 Relaying WebRTC offer from ${socket.id} to ${target}`);
     io.to(target).emit('offer', { sender: socket.id, payload });
   });
 
   socket.on('answer', ({ target, payload }: { target: string, payload: any }) => {
+    console.log(`📥 Relaying WebRTC answer from ${socket.id} to ${target}`);
     io.to(target).emit('answer', { sender: socket.id, payload });
   });
 
   socket.on('ice-candidate', ({ target, candidate }: { target: string, candidate: any }) => {
+    console.log(`🧊 Relaying ICE candidate from ${socket.id} to ${target}`);
     io.to(target).emit('ice-candidate', { sender: socket.id, candidate });
   });
 
