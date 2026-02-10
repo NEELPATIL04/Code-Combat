@@ -98,6 +98,7 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
                     if (isMounted.current) {
                         if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
                             setConnectionState('connected');
+                            retryCount.current = 0; // Reset retries on success
                         } else if (pc.iceConnectionState === 'failed') {
                             setConnectionState('failed');
                             if (retryCount.current < maxRetries) {

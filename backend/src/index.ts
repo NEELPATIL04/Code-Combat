@@ -26,6 +26,8 @@ const io = new Server(httpServer, {
     credentials: true
   },
   allowEIO3: true,
+  pingInterval: 25000,
+  pingTimeout: 60000,
 });
 
 // Make io accessible to our routers and controllers
@@ -40,6 +42,21 @@ io.on('connection', (socket: any) => {
   socket.on('join-contest', ({ contestId, userId }: { contestId: string | number, userId: string | number }) => {
     const contestIdStr = String(contestId);
     const userIdStr = String(userId);
+
+    // Evict any previous socket for the same userId in the same contest (handles reconnects + multi-tab)
+    for (const [oldSid, data] of connectedUsers.entries()) {
+      if (data.userId === userIdStr && data.contestId === contestIdStr && oldSid !== socket.id) {
+        console.log(`🔄 Evicting stale socket ${oldSid} for user ${userIdStr} (replaced by ${socket.id})`);
+        io.to(`admin-contest-${contestIdStr}`).emit('participant-left', { socketId: oldSid });
+        connectedUsers.delete(oldSid);
+        // Force-disconnect the old socket from the room
+        const oldSocket = io.sockets.sockets.get(oldSid);
+        if (oldSocket) {
+          oldSocket.leave(`contest-${contestIdStr}`);
+        }
+      }
+    }
+
     socket.join(`contest-${contestIdStr}`);
     connectedUsers.set(socket.id, { contestId: contestIdStr, userId: userIdStr, role: 'participant' });
     console.log(`🚪 User ${userIdStr} joined contest ${contestIdStr} (socket: ${socket.id})`);

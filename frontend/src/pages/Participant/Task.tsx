@@ -939,19 +939,26 @@ const TaskPage: React.FC = () => {
     const [settingsError, setSettingsError] = useState<string | null>(null);
     const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
 
-    // Helper to stop all media streams and peer connections
+    // Ref to always have the latest localStreams without causing useEffect re-runs
+    const localStreamsRef = useRef(localStreams);
+    useEffect(() => {
+        localStreamsRef.current = localStreams;
+    }, [localStreams]);
+
+    // Helper to stop all media streams and peer connections (stable identity — uses refs)
     const stopAllMedia = useCallback(() => {
         console.log('🛑 Stopping all media streams and peer connections');
+        const streams = localStreamsRef.current;
         // Stop camera stream tracks
-        if (localStreams?.camera) {
-            localStreams.camera.getTracks().forEach(track => {
+        if (streams?.camera) {
+            streams.camera.getTracks().forEach(track => {
                 track.stop();
                 console.log('📷 Stopped camera track:', track.kind);
             });
         }
         // Stop screen share stream tracks
-        if (localStreams?.screen) {
-            localStreams.screen.getTracks().forEach(track => {
+        if (streams?.screen) {
+            streams.screen.getTracks().forEach(track => {
                 track.stop();
                 console.log('🖥️ Stopped screen track:', track.kind);
             });
@@ -963,23 +970,24 @@ const TaskPage: React.FC = () => {
         });
         peerConnections.current.clear();
         setLocalStreams(null);
-    }, [localStreams]);
+    }, []);
 
-    // Cleanup media on component unmount
+    // Cleanup media on component unmount ONLY (empty deps = unmount only)
     useEffect(() => {
         return () => {
             console.log('🧹 Task component unmounting — cleaning up media');
-            // Stop all tracks directly from localStreams ref
-            if (localStreams?.camera) {
-                localStreams.camera.getTracks().forEach(track => track.stop());
+            const streams = localStreamsRef.current;
+            if (streams?.camera) {
+                streams.camera.getTracks().forEach(track => track.stop());
             }
-            if (localStreams?.screen) {
-                localStreams.screen.getTracks().forEach(track => track.stop());
+            if (streams?.screen) {
+                streams.screen.getTracks().forEach(track => track.stop());
             }
             peerConnections.current.forEach(pc => pc.close());
             peerConnections.current.clear();
         };
-    }, [localStreams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -1035,13 +1043,8 @@ const TaskPage: React.FC = () => {
         fetchSettings();
     }, [contestId]);
 
-    // Ref to always have the latest localStreams without causing useEffect re-runs
-    const localStreamsRef = useRef(localStreams);
-    useEffect(() => {
-        localStreamsRef.current = localStreams;
-    }, [localStreams]);
-
     // Join contest room ONLY after media is verified (so admin gets offer when streams are ready)
+    // Also re-join on socket reconnect (socket object ref is stable, but socket.id changes)
     useEffect(() => {
         if (!socket || !user || !contestId || !mediaVerified) {
             console.log('🚪 Not ready to join contest:', { 
@@ -1053,9 +1056,24 @@ const TaskPage: React.FC = () => {
             return;
         }
 
-        console.log(`🚪 Joining contest room: contest-${contestId} as user ${user.id}`);
-        socket.emit('join-contest', { contestId, userId: user.id });
-        console.log(`✅ Emitted join-contest event`);
+        const joinContest = () => {
+            console.log(`🚪 Joining contest room: contest-${contestId} as user ${user.id} (socket: ${socket.id})`);
+            socket.emit('join-contest', { contestId, userId: user.id });
+            // Close stale peer connections so fresh offers from admin are accepted
+            peerConnections.current.forEach(pc => pc.close());
+            peerConnections.current.clear();
+            console.log(`✅ Emitted join-contest event, cleared stale peer connections`);
+        };
+
+        // Join immediately
+        joinContest();
+
+        // Re-join whenever socket reconnects (gets new socket.id)
+        socket.on('connect', joinContest);
+
+        return () => {
+            socket.off('connect', joinContest);
+        };
     }, [socket, contestId, user, mediaVerified]);
 
     useEffect(() => {
@@ -1315,7 +1333,8 @@ const TaskPage: React.FC = () => {
             socket.off('user-contest-ended', handleUserContestEnded);
             console.log('🧹 Pause/resume/end listeners cleaned up');
         };
-    }, [socket, contestId, task, contest, navigate, showToast, language, stopAllMedia]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [socket, contestId, task, contest, navigate, showToast, language]);
 
     const handleGetHint = useCallback(async () => {
         if (!task) return;
@@ -2190,7 +2209,8 @@ const TaskPage: React.FC = () => {
         } else {
             navigate('/player');
         }
-    }, [contestId, navigate, stopAllMedia]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [contestId, navigate]);
 
     const handleTestCaseTabChange = useCallback((index: number) => {
         setTestCaseActiveTab(index);

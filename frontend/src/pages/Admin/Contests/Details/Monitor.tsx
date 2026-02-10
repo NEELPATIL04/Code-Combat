@@ -44,8 +44,9 @@ const Monitor: React.FC<MonitorProps> = ({ contestId }) => {
 
         const handleParticipantJoined = ({ userId, socketId }: { userId: string, socketId: string }) => {
             setActiveParticipants(prev => {
-                if (prev.find(p => p.socketId === socketId)) return prev;
-                return [...prev, { userId, socketId }];
+                // Remove any existing entry for this userId (handles reconnects/multi-tab)
+                const filtered = prev.filter(p => p.userId !== userId && p.socketId !== socketId);
+                return [...filtered, { userId, socketId }];
             });
         };
 
@@ -53,13 +54,27 @@ const Monitor: React.FC<MonitorProps> = ({ contestId }) => {
             setActiveParticipants(prev => prev.filter(p => p.socketId !== socketId));
         };
 
+        // When a participant reconnects, update the selected participant's socketId if it's the same user
+        const handleParticipantReconnected = ({ userId, socketId }: { userId: string, socketId: string }) => {
+            setSelectedParticipant(prev => {
+                if (prev && prev.userId === userId && prev.socketId !== socketId) {
+                    console.log(`🔄 Selected participant ${userId} reconnected with new socket ${socketId}`);
+                    return { ...prev, socketId };
+                }
+                return prev;
+            });
+        };
+
         socket.on('active-participants', handleActiveParticipants);
-        socket.on('participant-joined', handleParticipantJoined);
+        socket.on('participant-joined', (data: { userId: string, socketId: string }) => {
+            handleParticipantJoined(data);
+            handleParticipantReconnected(data);
+        });
         socket.on('participant-left', handleParticipantLeft);
 
         return () => {
             socket.off('active-participants', handleActiveParticipants);
-            socket.off('participant-joined', handleParticipantJoined);
+            socket.off('participant-joined');
             socket.off('participant-left', handleParticipantLeft);
         };
     }, [socket, contestId]);
