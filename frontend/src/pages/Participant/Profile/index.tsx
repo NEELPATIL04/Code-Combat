@@ -14,7 +14,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { userAPI } from '../../../utils/api';
 
 interface ContestHistory {
-    id: number;
+    contestId: number;
     title: string;
     difficulty: string;
     score: number;
@@ -407,8 +407,8 @@ const ProfilePage: React.FC = () => {
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                             {history.map((contest, index) => (
                                 <div
-                                    key={contest.id}
-                                    onClick={() => navigate(`/contest/${contest.id}?mode=review`)}
+                                    key={contest.contestId}
+                                    onClick={() => navigate(`/contest/${contest.contestId}?mode=review`)}
                                     style={{
                                         padding: '16px 24px',
                                         borderBottom: index !== history.length - 1 ? '1px solid rgba(255, 255, 255, 0.04)' : 'none',
