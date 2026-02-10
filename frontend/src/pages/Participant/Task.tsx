@@ -1705,6 +1705,8 @@ const TaskPage: React.FC = () => {
 
     // Fetch task data
     useEffect(() => {
+        let cancelled = false; // Prevent state updates after unmount
+
         const fetchTaskData = async () => {
             try {
                 const token = sessionStorage.getItem('token');
@@ -1720,9 +1722,12 @@ const TaskPage: React.FC = () => {
                     },
                 });
 
+                if (cancelled) return;
                 if (!response.ok) throw new Error('Failed to fetch tasks');
 
                 const data = await response.json();
+                if (cancelled) return;
+
                 if (data.tasks && data.tasks.length > 0) {
                     console.log('✅ Tasks fetched from backend:', data.tasks.length);
                     console.log('📋 First task boilerplate code:', data.tasks[0].boilerplateCode);
@@ -1772,6 +1777,7 @@ const TaskPage: React.FC = () => {
                 }
                 setLoading(false);
             } catch (err) {
+                if (cancelled) return;
                 setError(err instanceof Error ? err.message : 'Failed to load task');
                 setLoading(false);
             }
@@ -1779,7 +1785,10 @@ const TaskPage: React.FC = () => {
 
         if (contestId) fetchTaskData();
         else { setError('No contest ID'); setLoading(false); }
-    }, [contestId, navigate, fetchSubmissionHistory, showToast]);
+
+        return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [contestId]);
 
     const handleTaskSwitch = (index: number) => {
         if (index === currentTaskIndex) return;

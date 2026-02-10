@@ -297,53 +297,85 @@ export const updateContest = async (req: Request, res: Response, next: NextFunct
     if (tasksList && Array.isArray(tasksList)) {
       console.log('Updating tasks for contest:', contestId, 'Count:', tasksList.length);
 
-      // Get existing task IDs to delete their test cases first (if no cascade)
-      const existingTasks = await db.select({ id: tasks.id }).from(tasks).where(eq(tasks.contestId, contestId));
-      if (existingTasks.length > 0) {
-        const taskIds = existingTasks.map(t => t.id);
-        await db.delete(testCases).where(inArray(testCases.taskId, taskIds));
+      // Get existing tasks
+      const existingTasks = await db.select().from(tasks).where(eq(tasks.contestId, contestId));
+      const existingTaskMap = new Map(existingTasks.map(t => [t.id, t]));
+
+      // Separate tasks into: update (have existing id) vs new (no id)
+      const tasksWithId = tasksList.filter((t: any) => t.id && existingTaskMap.has(t.id));
+      const newTasks = tasksList.filter((t: any) => !t.id || !existingTaskMap.has(t.id));
+      const incomingIds = new Set(tasksWithId.map((t: any) => t.id));
+      const tasksToDelete = existingTasks.filter(t => !incomingIds.has(t.id));
+
+      // Delete removed tasks and their test cases
+      if (tasksToDelete.length > 0) {
+        const deleteIds = tasksToDelete.map(t => t.id);
+        await db.delete(testCases).where(inArray(testCases.taskId, deleteIds));
+        await db.delete(tasks).where(inArray(tasks.id, deleteIds));
+        console.log(`Deleted ${deleteIds.length} removed task(s)`);
       }
 
-      // Delete existing tasks
-      await db.delete(tasks).where(eq(tasks.contestId, contestId));
+      // Update existing tasks IN-PLACE (preserves task IDs → submissions stay valid)
+      for (const [index, task] of tasksWithId.entries()) {
+        await db.update(tasks).set({
+          title: task.title,
+          description: task.description,
+          difficulty: task.difficulty || difficulty || 'Medium',
+          maxPoints: task.maxPoints || 100,
+          allowedLanguages: task.allowedLanguages || [],
+          orderIndex: tasksList.indexOf(task),
+          functionName: task.functionName,
+          boilerplateCode: task.boilerplateCode,
+          testRunnerTemplate: task.testRunnerTemplate,
+          aiConfig: task.aiConfig,
+        }).where(eq(tasks.id, task.id));
 
-      // Insert new tasks
-      if (tasksList.length > 0) {
-        for (const [index, task] of tasksList.entries()) {
-          console.log(`Creating Task ${index}: ${task.title}`);
-
-          // Insert task
-          const [newTask] = await db.insert(tasks).values({
-            contestId: contestId,
-            title: task.title,
-            description: task.description,
-            difficulty: task.difficulty || difficulty || 'Medium',
-            maxPoints: task.maxPoints || 100,
-            allowedLanguages: task.allowedLanguages || [],
-            orderIndex: index,
-            // New fields
-            functionName: task.functionName,
-            boilerplateCode: task.boilerplateCode,
-            testRunnerTemplate: task.testRunnerTemplate,
-            aiConfig: task.aiConfig
-          }).returning();
-
-          // Insert test cases if provided
-          if (task.testCases && Array.isArray(task.testCases) && task.testCases.length > 0) {
-            const testCaseValues = task.testCases.map((tc: any, tcIndex: number) => ({
-              taskId: newTask.id,
-              input: tc.input,
-              expectedOutput: tc.expectedOutput,
-              isHidden: tc.isHidden || false,
-              orderIndex: tcIndex
-            }));
-
-            await db.insert(testCases).values(testCaseValues);
-            console.log(`Inserted ${testCaseValues.length} test cases for task ${newTask.id}`);
-          }
+        // Replace test cases for this task
+        await db.delete(testCases).where(eq(testCases.taskId, task.id));
+        if (task.testCases && Array.isArray(task.testCases) && task.testCases.length > 0) {
+          const testCaseValues = task.testCases.map((tc: any, tcIndex: number) => ({
+            taskId: task.id,
+            input: tc.input,
+            expectedOutput: tc.expectedOutput,
+            isHidden: tc.isHidden || false,
+            orderIndex: tcIndex,
+          }));
+          await db.insert(testCases).values(testCaseValues);
         }
-        console.log('Tasks and test cases replaced successfully');
+        console.log(`Updated Task ${task.id}: ${task.title}`);
       }
+
+      // Insert genuinely new tasks
+      for (const task of newTasks) {
+        const orderIdx = tasksList.indexOf(task);
+        const [newTask] = await db.insert(tasks).values({
+          contestId: contestId,
+          title: task.title,
+          description: task.description,
+          difficulty: task.difficulty || difficulty || 'Medium',
+          maxPoints: task.maxPoints || 100,
+          allowedLanguages: task.allowedLanguages || [],
+          orderIndex: orderIdx,
+          functionName: task.functionName,
+          boilerplateCode: task.boilerplateCode,
+          testRunnerTemplate: task.testRunnerTemplate,
+          aiConfig: task.aiConfig,
+        }).returning();
+
+        if (task.testCases && Array.isArray(task.testCases) && task.testCases.length > 0) {
+          const testCaseValues = task.testCases.map((tc: any, tcIndex: number) => ({
+            taskId: newTask.id,
+            input: tc.input,
+            expectedOutput: tc.expectedOutput,
+            isHidden: tc.isHidden || false,
+            orderIndex: tcIndex,
+          }));
+          await db.insert(testCases).values(testCaseValues);
+        }
+        console.log(`Created new Task ${newTask.id}: ${task.title}`);
+      }
+
+      console.log('Tasks and test cases updated successfully (ID-preserving)');
     }
 
     // Update participants if provided
@@ -352,21 +384,47 @@ export const updateContest = async (req: Request, res: Response, next: NextFunct
 
     if (newParticipantsRaw && Array.isArray(newParticipantsRaw)) {
       // Deduplicate participants
-      const newParticipants = [...new Set(newParticipantsRaw)];
-      console.log('Updating participants for contest:', contestId, 'Count:', newParticipants.length);
+      const newParticipantIds = [...new Set(newParticipantsRaw.map((id: any) => Number(id)))];
+      console.log('Updating participants for contest:', contestId, 'Count:', newParticipantIds.length);
 
-      // Delete existing participants
-      await db.delete(contestParticipants).where(eq(contestParticipants.contestId, contestId));
+      // Get existing participants (preserve their progress!)
+      const existingParticipants = await db
+        .select()
+        .from(contestParticipants)
+        .where(eq(contestParticipants.contestId, contestId));
+      const existingUserIds = new Set(existingParticipants.map(p => p.userId));
 
-      // Insert new participants
-      if (newParticipants.length > 0) {
-        const participantValues = newParticipants.map((userId: any) => ({
-          contestId,
-          userId: Number(userId),
-        }));
-        await db.insert(contestParticipants).values(participantValues);
-        console.log('Participants updated successfully');
+      // ADD new participants that don't already exist
+      const toAdd = newParticipantIds.filter(id => !existingUserIds.has(id));
+      if (toAdd.length > 0) {
+        await db.insert(contestParticipants).values(
+          toAdd.map(userId => ({ contestId, userId }))
+        );
+        console.log(`Added ${toAdd.length} new participant(s)`);
       }
+
+      // REMOVE participants NOT in the new list — but only if they haven't started
+      // (protect active participants from accidental removal)
+      const newIdSet = new Set(newParticipantIds);
+      const toRemove = existingParticipants.filter(p => !newIdSet.has(p.userId) && !p.hasStarted);
+      if (toRemove.length > 0) {
+        for (const p of toRemove) {
+          await db.delete(contestParticipants).where(
+            and(
+              eq(contestParticipants.contestId, contestId),
+              eq(contestParticipants.userId, p.userId)
+            )
+          );
+        }
+        console.log(`Removed ${toRemove.length} inactive participant(s)`);
+      }
+
+      const skippedRemoval = existingParticipants.filter(p => !newIdSet.has(p.userId) && p.hasStarted);
+      if (skippedRemoval.length > 0) {
+        console.log(`⚠️ Kept ${skippedRemoval.length} active participant(s) despite not being in new list (they have started)`);
+      }
+
+      console.log('Participants updated successfully (non-destructive)');
     }
 
     return res.status(200).json({

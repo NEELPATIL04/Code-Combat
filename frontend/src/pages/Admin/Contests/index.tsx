@@ -16,6 +16,7 @@ const Contests: React.FC = () => {
     const [fetchingDetails, setFetchingDetails] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
     const [modalInitialStep, setModalInitialStep] = useState<number>(1);
+    const [isParticipantsOnlyEdit, setIsParticipantsOnlyEdit] = useState<boolean>(false);
 
     // Form Data State
     const [formData, setFormData] = useState<FormData>({
@@ -51,6 +52,9 @@ const Contests: React.FC = () => {
 
     const openModal = async (contest: Contest | null = null, initialStep: number = 1) => {
         setModalInitialStep(initialStep);
+        // Only set isParticipantsOnlyEdit=false if not already set by openParticipantModal
+        // (openParticipantModal sets it to true BEFORE calling openModal)
+        if (initialStep !== 3) setIsParticipantsOnlyEdit(false);
         if (contest) {
             setEditingContest(contest);
             setFetchingDetails(true);
@@ -121,6 +125,7 @@ const Contests: React.FC = () => {
             endTime: '',
         });
         setModalInitialStep(1);
+        setIsParticipantsOnlyEdit(false);
         setError('');
     };
 
@@ -133,7 +138,21 @@ const Contests: React.FC = () => {
         setLoading(true);
         try {
             if (editingContest) {
-                await contestAPI.update(editingContest.id, formData);
+                if (isParticipantsOnlyEdit) {
+                    // Use the safe addParticipants endpoint — does NOT touch tasks or existing participants
+                    console.log('📋 Participants-only update — using safe addParticipants API');
+                    try {
+                        await contestAPI.addParticipants(editingContest.id, formData.participants);
+                    } catch (addErr: any) {
+                        // "All users are already participants" is OK — means no changes needed
+                        if (!addErr.message?.includes('already participants')) {
+                            throw addErr;
+                        }
+                    }
+                } else {
+                    // Full contest update (tasks + participants)
+                    await contestAPI.update(editingContest.id, formData);
+                }
             } else {
                 await contestAPI.create(formData);
             }
@@ -141,7 +160,7 @@ const Contests: React.FC = () => {
             loadContests();
         } catch (err: any) {
             console.error('Failed to save contest:', err);
-            setError(err.response?.data?.message || 'Failed to save contest');
+            setError(err.response?.data?.message || err.message || 'Failed to save contest');
         } finally {
             setLoading(false);
         }
@@ -222,6 +241,7 @@ const Contests: React.FC = () => {
     const openParticipantModal = (contestId: number) => {
         const contest = contests.find(c => c.id === contestId);
         if (contest) {
+            setIsParticipantsOnlyEdit(true);
             openModal(contest, 3);
         }
     };
