@@ -50,22 +50,30 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
     useEffect(() => {
         isMounted.current = true;
 
+        console.log(`🔌 VideoFeed: Setting up connection for participant ${userId} (socket: ${targetSocketId})`);
+        console.log(`🔌 Socket connected:`, socket.connected);
+        console.log(`🔌 Socket ID:`, socket.id);
+
         const setupConnection = async () => {
             try {
                 // Close previous connection if exists
                 if (peerConnection.current) {
+                    console.log('🔄 Closing previous peer connection');
                     peerConnection.current.close();
                     peerConnection.current = null;
                 }
                 videoStreamCount.current = 0;
 
+                console.log('🆕 Creating new RTCPeerConnection for', targetSocketId);
                 const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
                 peerConnection.current = pc;
 
                 pc.onicecandidate = (event) => {
                     if (event.candidate) {
-                        console.log('🧊 Sending ICE candidate to', targetSocketId);
+                        console.log('🧊 VideoFeed: Sending ICE candidate to', targetSocketId);
                         socket.emit('ice-candidate', { target: targetSocketId, candidate: event.candidate });
+                    } else {
+                        console.log('✅ VideoFeed: ICE gathering complete');
                     }
                 };
 
@@ -152,14 +160,23 @@ const VideoFeed: React.FC<VideoFeedProps> = ({ socket, targetSocketId, userId, i
                 };
 
                 // Add transceivers for receiving media (audio + 2 video to match participant tracks)
+                console.log('➕ VideoFeed: Adding transceivers (audio + 2 video)');
                 pc.addTransceiver('audio', { direction: 'recvonly' }); // For microphone audio
                 pc.addTransceiver('video', { direction: 'recvonly' }); // For camera
                 pc.addTransceiver('video', { direction: 'recvonly' }); // For screen
 
+                console.log('📝 VideoFeed: Creating offer...');
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
-                console.log('📤 Sending offer to', targetSocketId);
+
+                console.log('📤 VideoFeed: Sending WebRTC offer to participant', {
+                    targetSocketId,
+                    userId,
+                    offerType: offer.type,
+                    socketConnected: socket.connected
+                });
                 socket.emit('offer', { target: targetSocketId, payload: offer });
+                console.log('✅ VideoFeed: Offer sent successfully');
             } catch (err) {
                 console.error('Error setting up WebRTC connection:', err);
                 if (isMounted.current) setConnectionState('failed');

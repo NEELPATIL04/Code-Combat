@@ -55,7 +55,12 @@ const VideoFeedModal: React.FC<VideoFeedModalProps> = ({ socket, targetSocketId,
     };
 
     useEffect(() => {
+        console.log(`🔌 VideoFeedModal: Setting up connection for participant ${userId} (socket: ${targetSocketId})`);
+        console.log(`🔌 Socket connected:`, socket.connected);
+        console.log(`🔌 Socket ID:`, socket.id);
+
         const setupConnection = async () => {
+            console.log('🆕 VideoFeedModal: Creating new RTCPeerConnection for', targetSocketId);
             const pc = new RTCPeerConnection({
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
@@ -66,7 +71,10 @@ const VideoFeedModal: React.FC<VideoFeedModalProps> = ({ socket, targetSocketId,
 
             pc.onicecandidate = (event) => {
                 if (event.candidate) {
+                    console.log('🧊 VideoFeedModal: Sending ICE candidate to', targetSocketId);
                     socket.emit('ice-candidate', { target: targetSocketId, candidate: event.candidate });
+                } else {
+                    console.log('✅ VideoFeedModal: ICE gathering complete');
                 }
             };
 
@@ -148,13 +156,23 @@ const VideoFeedModal: React.FC<VideoFeedModalProps> = ({ socket, targetSocketId,
             };
 
             // Add transceivers for receiving media
+            console.log('➕ VideoFeedModal: Adding transceivers (audio + 2 video)');
             pc.addTransceiver('audio', { direction: 'recvonly' }); // For microphone
             pc.addTransceiver('video', { direction: 'recvonly' }); // For camera
             pc.addTransceiver('video', { direction: 'recvonly' }); // For screen share
 
+            console.log('📝 VideoFeedModal: Creating offer...');
             const offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
+
+            console.log('📤 VideoFeedModal: Sending WebRTC offer to participant', {
+                targetSocketId,
+                userId,
+                offerType: offer.type,
+                socketConnected: socket.connected
+            });
             socket.emit('offer', { target: targetSocketId, payload: offer });
+            console.log('✅ VideoFeedModal: Offer sent successfully');
         };
 
         setupConnection();

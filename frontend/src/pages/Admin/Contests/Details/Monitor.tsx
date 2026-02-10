@@ -35,22 +35,34 @@ const Monitor: React.FC<MonitorProps> = ({ contestId }) => {
     }, [selectedParticipant]);
 
     useEffect(() => {
-        if (!socket) return;
+        if (!socket) {
+            console.warn('⚠️ Monitor: Socket not available');
+            return;
+        }
+
+        console.log(`📡 Monitor: Joining monitor for contest ${contestId}`);
+        console.log(`📡 Socket connected:`, socket.connected);
+        console.log(`📡 Socket ID:`, socket.id);
         socket.emit('join-monitor', { contestId });
 
         const handleActiveParticipants = (participants: { socketId: string, userId: string }[]) => {
+            console.log(`👥 Monitor: Received active participants:`, participants);
             setActiveParticipants(participants);
         };
 
         const handleParticipantJoined = ({ userId, socketId }: { userId: string, socketId: string }) => {
+            console.log(`✅ Monitor: Participant joined -`, { userId, socketId });
             setActiveParticipants(prev => {
                 // Remove any existing entry for this userId (handles reconnects/multi-tab)
                 const filtered = prev.filter(p => p.userId !== userId && p.socketId !== socketId);
-                return [...filtered, { userId, socketId }];
+                const updated = [...filtered, { userId, socketId }];
+                console.log(`📊 Monitor: Active participants updated:`, updated);
+                return updated;
             });
         };
 
         const handleParticipantLeft = ({ socketId }: { socketId: string }) => {
+            console.log(`👋 Monitor: Participant left -`, { socketId });
             setActiveParticipants(prev => prev.filter(p => p.socketId !== socketId));
         };
 
