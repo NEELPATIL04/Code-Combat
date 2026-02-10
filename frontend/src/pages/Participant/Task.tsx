@@ -1746,8 +1746,8 @@ const TaskPage: React.FC = () => {
     useEffect(() => {
         if (!task || !task.allowedLanguages || task.allowedLanguages.length === 0) return;
 
-        const savedLang = localStorage.getItem(`task_${contestId}_language`);
-        const savedCode = localStorage.getItem(`task_${contestId}_code`);
+        const savedLang = localStorage.getItem(`task_${contestId}_${task.id}_language`);
+        const savedCode = localStorage.getItem(`task_${contestId}_${task.id}_code`);
 
         let initialLang = task.allowedLanguages[0];
         if (savedLang && task.allowedLanguages.includes(savedLang)) {
@@ -1782,7 +1782,7 @@ const TaskPage: React.FC = () => {
 
             // Update localStorage with fresh boilerplate
             if (boiler) {
-                localStorage.setItem(`task_${contestId}_code`, boiler);
+                localStorage.setItem(`task_${contestId}_${task.id}_code`, boiler);
             }
         }
     }, [task, contestId]);
@@ -1794,18 +1794,18 @@ const TaskPage: React.FC = () => {
         return () => clearInterval(interval);
     }, [isReviewMode]);
 
-    // Auto-save code and language to localStorage
+    // Auto-save code and language to localStorage (per-task)
     useEffect(() => {
-        if (contestId && code) {
-            localStorage.setItem(`task_${contestId}_code`, code);
+        if (contestId && task?.id && code) {
+            localStorage.setItem(`task_${contestId}_${task.id}_code`, code);
         }
-    }, [code, contestId]);
+    }, [code, contestId, task?.id]);
 
     useEffect(() => {
-        if (contestId && language) {
-            localStorage.setItem(`task_${contestId}_language`, language);
+        if (contestId && task?.id && language) {
+            localStorage.setItem(`task_${contestId}_${task.id}_language`, language);
         }
-    }, [language, contestId]);
+    }, [language, contestId, task?.id]);
 
     // Horizontal resize handlers
     const handleHorizontalMouseDown = useCallback((e: React.MouseEvent) => {
@@ -1892,12 +1892,14 @@ const TaskPage: React.FC = () => {
         setCode(newBoilerplate);
         codeRef.current = newBoilerplate;
 
-        // Save new language preference and boilerplate
-        localStorage.setItem(`task_${contestId}_lang`, newLang);
-        if (newBoilerplate) {
-            localStorage.setItem(`task_${contestId}_code`, newBoilerplate);
-        } else {
-            localStorage.removeItem(`task_${contestId}_code`);
+        // Save new language preference and boilerplate (per-task)
+        if (task?.id) {
+            localStorage.setItem(`task_${contestId}_${task.id}_language`, newLang);
+            if (newBoilerplate) {
+                localStorage.setItem(`task_${contestId}_${task.id}_code`, newBoilerplate);
+            } else {
+                localStorage.removeItem(`task_${contestId}_${task.id}_code`);
+            }
         }
     }, [task, contestId]);
 
@@ -1992,15 +1994,8 @@ const TaskPage: React.FC = () => {
 
             console.log('✅ Submit Result:', result);
 
-            // Log activity for submission
-            if (contestId && task) {
-                await logUserActivity('task_submitted', {
-                    taskId: task.id,
-                    taskTitle: task.title,
-                    language: language,
-                    timestamp: new Date().toISOString()
-                });
-            }
+            // Note: Activity logging for task_submitted is handled by the backend submitCode handler
+            // to avoid duplicate entries
 
             if (result.success && result.data) {
                 const { passed, total, results, status, score } = result.data;

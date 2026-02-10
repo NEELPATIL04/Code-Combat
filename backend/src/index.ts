@@ -36,25 +36,28 @@ const connectedUsers = new Map<string, { contestId: string, userId: string, role
 io.on('connection', (socket: any) => {
   console.log('✅ User connected:', socket.id);
 
-  socket.on('join-contest', ({ contestId, userId }: { contestId: string, userId: string }) => {
-    socket.join(`contest-${contestId}`);
-    connectedUsers.set(socket.id, { contestId, userId, role: 'participant' });
-    console.log(`🚪 User ${userId} joined contest ${contestId} (socket: ${socket.id})`);
+  socket.on('join-contest', ({ contestId, userId }: { contestId: string | number, userId: string | number }) => {
+    const contestIdStr = String(contestId);
+    const userIdStr = String(userId);
+    socket.join(`contest-${contestIdStr}`);
+    connectedUsers.set(socket.id, { contestId: contestIdStr, userId: userIdStr, role: 'participant' });
+    console.log(`🚪 User ${userIdStr} joined contest ${contestIdStr} (socket: ${socket.id})`);
     
     // Get room info using the server's adapter (not socket.io)
-    const roomSockets = io.sockets.adapter.rooms.get(`contest-${contestId}`);
-    console.log(`📊 Total participants in contest-${contestId}: ${roomSockets ? roomSockets.size : 0}`);
+    const roomSockets = io.sockets.adapter.rooms.get(`contest-${contestIdStr}`);
+    console.log(`📊 Total participants in contest-${contestIdStr}: ${roomSockets ? roomSockets.size : 0}`);
     
     // Notify admins in the room
-    io.to(`admin-contest-${contestId}`).emit('participant-joined', { userId, socketId: socket.id });
+    io.to(`admin-contest-${contestIdStr}`).emit('participant-joined', { userId: userIdStr, socketId: socket.id });
   });
 
-  socket.on('join-monitor', ({ contestId }: { contestId: string }) => {
-    socket.join(`admin-contest-${contestId}`);
-    console.log(`👨‍💼 Admin joined monitor for contest ${contestId} (socket: ${socket.id})`);
-    // Send list of currently connected participants
+  socket.on('join-monitor', ({ contestId }: { contestId: string | number }) => {
+    const contestIdStr = String(contestId);
+    socket.join(`admin-contest-${contestIdStr}`);
+    console.log(`👨‍💼 Admin joined monitor for contest ${contestIdStr} (socket: ${socket.id})`);
+    // Send list of currently connected participants (use String() to handle type mismatches)
     const participants = Array.from(connectedUsers.entries())
-      .filter(([_, data]) => data.contestId === contestId && data.role === 'participant')
+      .filter(([_, data]) => String(data.contestId) === contestIdStr && data.role === 'participant')
       .map(([sid, data]) => ({ socketId: sid, userId: data.userId }));
     console.log(`📋 Sending ${participants.length} active participants to admin`);
     socket.emit('active-participants', participants);

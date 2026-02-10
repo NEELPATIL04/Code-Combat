@@ -41,7 +41,7 @@ const ContestSettings: React.FC<ContestSettingsProps> = ({ contestId }) => {
         aiModeEnabled: true,
         fullScreenModeEnabled: true,
         allowCopyPaste: false,
-        enableActivityLogs: false,
+        enableActivityLogs: true,
         requireCamera: false,
         requireMicrophone: false,
         requireScreenShare: false,

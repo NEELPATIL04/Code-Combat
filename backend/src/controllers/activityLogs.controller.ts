@@ -34,12 +34,16 @@ export const logActivity = async (req: Request, res: Response, next: NextFunctio
       .where(eq(contestSettings.contestId, contestId))
       .limit(1);
 
-    // Only log if activity logging is enabled
-    if (settings && !settings.enableActivityLogs) {
-      return res.status(200).json({
-        success: true,
-        message: 'Activity logging is disabled for this contest',
-      });
+    // Only log if activity logging is enabled (or if no settings exist, default to logging)
+    if (settings && settings.enableActivityLogs === false) {
+      // Still allow critical activity types even when logging is disabled
+      const criticalTypes = ['task_submitted', 'contest_joined', 'contest_completed', 'screen_shift', 'copy_attempt'];
+      if (!criticalTypes.includes(activityType)) {
+        return res.status(200).json({
+          success: true,
+          message: 'Activity logging is disabled for this contest',
+        });
+      }
     }
 
     // Insert activity log
