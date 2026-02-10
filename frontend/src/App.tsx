@@ -33,6 +33,7 @@ import ParticipantDashboard from './pages/Participant/Dashboard';
 import ProfilePage from './pages/Participant/Profile';
 import SettingsPage from './pages/Participant/Settings';
 import ProblemsPage from './pages/Participant/Problems';
+import ProblemDetail from './pages/Participant/Problems/ProblemDetail';
 import ContestResults from './pages/Participant/ContestResults';
 
 const App: React.FC = () => {
@@ -82,6 +83,7 @@ const App: React.FC = () => {
                     }>
                         <Route path="/player" element={<ParticipantDashboard />} />
                         <Route path="/player/problems" element={<ProblemsPage />} />
+                        <Route path="/player/problems/:slug" element={<ProblemDetail />} />
                         <Route path="/profile" element={<ProfilePage />} />
                         <Route path="/settings" element={<SettingsPage />} />
                     </Route>
