@@ -219,6 +219,31 @@ export const getContestById = async (req: Request, res: Response, next: NextFunc
         .where(eq(contestParticipants.contestId, contestId)),
     ]);
 
+    // Get activity log counts for each participant
+    const { activityLogs } = await import('../db/schema');
+    const participantsWithLogs = await Promise.all(
+      participants.map(async (participant) => {
+        const logs = await db
+          .select()
+          .from(activityLogs)
+          .where(
+            and(
+              eq(activityLogs.contestId, contestId),
+              eq(activityLogs.userId, participant.userId)
+            )
+          );
+
+        const alertCount = logs.filter(log => log.severity === 'alert').length;
+        const warningCount = logs.filter(log => log.severity === 'warning').length;
+
+        return {
+          ...participant,
+          alertCount,
+          warningCount,
+        };
+      })
+    );
+
     // Check user role - only admins see hidden test cases
     const userRole = (req as any).user?.role;
     const isAdmin = userRole === 'admin' || userRole === 'super_admin';
@@ -237,7 +262,7 @@ export const getContestById = async (req: Request, res: Response, next: NextFunc
             : taskTestCases.filter(tc => !tc.isHidden).map(({ isHidden, ...tc }) => tc);
           return { ...task, testCases: filteredTestCases };
         })),
-        participants,
+        participants: participantsWithLogs,
       },
     });
   } catch (error) {

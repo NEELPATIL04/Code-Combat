@@ -28,8 +28,15 @@ interface Task {
 interface ContestInfo {
     title: string;
     participantName: string;
+    participantEmail: string;
     totalSubmissions: number;
     bestScore: number;
+}
+
+interface ActivityLogCounts {
+    alert: number;
+    warning: number;
+    normal: number;
 }
 
 const Submissions: React.FC = () => {
@@ -41,6 +48,7 @@ const Submissions: React.FC = () => {
     const [contestInfo, setContestInfo] = useState<ContestInfo | null>(null);
     const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
     const [loading, setLoading] = useState(true);
+    const [activityLogCounts, setActivityLogCounts] = useState<ActivityLogCounts>({ alert: 0, warning: 0, normal: 0 });
 
     // Task filter state
     const [tasks, setTasks] = useState<Task[]>([]);
@@ -65,8 +73,28 @@ const Submissions: React.FC = () => {
             loadContestTasks();
             loadSubmissions();
             loadContestSettings();
+            loadActivityLogs();
         }
     }, [id, contestId]);
+
+    const loadActivityLogs = async () => {
+        try {
+            const token = sessionStorage.getItem('token');
+            const response = await fetch(`/api/contests/${contestId}/activity/user/${id}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.severityCounts) {
+                    setActivityLogCounts(data.severityCounts);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load activity logs:', error);
+        }
+    };
 
     const loadContestSettings = async () => {
         try {
@@ -101,30 +129,30 @@ const Submissions: React.FC = () => {
             setLoading(true);
             const response = await adminAPI.getParticipantSubmissions(Number(id), Number(contestId));
             const subData = response.data.submissions;
+            const user = response.data.user;
+            const contest = response.data.contest;
 
             setSubmissions(subData);
             if (subData.length > 0) {
                 setSelectedSubmission(subData[0]);
-
-                // Calculate stats
-                const totalSubs = subData.length;
-                // Simple max score logic for demo, ideally fetching user details or contest details
-                const maxScore = Math.max(...subData.map((s: Submission) => s.score));
-
-                setContestInfo({
-                    title: `Contest #${contestId}`, // We might want to fetch actual contest title if available
-                    participantName: `Participant #${id}`, // Similarly for name
-                    totalSubmissions: totalSubs,
-                    bestScore: maxScore
-                });
-            } else {
-                setContestInfo({
-                    title: `Contest #${contestId}`,
-                    participantName: `Participant #${id}`,
-                    totalSubmissions: 0,
-                    bestScore: 0
-                });
             }
+
+            // Set contest info with proper user details
+            const displayName = user?.firstName && user?.lastName
+                ? `${user.firstName} ${user.lastName}`
+                : user?.username || `Participant #${id}`;
+
+            const contestTitle = contest?.title || `Contest #${contestId}`;
+            const totalSubs = subData.length;
+            const maxScore = subData.length > 0 ? Math.max(...subData.map((s: Submission) => s.score)) : 0;
+
+            setContestInfo({
+                title: contestTitle,
+                participantName: displayName,
+                participantEmail: user?.email || '',
+                totalSubmissions: totalSubs,
+                bestScore: maxScore
+            });
         } catch (error) {
             console.error("Failed to load submissions:", error);
             toast.error("Failed to load submissions");
@@ -269,6 +297,7 @@ const Submissions: React.FC = () => {
                     </h1>
                     <p style={{ margin: 0, fontSize: '0.875rem', color: '#a1a1aa' }}>
                         Submissions by {contestInfo?.participantName || 'Participant'}
+                        {contestInfo?.participantEmail && ` • ${contestInfo.participantEmail}`}
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -401,10 +430,39 @@ const Submissions: React.FC = () => {
             </header>
 
             <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-                {[{ label: 'Total Submissions', value: contestInfo?.totalSubmissions || 0 }, { label: 'Best Score', value: contestInfo?.bestScore || 0 }, { label: 'Filtered', value: filteredSubmissions.length }].map((stat, i) => (
+                {[
+                    { label: 'Total Submissions', value: contestInfo?.totalSubmissions || 0 },
+                    { label: 'Best Score', value: contestInfo?.bestScore || 0 },
+                    { label: 'Filtered', value: filteredSubmissions.length },
+                    {
+                        label: 'Contest Logs',
+                        value: `${activityLogCounts.alert} / ${activityLogCounts.warning}`,
+                        tooltip: 'Alerts / Warnings'
+                    }
+                ].map((stat, i) => (
                     <div key={i} style={{ textAlign: 'center', padding: '12px 20px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', flex: 1 }}>
-                        <span style={{ display: 'block', fontSize: '1.25rem', fontWeight: 700, color: '#fafafa', letterSpacing: '-0.025em' }}>{stat.value}</span>
-                        <span style={{ fontSize: '0.75rem', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</span>
+                        <span style={{
+                            fontSize: stat.label === 'Contest Logs' ? '1rem' : '1.25rem',
+                            fontWeight: 700,
+                            color: '#fafafa',
+                            letterSpacing: '-0.025em',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px'
+                        }}>
+                            {stat.label === 'Contest Logs' ? (
+                                <>
+                                    <span style={{ color: '#ef4444' }}>{activityLogCounts.alert}</span>
+                                    <span style={{ color: '#71717a', fontSize: '0.875rem' }}>/</span>
+                                    <span style={{ color: '#eab308' }}>{activityLogCounts.warning}</span>
+                                </>
+                            ) : stat.value}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            {stat.label}
+                            {stat.tooltip && ` (${stat.tooltip})`}
+                        </span>
                     </div>
                 ))}
             </div>

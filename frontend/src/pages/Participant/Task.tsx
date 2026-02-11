@@ -729,94 +729,367 @@ const MemoizedTestCases = React.memo<{
     testCases: TestCase[];
     activeTab: number;
     onTabChange: (index: number) => void;
-}>(({ testCases, activeTab, onTabChange }) => {
+    // Custom test case props
+    testCaseMode: 'preset' | 'custom';
+    onModeChange: (mode: 'preset' | 'custom') => void;
+    customTestCases: { input: string; expectedOutput: string; actualOutput?: string; consoleOutput?: string; passed?: boolean; executionTime?: number }[];
+    customTestCaseTab: number;
+    onCustomTabChange: (index: number) => void;
+    onAddCustomTestCase: () => void;
+    onRemoveCustomTestCase: (index: number) => void;
+    onUpdateCustomTestCase: (index: number, field: 'input' | 'expectedOutput', value: string) => void;
+    onRunCustom: () => void;
+    isRunningCustom: boolean;
+    isReviewMode?: boolean;
+}>(({ testCases, activeTab, onTabChange, testCaseMode, onModeChange, customTestCases, customTestCaseTab, onCustomTabChange, onAddCustomTestCase, onRemoveCustomTestCase, onUpdateCustomTestCase, onRunCustom, isRunningCustom, isReviewMode }) => {
     return (
         <>
+            {/* Mode Toggle: Preset vs Custom */}
             <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.06)', padding: '0 8px', background: 'rgba(255, 255, 255, 0.02)', gap: 2 }}>
-                <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255, 255, 255, 0.6)', padding: '8px 8px 8px 4px' }}>Testcase</span>
-                {testCases.map((tc, i) => (
-                    <button
-                        key={tc.id}
-                        onClick={() => onTabChange(i)}
-                        style={{
-                            padding: '6px 12px',
-                            background: activeTab === i ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-                            border: 'none',
-                            borderRadius: 4,
-                            color: activeTab === i ? '#fff' : 'rgba(255, 255, 255, 0.5)',
-                            fontSize: 12,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 4,
-                        }}
-                    >
-                        {tc.passed !== undefined && (
-                            tc.passed ? <Check size={12} style={{ color: '#34d399' }} /> : <X size={12} style={{ color: '#f87171' }} />
-                        )}
-                        Case {i + 1}
-                    </button>
-                ))}
-            </div>
+                <button
+                    onClick={() => onModeChange('preset')}
+                    style={{
+                        padding: '6px 12px',
+                        background: testCaseMode === 'preset' ? 'rgba(253, 230, 138, 0.15)' : 'transparent',
+                        border: testCaseMode === 'preset' ? '1px solid rgba(253, 230, 138, 0.3)' : '1px solid transparent',
+                        borderRadius: 4,
+                        color: testCaseMode === 'preset' ? '#FDE68A' : 'rgba(255, 255, 255, 0.5)',
+                        fontSize: 12,
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                    }}
+                >
+                    Testcases
+                </button>
+                <button
+                    onClick={() => onModeChange('custom')}
+                    style={{
+                        padding: '6px 12px',
+                        background: testCaseMode === 'custom' ? 'rgba(96, 165, 250, 0.15)' : 'transparent',
+                        border: testCaseMode === 'custom' ? '1px solid rgba(96, 165, 250, 0.3)' : '1px solid transparent',
+                        borderRadius: 4,
+                        color: testCaseMode === 'custom' ? '#60a5fa' : 'rgba(255, 255, 255, 0.5)',
+                        fontSize: 12,
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                    }}
+                >
+                    Custom
+                </button>
 
-            <div style={{ flex: 1, overflow: 'auto', padding: 12 }}>
-                {testCases[activeTab] && (
-                    <div style={{ fontFamily: 'monospace', fontSize: 13 }}>
-                        <div style={{ marginBottom: 12 }}>
-                            <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 11, marginBottom: 4 }}>Input</div>
-                            <div style={{ background: 'rgba(0, 0, 0, 0.3)', padding: 10, borderRadius: 4, color: 'rgba(255, 255, 255, 0.9)' }}>
-                                {testCases[activeTab].input}
-                            </div>
-                        </div>
-                        <div style={{ marginBottom: 12 }}>
-                            <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 11, marginBottom: 4 }}>Expected Output</div>
-                            <div style={{ background: 'rgba(0, 0, 0, 0.3)', padding: 10, borderRadius: 4, color: 'rgba(255, 255, 255, 0.9)' }}>
-                                {testCases[activeTab].expectedOutput}
-                            </div>
-                        </div>
-                        {testCases[activeTab].actualOutput && (
-                            <>
-                                {testCases[activeTab].consoleOutput && (
-                                    <div style={{ marginBottom: 12 }}>
-                                        <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 11, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#a78bfa' }} />
-                                            Stdout / Console
-                                        </div>
-                                        <div style={{
-                                            background: 'rgba(139, 92, 246, 0.08)',
-                                            border: '1px solid rgba(139, 92, 246, 0.2)',
-                                            padding: 10,
-                                            borderRadius: 4,
-                                            color: '#c4b5fd',
-                                            whiteSpace: 'pre-wrap',
-                                            wordBreak: 'break-all',
-                                            maxHeight: 120,
-                                            overflow: 'auto',
-                                        }}>
-                                            {testCases[activeTab].consoleOutput}
-                                        </div>
-                                    </div>
-                                )}
-                                <div>
-                                    <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 11, marginBottom: 4 }}>Your Output</div>
-                                <div style={{
-                                    background: testCases[activeTab].passed ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                    border: `1px solid ${testCases[activeTab].passed ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-                                    padding: 10,
+                {/* Tab pills for current mode */}
+                <div style={{ marginLeft: 8, display: 'flex', gap: 2, alignItems: 'center' }}>
+                    {testCaseMode === 'preset' ? (
+                        testCases.map((tc, i) => (
+                            <button
+                                key={tc.id}
+                                onClick={() => onTabChange(i)}
+                                style={{
+                                    padding: '4px 10px',
+                                    background: activeTab === i ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                                    border: 'none',
                                     borderRadius: 4,
-                                    color: testCases[activeTab].passed ? '#34d399' : '#f87171',
-                                }}>
-                                    {testCases[activeTab].actualOutput}
-                                    {testCases[activeTab].executionTime && (
-                                        <span style={{ marginLeft: 12, fontSize: 11, color: 'rgba(255, 255, 255, 0.4)' }}>
-                                            {testCases[activeTab].executionTime}ms
+                                    color: activeTab === i ? '#fff' : 'rgba(255, 255, 255, 0.5)',
+                                    fontSize: 11,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                }}
+                            >
+                                {tc.passed !== undefined && (
+                                    tc.passed ? <Check size={10} style={{ color: '#34d399' }} /> : <X size={10} style={{ color: '#f87171' }} />
+                                )}
+                                Case {i + 1}
+                            </button>
+                        ))
+                    ) : (
+                        <>
+                            {customTestCases.map((tc, i) => (
+                                <div
+                                    key={i}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 2,
+                                        padding: '4px 4px 4px 10px',
+                                        background: customTestCaseTab === i ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                                        borderRadius: 4,
+                                        cursor: 'pointer',
+                                    }}
+                                    onClick={() => onCustomTabChange(i)}
+                                >
+                                    {tc.passed !== undefined && (
+                                        tc.passed ? <Check size={10} style={{ color: '#34d399' }} /> : <X size={10} style={{ color: '#f87171' }} />
+                                    )}
+                                    <span style={{ fontSize: 11, color: customTestCaseTab === i ? '#fff' : 'rgba(255, 255, 255, 0.5)' }}>
+                                        C{i + 1}
+                                    </span>
+                                    {!isReviewMode && (
+                                        <span
+                                            onClick={(e) => { e.stopPropagation(); onRemoveCustomTestCase(i); }}
+                                            style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                width: 14,
+                                                height: 14,
+                                                borderRadius: 3,
+                                                color: 'rgba(255, 255, 255, 0.3)',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.15s',
+                                                marginLeft: 2,
+                                            }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255, 255, 255, 0.3)'; e.currentTarget.style.background = 'transparent'; }}
+                                            title="Remove test case"
+                                        >
+                                            <X size={10} />
                                         </span>
                                     )}
                                 </div>
+                            ))}
+                            {!isReviewMode && customTestCases.length < 10 && (
+                                <button
+                                    onClick={onAddCustomTestCase}
+                                    style={{
+                                        padding: '3px 8px',
+                                        background: 'rgba(96, 165, 250, 0.1)',
+                                        border: '1px solid rgba(96, 165, 250, 0.25)',
+                                        borderRadius: 4,
+                                        color: '#60a5fa',
+                                        fontSize: 12,
+                                        cursor: 'pointer',
+                                        lineHeight: 1,
+                                    }}
+                                    title="Add custom test case"
+                                >
+                                    +
+                                </button>
+                            )}
+                        </>
+                    )}
+                </div>
+
+                {/* Run Custom button */}
+                {testCaseMode === 'custom' && customTestCases.length > 0 && !isReviewMode && (
+                    <button
+                        onClick={onRunCustom}
+                        disabled={isRunningCustom}
+                        style={{
+                            marginLeft: 'auto',
+                            padding: '4px 12px',
+                            background: isRunningCustom ? 'rgba(96, 165, 250, 0.1)' : 'rgba(96, 165, 250, 0.15)',
+                            border: '1px solid rgba(96, 165, 250, 0.3)',
+                            borderRadius: 4,
+                            color: '#60a5fa',
+                            fontSize: 11,
+                            fontWeight: 600,
+                            cursor: isRunningCustom ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            transition: 'all 0.15s',
+                        }}
+                    >
+                        <Play size={10} />
+                        {isRunningCustom ? 'Running...' : 'Run Custom'}
+                    </button>
+                )}
+            </div>
+
+            {/* Content Area */}
+            <div style={{ flex: 1, overflow: 'auto', padding: 12 }}>
+                {testCaseMode === 'preset' ? (
+                    /* Preset test case view (existing) */
+                    testCases[activeTab] && (
+                        <div style={{ fontFamily: 'monospace', fontSize: 13 }}>
+                            <div style={{ marginBottom: 12 }}>
+                                <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 11, marginBottom: 4 }}>Input</div>
+                                <div style={{ background: 'rgba(0, 0, 0, 0.3)', padding: 10, borderRadius: 4, color: 'rgba(255, 255, 255, 0.9)', whiteSpace: 'pre-wrap' }}>
+                                    {testCases[activeTab].input}
+                                </div>
                             </div>
-                            </>
-                        )}
-                    </div>
+                            <div style={{ marginBottom: 12 }}>
+                                <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 11, marginBottom: 4 }}>Expected Output</div>
+                                <div style={{ background: 'rgba(0, 0, 0, 0.3)', padding: 10, borderRadius: 4, color: 'rgba(255, 255, 255, 0.9)', whiteSpace: 'pre-wrap' }}>
+                                    {testCases[activeTab].expectedOutput}
+                                </div>
+                            </div>
+                            {testCases[activeTab].actualOutput && (
+                                <>
+                                    {testCases[activeTab].consoleOutput && (
+                                        <div style={{ marginBottom: 12 }}>
+                                            <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 11, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#a78bfa' }} />
+                                                Stdout / Console
+                                            </div>
+                                            <div style={{
+                                                background: 'rgba(139, 92, 246, 0.08)',
+                                                border: '1px solid rgba(139, 92, 246, 0.2)',
+                                                padding: 10,
+                                                borderRadius: 4,
+                                                color: '#c4b5fd',
+                                                whiteSpace: 'pre-wrap',
+                                                wordBreak: 'break-all',
+                                                maxHeight: 120,
+                                                overflow: 'auto',
+                                            }}>
+                                                {testCases[activeTab].consoleOutput}
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div>
+                                        <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 11, marginBottom: 4 }}>Your Output</div>
+                                        <div style={{
+                                            background: testCases[activeTab].passed ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                            border: `1px solid ${testCases[activeTab].passed ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                                            padding: 10,
+                                            borderRadius: 4,
+                                            color: testCases[activeTab].passed ? '#34d399' : '#f87171',
+                                            whiteSpace: 'pre-wrap',
+                                        }}>
+                                            {testCases[activeTab].actualOutput}
+                                            {testCases[activeTab].executionTime && (
+                                                <span style={{ marginLeft: 12, fontSize: 11, color: 'rgba(255, 255, 255, 0.4)' }}>
+                                                    {testCases[activeTab].executionTime}ms
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )
+                ) : (
+                    /* Custom test case view */
+                    customTestCases.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '30px 20px', color: 'rgba(255, 255, 255, 0.4)' }}>
+                            <p style={{ margin: '0 0 12px', fontSize: 13 }}>No custom test cases yet</p>
+                            {!isReviewMode && (
+                                <button
+                                    onClick={onAddCustomTestCase}
+                                    style={{
+                                        padding: '8px 16px',
+                                        background: 'rgba(96, 165, 250, 0.1)',
+                                        border: '1px solid rgba(96, 165, 250, 0.3)',
+                                        borderRadius: 6,
+                                        color: '#60a5fa',
+                                        fontSize: 12,
+                                        fontWeight: 500,
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    + Add Test Case
+                                </button>
+                            )}
+                        </div>
+                    ) : customTestCases[customTestCaseTab] && (
+                        <div style={{ fontFamily: 'monospace', fontSize: 13 }}>
+                            {/* Input */}
+                            <div style={{ marginBottom: 12 }}>
+                                <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 11, marginBottom: 4 }}>
+                                    Input
+                                </div>
+                                <textarea
+                                    value={customTestCases[customTestCaseTab].input}
+                                    onChange={(e) => onUpdateCustomTestCase(customTestCaseTab, 'input', e.target.value)}
+                                    placeholder="Enter input..."
+                                    readOnly={isReviewMode}
+                                    style={{
+                                        width: '100%',
+                                        minHeight: 50,
+                                        background: 'rgba(0, 0, 0, 0.3)',
+                                        border: '1px solid rgba(96, 165, 250, 0.15)',
+                                        borderRadius: 4,
+                                        color: 'rgba(255, 255, 255, 0.9)',
+                                        padding: 10,
+                                        fontFamily: 'monospace',
+                                        fontSize: 13,
+                                        resize: 'vertical',
+                                        outline: 'none',
+                                        boxSizing: 'border-box',
+                                    }}
+                                    onFocus={(e: React.FocusEvent<HTMLTextAreaElement>) => { e.target.style.borderColor = 'rgba(96, 165, 250, 0.4)'; }}
+                                    onBlur={(e: React.FocusEvent<HTMLTextAreaElement>) => { e.target.style.borderColor = 'rgba(96, 165, 250, 0.15)'; }}
+                                />
+                            </div>
+
+                            {/* Expected Output */}
+                            <div style={{ marginBottom: 12 }}>
+                                <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 11, marginBottom: 4 }}>Expected Output</div>
+                                <textarea
+                                    value={customTestCases[customTestCaseTab].expectedOutput}
+                                    onChange={(e) => onUpdateCustomTestCase(customTestCaseTab, 'expectedOutput', e.target.value)}
+                                    placeholder="Enter expected output..."
+                                    readOnly={isReviewMode}
+                                    style={{
+                                        width: '100%',
+                                        minHeight: 50,
+                                        background: 'rgba(0, 0, 0, 0.3)',
+                                        border: '1px solid rgba(96, 165, 250, 0.15)',
+                                        borderRadius: 4,
+                                        color: 'rgba(255, 255, 255, 0.9)',
+                                        padding: 10,
+                                        fontFamily: 'monospace',
+                                        fontSize: 13,
+                                        resize: 'vertical',
+                                        outline: 'none',
+                                        boxSizing: 'border-box',
+                                    }}
+                                    onFocus={(e: React.FocusEvent<HTMLTextAreaElement>) => { e.target.style.borderColor = 'rgba(96, 165, 250, 0.4)'; }}
+                                    onBlur={(e: React.FocusEvent<HTMLTextAreaElement>) => { e.target.style.borderColor = 'rgba(96, 165, 250, 0.15)'; }}
+                                />
+                            </div>
+
+                            {/* Actual Output (after running) */}
+                            {customTestCases[customTestCaseTab].actualOutput && (
+                                <>
+                                    {customTestCases[customTestCaseTab].consoleOutput && (
+                                        <div style={{ marginBottom: 12 }}>
+                                            <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 11, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#a78bfa' }} />
+                                                Stdout / Console
+                                            </div>
+                                            <div style={{
+                                                background: 'rgba(139, 92, 246, 0.08)',
+                                                border: '1px solid rgba(139, 92, 246, 0.2)',
+                                                padding: 10,
+                                                borderRadius: 4,
+                                                color: '#c4b5fd',
+                                                whiteSpace: 'pre-wrap',
+                                                wordBreak: 'break-all',
+                                                maxHeight: 120,
+                                                overflow: 'auto',
+                                            }}>
+                                                {customTestCases[customTestCaseTab].consoleOutput}
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div>
+                                        <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 11, marginBottom: 4 }}>Your Output</div>
+                                        <div style={{
+                                            background: customTestCases[customTestCaseTab].passed ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                            border: `1px solid ${customTestCases[customTestCaseTab].passed ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                                            padding: 10,
+                                            borderRadius: 4,
+                                            color: customTestCases[customTestCaseTab].passed ? '#34d399' : '#f87171',
+                                            whiteSpace: 'pre-wrap',
+                                        }}>
+                                            {customTestCases[customTestCaseTab].actualOutput}
+                                            {customTestCases[customTestCaseTab].executionTime && (
+                                                <span style={{ marginLeft: 12, fontSize: 11, color: 'rgba(255, 255, 255, 0.4)' }}>
+                                                    {customTestCases[customTestCaseTab].executionTime}ms
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )
                 )}
             </div>
         </>
@@ -1624,6 +1897,10 @@ const TaskPage: React.FC = () => {
     const [showTestCases, setShowTestCases] = useState<boolean>(false);
     const [isRunning, setIsRunning] = useState<boolean>(false);
     const [testCases, setTestCases] = useState<TestCase[]>([]);
+    const [customTestCases, setCustomTestCases] = useState<{ input: string; expectedOutput: string; actualOutput?: string; consoleOutput?: string; passed?: boolean; executionTime?: number }[]>([]);
+    const [customTestCaseTab, setCustomTestCaseTab] = useState<number>(0);
+    const [isRunningCustom, setIsRunningCustom] = useState<boolean>(false);
+    const [testCaseMode, setTestCaseMode] = useState<'preset' | 'custom'>('preset');
 
     // Drag and Drop handlers
     const handleDragStart = useCallback((panel: PanelType) => (e: React.DragEvent) => {
@@ -2118,6 +2395,58 @@ const TaskPage: React.FC = () => {
         setIsRunning(false);
     }, [language, task]);
 
+    const handleRunCustom = useCallback(async () => {
+        if (isReviewMode) return;
+        if (customTestCases.length === 0) return;
+        const currentCode = codeRef.current;
+        console.log('Running code against custom test cases...');
+        setIsRunningCustom(true);
+        setShowTestCases(true);
+
+        try {
+            if (!task) throw new Error('Task not found');
+
+            const result = await submissionAPI.run({
+                taskId: task.id,
+                code: currentCode,
+                language: language,
+                customTestCases: customTestCases.map(tc => ({
+                    input: tc.input,
+                    expectedOutput: tc.expectedOutput,
+                })),
+            });
+
+            console.log('✅ Custom Run Result:', result);
+
+            if (result.success && result.data) {
+                const { results } = result.data;
+                setCustomTestCases(prev => prev.map((tc, index) => {
+                    const testResult = results[index];
+                    if (testResult) {
+                        return {
+                            ...tc,
+                            actualOutput: testResult.actualOutput || 'No output',
+                            consoleOutput: testResult.consoleOutput || '',
+                            passed: testResult.passed,
+                            executionTime: testResult.executionTime,
+                        };
+                    }
+                    return tc;
+                }));
+            }
+        } catch (error: any) {
+            console.error('❌ Custom run error:', error);
+            setCustomTestCases(prev => prev.map(tc => ({
+                ...tc,
+                actualOutput: `Error: ${error.message}`,
+                passed: false,
+                consoleOutput: '',
+            })));
+        }
+
+        setIsRunningCustom(false);
+    }, [language, task, customTestCases, isReviewMode]);
+
     const handleSubmit = useCallback(async () => {
         if (isReviewMode) return;
         const currentCode = codeRef.current;
@@ -2267,6 +2596,36 @@ const TaskPage: React.FC = () => {
         setTestCaseActiveTab(index);
     }, []);
 
+    const handleCustomTabChange = useCallback((index: number) => {
+        setCustomTestCaseTab(index);
+    }, []);
+
+    const handleAddCustomTestCase = useCallback(() => {
+        setCustomTestCases(prev => {
+            const next = [...prev, { input: '', expectedOutput: '' }];
+            setCustomTestCaseTab(next.length - 1);
+            return next;
+        });
+        setTestCaseMode('custom');
+        setShowTestCases(true);
+    }, []);
+
+    const handleRemoveCustomTestCase = useCallback((index: number) => {
+        setCustomTestCases(prev => {
+            const next = prev.filter((_, i) => i !== index);
+            setCustomTestCaseTab(t => Math.min(t, Math.max(0, next.length - 1)));
+            return next;
+        });
+    }, []);
+
+    const handleUpdateCustomTestCase = useCallback((index: number, field: 'input' | 'expectedOutput', value: string) => {
+        setCustomTestCases(prev => prev.map((tc, i) => i === index ? { ...tc, [field]: value, actualOutput: undefined, consoleOutput: undefined, passed: undefined, executionTime: undefined } : tc));
+    }, []);
+
+    const handleTestCaseModeChange = useCallback((mode: 'preset' | 'custom') => {
+        setTestCaseMode(mode);
+    }, []);
+
     const handleDescriptionTabChange = useCallback((tab: 'description' | 'submissions') => {
         setLeftActiveTab(tab);
     }, []);
@@ -2359,6 +2718,17 @@ const TaskPage: React.FC = () => {
                         testCases={testCases}
                         activeTab={testCaseActiveTab}
                         onTabChange={handleTestCaseTabChange}
+                        testCaseMode={testCaseMode}
+                        onModeChange={handleTestCaseModeChange}
+                        customTestCases={customTestCases}
+                        customTestCaseTab={customTestCaseTab}
+                        onCustomTabChange={handleCustomTabChange}
+                        onAddCustomTestCase={handleAddCustomTestCase}
+                        onRemoveCustomTestCase={handleRemoveCustomTestCase}
+                        onUpdateCustomTestCase={handleUpdateCustomTestCase}
+                        onRunCustom={handleRunCustom}
+                        isRunningCustom={isRunningCustom}
+                        isReviewMode={isReviewMode}
                     />
                 )}
             </div>

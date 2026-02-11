@@ -36,6 +36,8 @@ interface ParticipantPerformance {
     hasStarted: boolean;
     startedAt: string | null;
     score: number;
+    alertCount?: number;
+    warningCount?: number;
 }
 
 interface ContestDetailsData {
@@ -441,6 +443,7 @@ const ContestDetails: React.FC = () => {
                                 <th style={thStyle}>Started At</th>
                                 <th style={thStyle}>Score</th>
                                 <th style={thStyle}>Performance</th>
+                                <th style={thStyle}>Logs</th>
                                 <th style={thStyle}>Actions</th>
                             </tr>
                         </thead>
@@ -449,7 +452,7 @@ const ContestDetails: React.FC = () => {
                                 const totalMaxPoints = contest.tasks?.reduce((sum: number, t: any) => sum + (t.maxPoints || 100), 0) || 0;
                                 return filteredParticipants.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} style={{ padding: '60px', textAlign: 'center', color: '#71717a' }}>
+                                    <td colSpan={7} style={{ padding: '60px', textAlign: 'center', color: '#71717a' }}>
                                         No participants match your search.
                                     </td>
                                 </tr>
@@ -548,6 +551,37 @@ const ContestDetails: React.FC = () => {
                                                     </div>
                                                 );
                                             })()}
+                                        </td>
+                                        <td style={tdStyle}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem' }}>
+                                                <span style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                    padding: '4px 8px',
+                                                    borderRadius: '6px',
+                                                    background: 'rgba(239, 68, 68, 0.1)',
+                                                    color: '#ef4444',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 600
+                                                }}>
+                                                    {p.alertCount || 0}
+                                                </span>
+                                                <span style={{ color: '#71717a', fontSize: '0.75rem' }}>/</span>
+                                                <span style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                    padding: '4px 8px',
+                                                    borderRadius: '6px',
+                                                    background: 'rgba(234, 179, 8, 0.1)',
+                                                    color: '#eab308',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 600
+                                                }}>
+                                                    {p.warningCount || 0}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td style={tdStyle}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative' }}>

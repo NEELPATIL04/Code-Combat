@@ -12,7 +12,7 @@ import { Server } from 'socket.io';
  */
 export const runCode = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { taskId, code, language } = req.body;
+    const { taskId, code, language, customTestCases } = req.body;
     // const userId = (req as any).user?.userId; // Unused in runCode
 
     if (!taskId || !code || !language) {
@@ -36,31 +36,50 @@ export const runCode = async (req: Request, res: Response, next: NextFunction) =
       });
     }
 
-    // Get ONLY VISIBLE test cases for Run (not hidden ones)
-    const taskTestCases = await db
-      .select()
-      .from(testCases)
-      .where(and(eq(testCases.taskId, taskId), eq(testCases.isHidden, false)))
-      .orderBy(testCases.orderIndex);
+    // If custom test cases are provided, use them; otherwise fetch from DB
+    let casesToRun: { input: string; expectedOutput: string }[] = [];
 
-    if (taskTestCases.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'No test cases found for this task',
-      });
+    if (Array.isArray(customTestCases) && customTestCases.length > 0) {
+      // Validate custom test cases
+      for (const tc of customTestCases) {
+        if (typeof tc.input !== 'string' || typeof tc.expectedOutput !== 'string') {
+          return res.status(400).json({
+            success: false,
+            message: 'Each custom test case must have input and expectedOutput strings',
+          });
+        }
+      }
+      casesToRun = customTestCases.map((tc: any) => ({ input: tc.input, expectedOutput: tc.expectedOutput }));
+      console.log(`📋 Running ${casesToRun.length} CUSTOM test cases for task ${taskId}`);
+    } else {
+      // Get ONLY VISIBLE test cases for Run (not hidden ones)
+      const taskTestCases = await db
+        .select()
+        .from(testCases)
+        .where(and(eq(testCases.taskId, taskId), eq(testCases.isHidden, false)))
+        .orderBy(testCases.orderIndex);
+
+      if (taskTestCases.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No test cases found for this task',
+        });
+      }
+      casesToRun = taskTestCases.map(tc => ({ input: tc.input, expectedOutput: tc.expectedOutput }));
     }
 
     // Get test runner template for this language
     const testRunnerTemplate = task.testRunnerTemplate?.[language];
 
     // Log for debugging
-    console.log('📋 Task Details (Run - visible only):', {
+    console.log('📋 Task Details (Run):', {
       taskId: task.id,
       functionName: task.functionName,
       language,
       hasTestRunnerTemplate: !!testRunnerTemplate,
       availableLanguages: task.testRunnerTemplate ? Object.keys(task.testRunnerTemplate) : [],
-      visibleTestCaseCount: taskTestCases.length,
+      testCaseCount: casesToRun.length,
+      isCustom: Array.isArray(customTestCases) && customTestCases.length > 0,
     });
 
     // Execute code against test cases
@@ -69,10 +88,7 @@ export const runCode = async (req: Request, res: Response, next: NextFunction) =
       language,
       functionName: task.functionName || undefined,
       testRunnerTemplate,
-      testCases: taskTestCases.map(tc => ({
-        input: tc.input,
-        expectedOutput: tc.expectedOutput,
-      })),
+      testCases: casesToRun,
     });
 
     const passedCount = results.filter(r => r.passed).length;

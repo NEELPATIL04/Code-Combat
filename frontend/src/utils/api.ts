@@ -414,6 +414,7 @@ export const submissionAPI = {
     taskId: number;
     code: string;
     language: string;
+    customTestCases?: { input: string; expectedOutput: string }[];
   }) => {
     const response = await fetch(`${API_BASE_URL}/submissions/run`, {
       method: 'POST',
