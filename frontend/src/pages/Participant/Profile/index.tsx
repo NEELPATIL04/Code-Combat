@@ -408,7 +408,7 @@ const ProfilePage: React.FC = () => {
                             {history.map((contest, index) => (
                                 <div
                                     key={contest.contestId}
-                                    onClick={() => navigate(`/contest/${contest.contestId}?mode=review`)}
+                                    onClick={() => navigate(`/contest/${contest.contestId}/results`)}
                                     style={{
                                         padding: '16px 24px',
                                         borderBottom: index !== history.length - 1 ? '1px solid rgba(255, 255, 255, 0.04)' : 'none',

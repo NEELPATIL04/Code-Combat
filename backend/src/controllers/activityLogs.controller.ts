@@ -9,36 +9,6 @@ import { eq, and, desc } from 'drizzle-orm';
  */
 
 /**
- * Determine severity level based on activity type
- */
-const getSeverityForActivity = (activityType: string): 'normal' | 'warning' | 'alert' => {
-  // Alert-level activities (critical violations)
-  const alertActivities = [
-    'exit_fullscreen',
-    'tab_switch',
-    'screen_shift',
-  ];
-
-  // Warning-level activities (suspicious but not critical)
-  const warningActivities = [
-    'copy_attempt',
-    'paste_attempt',
-    'cut_attempt',
-    'task_submitted',
-    'tab_focus',
-    'monitor_audio_muted',
-  ];
-
-  if (alertActivities.includes(activityType)) {
-    return 'alert';
-  } else if (warningActivities.includes(activityType)) {
-    return 'warning';
-  } else {
-    return 'normal';
-  }
-};
-
-/**
  * Log user activity
  * POST /api/contests/:id/activity
  */
@@ -76,9 +46,6 @@ export const logActivity = async (req: Request, res: Response, next: NextFunctio
       }
     }
 
-    // Auto-determine severity if not provided
-    const determinedSeverity = severity || getSeverityForActivity(activityType);
-
     // Insert activity log
     const [log] = await db
       .insert(activityLogs)
@@ -87,7 +54,7 @@ export const logActivity = async (req: Request, res: Response, next: NextFunctio
         userId,
         activityType,
         activityData: activityData || null,
-        severity: determinedSeverity,
+        severity: severity || 'normal',
       })
       .returning();
 
@@ -174,18 +141,10 @@ export const getUserActivityLogs = async (req: Request, res: Response, next: Nex
       )
       .orderBy(desc(activityLogs.timestamp));
 
-    // Calculate severity counts
-    const severityCounts = {
-      alert: logs.filter(log => log.severity === 'alert').length,
-      warning: logs.filter(log => log.severity === 'warning').length,
-      normal: logs.filter(log => log.severity === 'normal').length,
-    };
-
     return res.status(200).json({
       success: true,
       count: logs.length,
       logs,
-      severityCounts,
     });
   } catch (error) {
     next(error);

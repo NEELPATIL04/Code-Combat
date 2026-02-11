@@ -11,45 +11,21 @@ export const getParticipantSubmissions = async (req: Request, res: Response, nex
     try {
         const { userId, contestId } = req.params;
 
-        const [userSubmissions, userData, contestData] = await Promise.all([
-            db
-                .select()
-                .from(submissions)
-                .where(
-                    and(
-                        eq(submissions.userId, parseInt(String(userId))),
-                        eq(submissions.contestId, parseInt(String(contestId)))
-                    )
+        const userSubmissions = await db
+            .select()
+            .from(submissions)
+            .where(
+                and(
+                    eq(submissions.userId, parseInt(String(userId))),
+                    eq(submissions.contestId, parseInt(String(contestId)))
                 )
-                .orderBy(desc(submissions.submittedAt)),
-            db
-                .select({
-                    username: users.username,
-                    email: users.email,
-                    firstName: users.firstName,
-                    lastName: users.lastName,
-                })
-                .from(users)
-                .where(eq(users.id, parseInt(String(userId))))
-                .limit(1),
-            db
-                .select({
-                    title: contests.title,
-                })
-                .from(contests)
-                .where(eq(contests.id, parseInt(String(contestId))))
-                .limit(1),
-        ]);
-
-        const user = userData[0] || null;
-        const contest = contestData[0] || null;
+            )
+            .orderBy(desc(submissions.submittedAt));
 
         return res.json({
             success: true,
             data: {
                 submissions: userSubmissions,
-                user,
-                contest,
             },
         });
     } catch (error) {

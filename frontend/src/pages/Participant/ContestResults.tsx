@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Trophy, CheckCircle2, XCircle, Clock, Code, Lightbulb, Target, TrendingUp, Award, Home, Calendar, BarChart3, Zap, CheckCheck } from 'lucide-react';
-import { contestAPI } from '../../utils/api';
+import { contestAPI, userAPI } from '../../utils/api';
 import { useToast } from '../../components/Toast/ToastProvider';
 
 interface TaskResult {
@@ -59,20 +59,61 @@ const ContestResults: React.FC = () => {
       }
 
       try {
-        const response = await contestAPI.getById(parseInt(contestId));
         const resultsResponse = await fetch(`/api/contests/${contestId}/results`, {
           headers: {
             'Authorization': `Bearer ${sessionStorage.getItem('token')}`,
           },
         });
 
-        if (!resultsResponse.ok) {
-          throw new Error('Failed to fetch results');
-        }
+        if (resultsResponse.ok) {
+          const data = await resultsResponse.json();
+          setContest(data.contest);
+          setResults(data.results);
+        } else {
+          // Fallback: use getUserContestDetails API for contests without formal results
+          const detailData = await userAPI.getContestDetails(parseInt(contestId));
+          const contestInfo = detailData.contest;
+          const tasks = detailData.tasks || [];
 
-        const data = await resultsResponse.json();
-        setContest(data.contest);
-        setResults(data.results);
+          // Build a ContestResultData-compatible object from the fallback data
+          const totalScore = tasks.reduce((sum: number, t: any) => sum + (t.score || 0), 0);
+          const totalPossible = tasks.reduce((sum: number, t: any) => sum + (t.maxPoints || 0), 0);
+          const completed = tasks.filter((t: any) => t.status === 'accepted').length;
+
+          setContest({
+            id: parseInt(contestId),
+            title: contestInfo.title,
+            difficulty: contestInfo.difficulty,
+            duration: 0,
+          });
+
+          setResults({
+            id: 0,
+            contestId: parseInt(contestId),
+            userId: 0,
+            totalScore,
+            totalPossibleScore: totalPossible,
+            percentageScore: totalPossible > 0 ? Math.round((totalScore / totalPossible) * 100) : 0,
+            tasksCompleted: completed,
+            totalTasks: tasks.length,
+            completionPercentage: tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0,
+            taskResults: tasks.map((t: any) => ({
+              taskId: t.taskId,
+              title: t.taskTitle,
+              completed: t.status === 'accepted',
+              submissions: 0,
+              aiHintsUsed: t.hintsUsed || 0,
+              solutionUnlocked: t.solutionUsed || false,
+              testCasesPassed: t.passedTests || 0,
+              totalTestCases: t.totalTests || 0,
+              score: t.score || 0,
+              maxPoints: t.maxPoints || 0,
+            })),
+            startedAt: contestInfo.startedAt || new Date().toISOString(),
+            completedAt: contestInfo.completedAt || new Date().toISOString(),
+            timeTaken: 0,
+          });
+        }
       } catch (error) {
         console.error('Error fetching contest results:', error);
         showToast('Failed to load contest results', 'error');

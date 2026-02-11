@@ -3,21 +3,18 @@
  * Provides helpers for making authenticated API requests
  */
 
-// Backend mode from environment variable
-const backendMode = import.meta.env.VITE_BACKEND_MODE || 'local';
-
-// Use relative URL for API calls (Vite proxy will handle routing)
-// Vite proxy automatically routes /api/* to the correct backend based on mode
+// Always use relative URLs - nginx (production) or Vite (dev) will proxy to backend
 const API_BASE_URL = '/api';
 
-// Get actual backend URL for logging
-const LOCAL_BACKEND = import.meta.env.VITE_LOCAL_BACKEND_URL || 'http://localhost:5000/api';
-const LIVE_BACKEND = import.meta.env.VITE_LIVE_BACKEND_URL || 'http://49.13.223.175:5000/api';
-const actualBackend = backendMode === 'live' ? LIVE_BACKEND : LOCAL_BACKEND;
+// Auto-detect environment for logging
+const isLocalhost = typeof window !== 'undefined' &&
+                   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-// Log current backend mode for debugging
-console.log(`🔗 API Mode: ${backendMode.toUpperCase()} → ${actualBackend}`);
-console.log(`📡 Requests go to: ${API_BASE_URL} (proxied by Vite)`);
+// Log current mode for debugging (only in development)
+if (import.meta.env.DEV) {
+  console.log(`🔗 API Mode: ${isLocalhost ? 'DEVELOPMENT' : 'PRODUCTION'}`);
+  console.log(`📡 Requests go to: ${API_BASE_URL} (${isLocalhost ? 'Vite proxy' : 'nginx proxy'})`);
+}
 
 /**
  * Get authorization headers with JWT token

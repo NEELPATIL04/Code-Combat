@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Play, Send, XCircle, Clock, ChevronRight, Check, X, GripHorizontal, Minimize2, Lightbulb, Brain, Unlock, Lock, MessageSquare, CheckCircle2, Pause, StopCircle } from 'lucide-react';
+import { Play, Send, XCircle, Clock, ChevronRight, Check, X, GripHorizontal, Minimize2, Lightbulb, Brain, Unlock, Lock, MessageSquare, CheckCircle2, Pause, StopCircle, RotateCcw, LogOut, AlertTriangle } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import MediaCheckHelper from '../../components/MediaCheckHelper';
 import TaskSidebar from '../../components/TaskSidebar';
@@ -103,6 +103,8 @@ interface MemoizedCodeEditorProps {
     allowCopyPaste?: boolean;
     onCopyPasteAttempt?: (type: 'copy' | 'paste' | 'cut') => void;
     readOnly?: boolean;
+    onResetCode?: () => void;
+    codeVersion?: number;
 }
 
 // Memoized Code Editor component to prevent re-renders
@@ -130,7 +132,12 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
     allowCopyPaste = true,
     onCopyPasteAttempt,
     readOnly = false,
+    onResetCode,
+    codeVersion = 0,
 }) => {
+    // Reset confirmation popup state
+    const [showResetConfirm, setShowResetConfirm] = React.useState(false);
+
     // Lock/unlock state — only lock when there's a real positive threshold
     const hintThreshold = Number(hintUnlockAfterSubmissions) || 0;
     const solutionThreshold = Number(solutionUnlockAfterSubmissions) || 0;
@@ -190,15 +197,84 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
                         ))}
                     </select>
                 </div>
-                <span style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.4)', fontFamily: 'monospace' }}>
-                    solution.{getFileExtension(language)}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.4)', fontFamily: 'monospace' }}>
+                        solution.{getFileExtension(language)}
+                    </span>
+                    {!readOnly && onResetCode && (
+                        <div style={{ position: 'relative' }}>
+                            <button
+                                onClick={() => setShowResetConfirm(true)}
+                                title="Reset code to boilerplate"
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px',
+                                    background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    borderRadius: 5, color: 'rgba(255, 255, 255, 0.6)', fontSize: 11, cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
+                                    e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                                    e.currentTarget.style.color = '#f87171';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)';
+                                }}
+                            >
+                                <RotateCcw size={12} />
+                                Reset
+                            </button>
+
+                            {/* Reset Confirmation Popup */}
+                            {showResetConfirm && (
+                                <div style={{
+                                    position: 'absolute', top: '100%', right: 0, marginTop: 6, zIndex: 100,
+                                    background: '#1a1a2e', border: '1px solid rgba(239, 68, 68, 0.3)',
+                                    borderRadius: 10, padding: '14px 18px', minWidth: 260,
+                                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                                        <RotateCcw size={16} style={{ color: '#f87171' }} />
+                                        <span style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>Reset Code?</span>
+                                    </div>
+                                    <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, margin: '0 0 14px 0', lineHeight: 1.5 }}>
+                                        This will replace your current code with the original boilerplate. Your changes will be lost.
+                                    </p>
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                                        <button
+                                            onClick={() => setShowResetConfirm(false)}
+                                            style={{
+                                                padding: '5px 14px', background: 'rgba(255,255,255,0.06)',
+                                                border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6,
+                                                color: 'rgba(255,255,255,0.7)', fontSize: 12, cursor: 'pointer',
+                                            }}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={() => { onResetCode(); setShowResetConfirm(false); }}
+                                            style={{
+                                                padding: '5px 14px', background: 'rgba(239, 68, 68, 0.2)',
+                                                border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: 6,
+                                                color: '#f87171', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                            }}
+                                        >
+                                            Yes, Reset
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Monaco Editor */}
             <div style={{ flex: 1, overflow: 'hidden' }}>
                 <Editor
-                    key={`${taskId}-${language}`}
+                    key={`${taskId}-${language}-${codeVersion}`}
                     height="100%"
                     language={language}
                     defaultValue={code}
@@ -409,6 +485,7 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
     return (
         prevProps.taskId === nextProps.taskId &&
         prevProps.language === nextProps.language &&
+        prevProps.codeVersion === nextProps.codeVersion &&
         prevProps.isRunning === nextProps.isRunning &&
         prevProps.isGeneratingHint === nextProps.isGeneratingHint &&
         prevProps.isGeneratingSolution === nextProps.isGeneratingSolution &&
@@ -1118,6 +1195,7 @@ const TaskPage: React.FC = () => {
     // will set the correct boilerplate/saved code once the task loads from the backend.
     const [language, setLanguage] = useState<string>('javascript');
     const [code, setCode] = useState<string>('');
+    const [codeVersion, setCodeVersion] = useState<number>(0); // incremented on programmatic code changes to force editor remount
     const codeRef = useRef<string>(code);
     const debounceTimer = useRef<any>(null);
 
@@ -1163,6 +1241,9 @@ const TaskPage: React.FC = () => {
     const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
     const [showLockout, setShowLockout] = useState<boolean>(false);
     const hasExited = useRef<boolean>(false);
+
+    // Exit confirmation state
+    const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
 
     // Contest state (pause/end)
     const [contestPaused, setContestPaused] = useState<boolean>(false);
@@ -1867,9 +1948,21 @@ const TaskPage: React.FC = () => {
             }
         };
 
+        // Push a dummy history entry so browser back/swipe-left triggers popstate
+        // instead of immediately leaving the page
+        window.history.pushState({ contestGuard: true }, '');
+
+        const handlePopState = (_e: PopStateEvent) => {
+            if (hasExited.current) return;
+            // Re-push the guard entry so subsequent back attempts are also caught
+            window.history.pushState({ contestGuard: true }, '');
+            setShowExitConfirm(true);
+        };
+
         // Add listeners
         window.addEventListener('keydown', handleKeyDown, { capture: true });
         window.addEventListener('beforeunload', handleBeforeUnload);
+        window.addEventListener('popstate', handlePopState);
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         document.addEventListener('visibilitychange', handleVisibilityChange);
         document.addEventListener('contextmenu', handleContextMenu);
@@ -1882,6 +1975,7 @@ const TaskPage: React.FC = () => {
         return () => {
             window.removeEventListener('keydown', handleKeyDown, { capture: true });
             window.removeEventListener('beforeunload', handleBeforeUnload);
+            window.removeEventListener('popstate', handlePopState);
             document.removeEventListener('fullscreenchange', handleFullscreenChange);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             document.removeEventListener('contextmenu', handleContextMenu);
@@ -2042,10 +2136,26 @@ const TaskPage: React.FC = () => {
                     console.log('📋 First task boilerplate code:', data.tasks[0].boilerplateCode);
                     console.log('🔧 First task wrapper/testRunner:', data.tasks[0].testRunnerTemplate);
 
+                    const firstTask = data.tasks[0];
                     setTasks(data.tasks);
-                    setTask(data.tasks[0]);
+                    setTask(firstTask);
                     setCurrentTaskIndex(0);
                     setContest(data.contest);
+
+                    // Initialize language and code immediately so editor mounts with correct boilerplate
+                    {
+                        const savedLang = localStorage.getItem(`task_${contestId}_${firstTask.id}_language`);
+                        const savedCode = localStorage.getItem(`task_${contestId}_${firstTask.id}_code`);
+                        const effectiveLang = (savedLang && firstTask.allowedLanguages?.includes(savedLang))
+                            ? savedLang
+                            : (firstTask.allowedLanguages?.[0] || 'javascript');
+                        const boiler = firstTask.boilerplateCode?.[effectiveLang] || '';
+                        const initialCode = (savedCode && savedCode !== boiler && savedCode.trim() !== '') ? savedCode : boiler;
+                        console.log('🚀 Initial load — setting language:', effectiveLang, 'code length:', initialCode.length);
+                        setLanguage(effectiveLang);
+                        setCode(initialCode);
+                        codeRef.current = initialCode;
+                    }
 
                     // Merge settings from tasks endpoint (ensures AI settings are available)
                     if (data.settings) {
@@ -2139,26 +2249,35 @@ const TaskPage: React.FC = () => {
         console.log('🔀 Switching to task:', newTask.id, newTask.title);
         console.log('📦 Boilerplate available:', newTask.boilerplateCode ? Object.keys(newTask.boilerplateCode) : 'None');
 
-        setTask(newTask);
         setCurrentTaskIndex(index);
         setShowShiftWarning(false);
         setPendingTaskIndex(null);
         setLatestSubmissionResult(null); // Clear previous task's submission result
         setShowSubmittedCode(false); // Close the code viewer
 
-        // Load last submitted code if this task was submitted before
+        // Compute language and code BEFORE setTask so everything batches into one render
+        const savedLang = localStorage.getItem(`task_${contestId}_${newTask.id}_language`);
+        const savedCode = localStorage.getItem(`task_${contestId}_${newTask.id}_code`);
+        const effectiveLang = (savedLang && newTask.allowedLanguages?.includes(savedLang))
+            ? savedLang
+            : (newTask.allowedLanguages?.[0] || language);
+
+        let newCode = '';
         if (submittedTasks.has(newTask.id)) {
             console.log('📝 Loading previously submitted code for this task');
-            setCode(submittedTasks.get(newTask.id) || '');
-            codeRef.current = submittedTasks.get(newTask.id) || '';
+            newCode = submittedTasks.get(newTask.id) || '';
+        } else if (savedCode && savedCode.trim() !== '') {
+            newCode = savedCode;
         } else {
-            // Load boilerplate if available
-            const boiler = newTask.boilerplateCode?.[language] || '';
-            console.log('🎯 Loading boilerplate for', language, ':', boiler ? `${boiler.length} chars` : 'Empty/Not found');
-            console.log('📄 Boilerplate preview:', boiler.substring(0, 100));
-            setCode(boiler);
-            codeRef.current = boiler;
+            const boiler = newTask.boilerplateCode?.[effectiveLang] || '';
+            console.log('🎯 Loading boilerplate for', effectiveLang, ':', boiler ? `${boiler.length} chars` : 'Empty/Not found');
+            newCode = boiler;
         }
+
+        setLanguage(effectiveLang);
+        setCode(newCode);
+        codeRef.current = newCode;
+        setTask(newTask);
 
         // Load test cases for new task
         if (newTask.testCases && newTask.testCases.length > 0) {
@@ -2335,6 +2454,23 @@ const TaskPage: React.FC = () => {
             }
         }
     }, [task, contestId]);
+
+    // Reset code to boilerplate for current language
+    const handleResetCode = useCallback(() => {
+        if (!task) return;
+        const boilerplate = task.boilerplateCode?.[language] || '';
+        setCode(boilerplate);
+        codeRef.current = boilerplate;
+        setCodeVersion(v => v + 1); // force editor remount with new defaultValue
+        // Also update localStorage so a refresh keeps the reset
+        if (task?.id) {
+            if (boilerplate) {
+                localStorage.setItem(`task_${contestId}_${task.id}_code`, boilerplate);
+            } else {
+                localStorage.removeItem(`task_${contestId}_${task.id}_code`);
+            }
+        }
+    }, [task, language, contestId]);
 
     // Memoized editor change handler to prevent re-renders
     const handleCodeChange = useCallback((value: string | undefined) => {
@@ -2710,6 +2846,8 @@ const TaskPage: React.FC = () => {
                         allowCopyPaste={contestSettings?.allowCopyPaste ?? false}
                         onCopyPasteAttempt={handleCopyPasteAttempt}
                         readOnly={isReviewMode}
+                        onResetCode={handleResetCode}
+                        codeVersion={codeVersion}
                     />
                 )}
 
@@ -2922,11 +3060,7 @@ const TaskPage: React.FC = () => {
                                 Submit Task
                             </button>
                             <button
-                                onClick={async () => {
-                                    if (window.confirm('Are you sure you want to finish the contest? This will mark it as completed.')) {
-                                        await handleFinishContest();
-                                    }
-                                }}
+                                onClick={() => setShowExitConfirm(true)}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
@@ -3065,6 +3199,104 @@ const TaskPage: React.FC = () => {
                             >
                                 Re-enter Full Screen
                             </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Exit Confirmation Overlay */}
+                {showExitConfirm && (
+                    <div style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        background: 'rgba(0, 0, 0, 0.85)',
+                        backdropFilter: 'blur(6px)',
+                        zIndex: 10001,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 20,
+                    }}>
+                        <div style={{
+                            background: '#111113',
+                            border: '1px solid rgba(239, 68, 68, 0.25)',
+                            borderRadius: 16,
+                            padding: '36px 32px',
+                            maxWidth: 420,
+                            width: '100%',
+                            boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
+                            fontFamily: "'DM Sans', sans-serif",
+                            textAlign: 'center',
+                        }}>
+                            <div style={{
+                                width: 64, height: 64, borderRadius: '50%',
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                margin: '0 auto 20px',
+                            }}>
+                                <AlertTriangle size={32} style={{ color: '#f87171' }} />
+                            </div>
+                            <h2 style={{ fontSize: 22, fontWeight: 700, color: '#fff', marginBottom: 10 }}>
+                                Leave Contest?
+                            </h2>
+                            <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 14, lineHeight: 1.6, marginBottom: 28 }}>
+                                Are you sure you want to exit the contest? Your progress has been saved, but leaving will end your session.
+                            </p>
+                            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+                                <button
+                                    onClick={() => {
+                                        setShowExitConfirm(false);
+                                    }}
+                                    style={{
+                                        flex: 1, padding: '12px 20px',
+                                        background: 'rgba(255,255,255,0.06)',
+                                        border: '1px solid rgba(255,255,255,0.12)',
+                                        borderRadius: 10,
+                                        color: 'rgba(255,255,255,0.8)',
+                                        fontSize: 14, fontWeight: 600,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                                    }}
+                                >
+                                    Stay in Contest
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        setShowExitConfirm(false);
+                                        hasExited.current = true;
+                                        await handleFinishContest();
+                                    }}
+                                    style={{
+                                        flex: 1, padding: '12px 20px',
+                                        background: 'rgba(239, 68, 68, 0.2)',
+                                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                                        borderRadius: 10,
+                                        color: '#f87171',
+                                        fontSize: 14, fontWeight: 600,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                                    }}
+                                >
+                                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                        <LogOut size={16} />
+                                        Yes, Leave
+                                    </span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
