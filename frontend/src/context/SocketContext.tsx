@@ -15,13 +15,12 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [isConnected, setIsConnected] = useState(false);
 
     useEffect(() => {
-        // Socket URL - in dev Vite proxy handles it, in prod nginx proxies /socket.io/
-        const backendMode = import.meta.env.VITE_BACKEND_MODE || 'local';
+        // Auto-detect environment: if running on localhost, use local backend; otherwise use same origin (nginx proxies /socket.io/)
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         const localBackend = import.meta.env.VITE_LOCAL_BACKEND_URL?.replace('/api', '') || 'http://localhost:5000';
-        // In production, connect to same origin (nginx proxies /socket.io/ to backend)
-        const socketUrl = backendMode === 'live' ? window.location.origin : localBackend;
+        const socketUrl = isLocal ? localBackend : window.location.origin;
 
-        console.log(`🔌 Socket connecting to: ${socketUrl}`);
+        console.log(`🔌 Socket connecting to: ${socketUrl} (${isLocal ? 'local' : 'production'})`);
 
         const socketInstance = io(socketUrl, {
             withCredentials: true,
