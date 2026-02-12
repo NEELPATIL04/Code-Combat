@@ -184,6 +184,18 @@ export const tasks = pgTable('tasks', {
     hintThreshold: 2,
     solutionThreshold: 5
   }),
+
+  // AI Evaluation Configuration
+  // Defines what concepts/patterns the admin expects in the solution and how much weight AI eval carries
+  aiEvalConfig: json('ai_eval_config').$type<{
+    enabled: boolean;
+    weight: number; // Percentage of total score (0-100). Test cases get the rest.
+    expectedConcepts: string; // Description of expected approach/concepts (e.g. "Use setTimeout meaningfully in the debounce logic")
+  }>().default({
+    enabled: false,
+    weight: 0,
+    expectedConcepts: ''
+  }),
 });
 
 /**
@@ -393,6 +405,12 @@ export const submissions = pgTable('submissions', {
 
   // Runtime error message
   stderr: text('stderr'),
+
+  // AI Evaluation Results
+  aiEvalScore: integer('ai_eval_score'), // 0-100 score from AI evaluation
+  aiEvalPassed: boolean('ai_eval_passed'), // Whether AI eval criteria were met
+  aiEvalFeedback: text('ai_eval_feedback'), // Detailed feedback from AI
+  aiEvalExpected: text('ai_eval_expected'), // What was expected (snapshot from task config)
 
   // Timestamp when submitted
   submittedAt: timestamp('submitted_at').defaultNow().notNull(),

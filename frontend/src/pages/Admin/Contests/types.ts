@@ -31,6 +31,11 @@ export interface Task {
         hintThreshold: number;
         solutionThreshold: number;
     };
+    aiEvalConfig: {
+        enabled: boolean;
+        weight: number;
+        expectedConcepts: string;
+    };
 }
 
 export const SUPPORTED_LANGUAGES = [

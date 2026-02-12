@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, FileEdit, X, Brain } from 'lucide-react';
+import { Plus, Edit2, FileEdit, X, Brain, Sparkles } from 'lucide-react';
 import { Task, SUPPORTED_LANGUAGES } from '../../types';
 import TestCaseManager from '../../../../../components/TestCaseManager';
 import HTMLEditor from '../../../../../components/HTMLEditor';
@@ -77,6 +77,69 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, is
             </div>
 
             {/* Note: AI Configuration is now controlled from Contest Settings tab only */}
+
+            <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#fafafa', marginTop: '24px', marginBottom: '12px', paddingTop: '24px', borderTop: '1px solid #27272a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sparkles size={16} color="#a855f7" /> AI Evaluation
+            </h3>
+
+            <div style={{ background: 'rgba(168, 85, 247, 0.05)', border: '1px solid rgba(168, 85, 247, 0.15)', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <label style={{ color: '#fafafa', fontSize: '0.9rem', fontWeight: 500 }}>Enable AI Evaluation</label>
+                        <p style={{ margin: 0, fontSize: '0.7rem', color: '#a1a1aa' }}>AI will check if the solution uses expected concepts/patterns meaningfully</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setTaskInput(prev => ({ ...prev, aiEvalConfig: { ...prev.aiEvalConfig, enabled: !prev.aiEvalConfig.enabled } }))}
+                        style={{
+                            width: '44px', height: '24px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                            background: taskInput.aiEvalConfig.enabled ? '#a855f7' : '#27272a',
+                            position: 'relative', transition: 'background 0.2s'
+                        }}
+                    >
+                        <div style={{
+                            width: '18px', height: '18px', borderRadius: '50%', background: '#fff',
+                            position: 'absolute', top: '3px',
+                            left: taskInput.aiEvalConfig.enabled ? '23px' : '3px',
+                            transition: 'left 0.2s'
+                        }} />
+                    </button>
+                </div>
+
+                {taskInput.aiEvalConfig.enabled && (
+                    <>
+                        <div style={{ marginBottom: '14px' }}>
+                            <label style={{ display: 'block', marginBottom: '6px', color: '#d4d4d8', fontSize: '0.85rem', fontWeight: 500 }}>AI Evaluation Weight (%)</label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <input
+                                    type="range" min="0" max="50" step="5"
+                                    value={taskInput.aiEvalConfig.weight}
+                                    onChange={(e) => setTaskInput(prev => ({ ...prev, aiEvalConfig: { ...prev.aiEvalConfig, weight: parseInt(e.target.value) } }))}
+                                    style={{ flex: 1, accentColor: '#a855f7' }}
+                                />
+                                <span style={{ color: '#a855f7', fontWeight: 700, fontSize: '1rem', minWidth: '48px', textAlign: 'center' }}>{taskInput.aiEvalConfig.weight}%</span>
+                            </div>
+                            <p style={{ margin: '4px 0 0', fontSize: '0.7rem', color: '#71717a' }}>
+                                Test cases = {100 - taskInput.aiEvalConfig.weight}% • AI Evaluation = {taskInput.aiEvalConfig.weight}% of total score
+                            </p>
+                        </div>
+
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '6px', color: '#d4d4d8', fontSize: '0.85rem', fontWeight: 500 }}>Expected Concepts / Approach</label>
+                            <textarea
+                                value={taskInput.aiEvalConfig.expectedConcepts}
+                                onChange={(e) => setTaskInput(prev => ({ ...prev, aiEvalConfig: { ...prev.aiEvalConfig, expectedConcepts: e.target.value } }))}
+                                placeholder={'Describe what you expect in the solution. Be specific.\n\nExample: "The solution should use setTimeout meaningfully to implement a debounce function. Simply declaring setTimeout without using it in the logic should not count. The function must delay execution and clear previous timeouts on subsequent calls."'}
+                                rows={4}
+                                style={{ ...inputStyle, resize: 'vertical', minHeight: '90px', fontSize: '0.9rem' }}
+                            />
+                            <p style={{ margin: '4px 0 0', fontSize: '0.7rem', color: '#71717a' }}>
+                                Be specific about what concepts/functions should be used and HOW they should be used meaningfully.
+                            </p>
+                        </div>
+                    </>
+                )}
+            </div>
 
             <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#fafafa', marginTop: '24px', marginBottom: '12px', paddingTop: '24px', borderTop: '1px solid #27272a' }}>Code & Test Cases</h3>
 

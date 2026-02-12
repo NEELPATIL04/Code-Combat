@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { db } from '../config/database';
 import { submissions, testCases, tasks, contestParticipants, userTaskProgress, activityLogs, contestSettings } from '../db/schema';
 import { judge0Service } from '../services/judge0.service';
+import { aiService } from '../services/ai.service';
 import { getJudge0LanguageId } from '../utils/judge0.util';
 import { eq, and, desc } from 'drizzle-orm';
 import { Server } from 'socket.io';
@@ -246,7 +247,46 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
 
     // Calculate score based on task's max points
     const maxPoints = task.maxPoints || 100;
-    const score = allPassed ? maxPoints : Math.floor((passedCount / totalCount) * maxPoints);
+    const testCaseScore = allPassed ? maxPoints : Math.floor((passedCount / totalCount) * maxPoints);
+
+    // --- AI Evaluation ---
+    let aiEvalResult: { score: number; passed: boolean; feedback: string } | null = null;
+    let finalScore = testCaseScore;
+
+    const aiEvalConfig = task.aiEvalConfig as { enabled: boolean; weight: number; expectedConcepts: string } | null;
+
+    if (aiEvalConfig?.enabled && aiEvalConfig.expectedConcepts?.trim()) {
+      try {
+        console.log(`🤖 AI Eval enabled for task ${taskId}, weight=${aiEvalConfig.weight}%`);
+        aiEvalResult = await aiService.evaluateCodeConcepts(
+          code,
+          language,
+          aiEvalConfig.expectedConcepts,
+          task.description || '',
+          userId,
+          taskId,
+          contestId
+        );
+
+        // Weighted score: testCaseScore gets (100 - weight)%, aiEvalScore gets weight%
+        const aiWeight = Math.max(0, Math.min(50, aiEvalConfig.weight)); // cap at 50%
+        const testWeight = 100 - aiWeight;
+        const aiScoreContribution = (aiEvalResult.score / 100) * maxPoints; // scale AI score to maxPoints
+        finalScore = Math.round((testCaseScore * testWeight + aiScoreContribution * aiWeight) / 100);
+
+        console.log(`📊 AI Eval: testCaseScore=${testCaseScore}, aiScore=${aiEvalResult.score}, weight=${aiWeight}%, finalScore=${finalScore}`);
+      } catch (aiError: any) {
+        console.error('❌ AI Eval failed, using test case score only:', aiError.message);
+        // Don't block submission if AI eval fails
+        aiEvalResult = {
+          score: 0,
+          passed: false,
+          feedback: 'AI evaluation encountered an error. Score based on test cases only.',
+        };
+      }
+    }
+
+    const score = finalScore;
 
     // Determine status
     let status = 'wrong_answer';
@@ -290,6 +330,12 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
         hintsUsed,
         usedSolution,
         processedAt: new Date(),
+        ...(aiEvalResult ? {
+          aiEvalScore: aiEvalResult.score,
+          aiEvalPassed: aiEvalResult.passed,
+          aiEvalFeedback: aiEvalResult.feedback,
+          aiEvalExpected: aiEvalConfig?.expectedConcepts || null,
+        } : {}),
       })
       .returning();
 
@@ -366,6 +412,17 @@ export const submitCode = async (req: Request, res: Response, next: NextFunction
           total: hiddenResults.length,
           passed: hiddenPassed,
         },
+        // AI Evaluation results (if enabled)
+        ...(aiEvalResult ? {
+          aiEval: {
+            enabled: true,
+            score: aiEvalResult.score,
+            passed: aiEvalResult.passed,
+            feedback: aiEvalResult.feedback,
+            weight: aiEvalConfig?.weight || 0,
+            testCaseScore: testCaseScore,
+          },
+        } : {}),
       },
     });
   } catch (error: any) {

@@ -198,6 +198,115 @@ ${boilerplateCode ? '- Return ONLY the function body code that fits inside the b
         }
     }
 
+    /**
+     * Evaluate whether user's code genuinely uses the expected concepts.
+     * Returns a score (0-100), pass/fail, and detailed per-concept feedback.
+     */
+    async evaluateCodeConcepts(
+        userCode: string,
+        language: string,
+        expectedConcepts: string,
+        problemDescription: string,
+        userId?: number,
+        taskId?: number,
+        contestId?: number
+    ): Promise<{
+        score: number;
+        passed: boolean;
+        feedback: string;
+    }> {
+        const prompt = `You are a strict code evaluator for a programming contest. Your job is to check whether the student's code **genuinely and meaningfully** uses the expected concepts — not just that the keywords appear.
+
+## Problem Description
+${problemDescription}
+
+## Student's Code (${language})
+\`\`\`${language}
+${userCode}
+\`\`\`
+
+## Expected Concepts (set by the contest admin)
+${expectedConcepts}
+
+## Your Task
+For EACH expected concept listed above:
+1. Check if it is **meaningfully used** in the code (not just declared, imported, or appearing in a comment).
+2. A concept is "meaningfully used" if it plays a functional role in solving the problem.
+3. Simply writing \`setTimeout(() => {}, 0)\` or declaring an unused variable does NOT count.
+
+## Response Format (strict JSON)
+Return a JSON object with exactly this structure:
+{
+  "concepts": [
+    {
+      "concept": "name of the concept",
+      "met": true or false,
+      "reason": "1-2 sentence explanation of why it passed or failed"
+    }
+  ],
+  "overallScore": number from 0 to 100 (percentage of concepts meaningfully met),
+  "overallFeedback": "2-3 sentence summary of the evaluation"
+}
+
+IMPORTANT:
+- Be strict. Superficial or decorative usage should FAIL.
+- Be fair. If the concept is used correctly in service of the solution, it should PASS.
+- The overallScore should reflect the proportion of concepts met. If 3 out of 4 concepts are met, score ~75.
+- Return ONLY valid JSON, no markdown, no extra text.`;
+
+        const meta = { userId, taskId, contestId, purpose: 'ai_eval' };
+
+        let rawResponse: string;
+        try {
+            console.log(`🤖 AI Eval: Evaluating code concepts for user ${userId}, task ${taskId}`);
+            rawResponse = await this.callGroq(prompt, true, meta);
+        } catch (error: any) {
+            console.warn('⚠️  Groq AI eval failed, falling back to Gemini:', error.message);
+            try {
+                rawResponse = await this.callGemini(prompt, true, meta);
+            } catch (fallbackError: any) {
+                console.error('❌ Both Groq and Gemini AI eval failed:', fallbackError.message);
+                // Return a neutral result so submission isn't blocked
+                return {
+                    score: 0,
+                    passed: false,
+                    feedback: 'AI evaluation was unavailable. Your submission was scored based on test cases only.',
+                };
+            }
+        }
+
+        try {
+            // Clean potential markdown wrapping from Gemini
+            const cleaned = rawResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+            const parsed = JSON.parse(cleaned);
+
+            const concepts: { concept: string; met: boolean; reason: string }[] = parsed.concepts || [];
+            const score = Math.round(Math.max(0, Math.min(100, parsed.overallScore || 0)));
+            const passed = score >= 70; // 70% threshold to pass AI eval
+
+            // Build human-readable feedback
+            const conceptLines = concepts.map(
+                (c) => `${c.met ? '✅' : '❌'} ${c.concept}: ${c.reason}`
+            );
+            const feedback = [
+                parsed.overallFeedback || '',
+                '',
+                '**Concept Breakdown:**',
+                ...conceptLines,
+            ].join('\n');
+
+            console.log(`✅ AI Eval result: score=${score}, passed=${passed}, concepts=${concepts.length}`);
+            return { score, passed, feedback };
+        } catch (parseError: any) {
+            console.error('❌ Failed to parse AI eval response:', parseError.message, 'Raw:', rawResponse);
+            return {
+                score: 0,
+                passed: false,
+                feedback: 'AI evaluation produced an invalid response. Your submission was scored based on test cases only.',
+            };
+        }
+    }
+
     private async callGroq(prompt: string, jsonMode = false, meta?: { userId?: number; contestId?: number; taskId?: number; purpose: string }): Promise<string> {
         if (!GROQ_API_KEY) {
             throw new Error('GROQ_HINT_API_KEY is not configured');

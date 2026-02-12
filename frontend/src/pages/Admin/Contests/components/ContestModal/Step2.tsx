@@ -10,7 +10,7 @@ interface Step2Props {
 }
 
 const Step2: React.FC<Step2Props> = ({ formData, setFormData, readOnly = false }) => {
-    const [taskInput, setTaskInput] = useState<Task>({ title: '', description: '', descriptionType: 'text', difficulty: 'Medium', maxPoints: 100, allowedLanguages: ['javascript', 'typescript', 'python', 'java', 'cpp'], boilerplateCode: {}, testRunnerTemplate: {}, testCases: [], functionName: 'solution', aiConfig: { hintsEnabled: true, hintThreshold: 2, solutionThreshold: 5 } });
+    const [taskInput, setTaskInput] = useState<Task>({ title: '', description: '', descriptionType: 'text', difficulty: 'Medium', maxPoints: 100, allowedLanguages: ['javascript', 'typescript', 'python', 'java', 'cpp'], boilerplateCode: {}, testRunnerTemplate: {}, testCases: [], functionName: 'solution', aiConfig: { hintsEnabled: true, hintThreshold: 2, solutionThreshold: 5 }, aiEvalConfig: { enabled: false, weight: 0, expectedConcepts: '' } });
     const [editingTaskIndex, setEditingTaskIndex] = useState<number | null>(null);
     const [viewingTaskIndex, setViewingTaskIndex] = useState<number | null>(null);
 
@@ -22,7 +22,7 @@ const Step2: React.FC<Step2Props> = ({ formData, setFormData, readOnly = false }
                 else newTasks.push({ ...taskInput });
                 return { ...prev, tasks: newTasks };
             });
-            setTaskInput({ title: '', description: '', descriptionType: 'text', difficulty: 'Medium', maxPoints: 100, allowedLanguages: ['javascript', 'typescript', 'python', 'java', 'cpp'], boilerplateCode: {}, testRunnerTemplate: {}, testCases: [], functionName: 'solution', aiConfig: { hintsEnabled: true, hintThreshold: 2, solutionThreshold: 5 } });
+            setTaskInput({ title: '', description: '', descriptionType: 'text', difficulty: 'Medium', maxPoints: 100, allowedLanguages: ['javascript', 'typescript', 'python', 'java', 'cpp'], boilerplateCode: {}, testRunnerTemplate: {}, testCases: [], functionName: 'solution', aiConfig: { hintsEnabled: true, hintThreshold: 2, solutionThreshold: 5 }, aiEvalConfig: { enabled: false, weight: 0, expectedConcepts: '' } });
             setEditingTaskIndex(null);
         }
     };

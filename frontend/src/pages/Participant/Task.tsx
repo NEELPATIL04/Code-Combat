@@ -552,7 +552,7 @@ const PanelHeader = React.memo<{
 PanelHeader.displayName = 'PanelHeader';
 
 // Memoized Description Content
-const MemoizedDescription = React.memo<{ task: Task; testCases: TestCase[]; leftActiveTab: string; submissions: SubmissionHistory[]; onTabChange: (tab: 'description' | 'submissions') => void; completedTasks: number[]; latestSubmissionResult: { passed: number; total: number; percentage: number; code: string } | null; showSubmittedCode: boolean; setShowSubmittedCode: (show: boolean) => void }>(({ task, testCases, leftActiveTab, submissions, onTabChange, completedTasks, latestSubmissionResult, showSubmittedCode, setShowSubmittedCode }) => {
+const MemoizedDescription = React.memo<{ task: Task; testCases: TestCase[]; leftActiveTab: string; submissions: SubmissionHistory[]; onTabChange: (tab: 'description' | 'submissions') => void; completedTasks: number[]; latestSubmissionResult: { passed: number; total: number; percentage: number; code: string; aiEval?: { enabled: boolean; score: number; passed: boolean; feedback: string; weight: number; testCaseScore: number } } | null; showSubmittedCode: boolean; setShowSubmittedCode: (show: boolean) => void }>(({ task, testCases, leftActiveTab, submissions, onTabChange, completedTasks, latestSubmissionResult, showSubmittedCode, setShowSubmittedCode }) => {
     const getDifficultyStyles = (difficulty: string) => {
         switch (difficulty) {
             case 'Easy': return { background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' };
@@ -727,9 +727,67 @@ const MemoizedDescription = React.memo<{ task: Task; testCases: TestCase[]; left
                                 )}
                             </div>
 
+                            {/* AI Evaluation Results */}
+                            {latestSubmissionResult.aiEval && (
+                                <div style={{
+                                    marginTop: 16,
+                                    background: latestSubmissionResult.aiEval.passed ? 'rgba(34, 197, 94, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                                    border: `1px solid ${latestSubmissionResult.aiEval.passed ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                                    borderRadius: 8,
+                                    padding: 16,
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                                        <span style={{ fontSize: 16 }}>🤖</span>
+                                        <span style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0' }}>AI Evaluation</span>
+                                        <span style={{
+                                            fontSize: 11,
+                                            fontWeight: 600,
+                                            padding: '2px 8px',
+                                            borderRadius: 4,
+                                            background: latestSubmissionResult.aiEval.passed ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                            color: latestSubmissionResult.aiEval.passed ? '#22c55e' : '#ef4444',
+                                        }}>
+                                            {latestSubmissionResult.aiEval.passed ? 'PASSED' : 'FAILED'}
+                                        </span>
+                                    </div>
 
+                                    {/* Score breakdown */}
+                                    <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                                        <div style={{
+                                            flex: 1,
+                                            background: 'rgba(0, 0, 0, 0.2)',
+                                            borderRadius: 6,
+                                            padding: '8px 12px',
+                                        }}>
+                                            <div style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.5)', marginBottom: 2 }}>Test Cases ({100 - latestSubmissionResult.aiEval.weight}%)</div>
+                                            <div style={{ fontSize: 16, fontWeight: 700, color: '#60a5fa' }}>{latestSubmissionResult.aiEval.testCaseScore} pts</div>
+                                        </div>
+                                        <div style={{
+                                            flex: 1,
+                                            background: 'rgba(0, 0, 0, 0.2)',
+                                            borderRadius: 6,
+                                            padding: '8px 12px',
+                                        }}>
+                                            <div style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.5)', marginBottom: 2 }}>AI Score ({latestSubmissionResult.aiEval.weight}%)</div>
+                                            <div style={{ fontSize: 16, fontWeight: 700, color: latestSubmissionResult.aiEval.passed ? '#22c55e' : '#ef4444' }}>{latestSubmissionResult.aiEval.score}/100</div>
+                                        </div>
+                                    </div>
 
-                            <div style={{ marginTop: 12 }}>
+                                    {/* Concept feedback */}
+                                    <div style={{
+                                        background: 'rgba(0, 0, 0, 0.2)',
+                                        borderRadius: 6,
+                                        padding: 12,
+                                        fontSize: 12,
+                                        lineHeight: 1.6,
+                                        color: 'rgba(255, 255, 255, 0.8)',
+                                        whiteSpace: 'pre-wrap' as const,
+                                        fontFamily: 'inherit',
+                                    }}>
+                                        {latestSubmissionResult.aiEval.feedback}
+                                    </div>
+                                </div>
+                            )}                            <div style={{ marginTop: 12 }}>
                                 <button
                                     onClick={() => setShowSubmittedCode(!showSubmittedCode)}
                                     style={{
@@ -2103,7 +2161,7 @@ const TaskPage: React.FC = () => {
     const [submittedTasks, setSubmittedTasks] = useState<Map<number, string>>(new Map()); // taskId -> last submitted code
     const [showShiftWarning, setShowShiftWarning] = useState<boolean>(false);
     const [pendingTaskIndex, setPendingTaskIndex] = useState<number | null>(null);
-    const [latestSubmissionResult, setLatestSubmissionResult] = useState<{ passed: number; total: number; percentage: number; code: string } | null>(null);
+    const [latestSubmissionResult, setLatestSubmissionResult] = useState<{ passed: number; total: number; percentage: number; code: string; aiEval?: { enabled: boolean; score: number; passed: boolean; feedback: string; weight: number; testCaseScore: number } } | null>(null);
     const [showSubmittedCode, setShowSubmittedCode] = useState<boolean>(false);
 
     // Fetch task data
@@ -2627,12 +2685,13 @@ const TaskPage: React.FC = () => {
                 // Calculate percentage
                 const percentage = total > 0 ? Math.round((passed / total) * 100) : 0;
 
-                // Store latest submission result
+                // Store latest submission result (including AI eval if present)
                 setLatestSubmissionResult({
                     passed,
                     total,
                     percentage,
                     code: currentCode,
+                    ...(result.data.aiEval ? { aiEval: result.data.aiEval } : {}),
                 });
 
                 // Mark task as completed if all tests pass
