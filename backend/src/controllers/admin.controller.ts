@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../config/database';
 import { submissions, contestParticipants, aiUsageLogs, users, contests } from '../db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, lt, sql } from 'drizzle-orm';
 
 /**
  * Get all submissions for a participant in a contest
@@ -154,6 +154,9 @@ export const getAiUsageLogs = async (req: Request, res: Response, next: NextFunc
         const limit = parseInt(String(req.query.limit)) || 50;
         const offset = (page - 1) * limit;
 
+        // Automatically clean up old logs before fetching
+        await cleanupOldAiUsageLogs();
+
         const logs = await db
             .select({
                 id: aiUsageLogs.id,
@@ -174,6 +177,30 @@ export const getAiUsageLogs = async (req: Request, res: Response, next: NextFunc
         return res.json({ logs, page, limit });
     } catch (error) {
         return next(error);
+    }
+};
+
+/**
+ * Cleanup AI Usage Logs older than 2 days
+ * This function is called automatically when fetching logs
+ * and can also be called manually via cron job
+ */
+export const cleanupOldAiUsageLogs = async () => {
+    try {
+        // Calculate the cutoff date (2 days ago)
+        const twoDaysAgo = new Date();
+        twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
+        // Delete logs older than 2 days
+        const result = await db
+            .delete(aiUsageLogs)
+            .where(lt(aiUsageLogs.timestamp, twoDaysAgo));
+
+        console.log(`✅ Cleaned up AI usage logs older than ${twoDaysAgo.toISOString()}`);
+        return result;
+    } catch (error) {
+        console.error('❌ Error cleaning up old AI usage logs:', error);
+        throw error;
     }
 };
 /**

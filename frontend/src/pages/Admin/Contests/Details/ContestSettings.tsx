@@ -12,6 +12,7 @@ interface SettingsData {
     fullScreenModeEnabled: boolean;
     allowCopyPaste: boolean;
     enableActivityLogs: boolean;
+    deleteActivityLogsAfterFetch: boolean;
     requireCamera: boolean;
     requireMicrophone: boolean;
     requireScreenShare: boolean;
@@ -42,6 +43,7 @@ const ContestSettings: React.FC<ContestSettingsProps> = ({ contestId }) => {
         fullScreenModeEnabled: true,
         allowCopyPaste: false,
         enableActivityLogs: true,
+        deleteActivityLogsAfterFetch: false,
         requireCamera: false,
         requireMicrophone: false,
         requireScreenShare: false,
@@ -589,6 +591,15 @@ const ContestSettings: React.FC<ContestSettingsProps> = ({ contestId }) => {
                                 checked={settings.enableActivityLogs}
                                 onChange={(checked) => setSettings({ ...settings, enableActivityLogs: checked })}
                             />
+
+                            {settings.enableActivityLogs && (
+                                <ToggleSwitch
+                                    label="Auto-Delete Logs After Fetch"
+                                    description="Automatically delete activity logs after they are retrieved (keeps logs only until viewed)"
+                                    checked={settings.deleteActivityLogsAfterFetch}
+                                    onChange={(checked) => setSettings({ ...settings, deleteActivityLogsAfterFetch: checked })}
+                                />
+                            )}
                         </div>
                     )}
                 </div>

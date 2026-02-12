@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getUserContestHistory, getUserContestDetails, getAllUsers, getUserProfile, updateUser } from '../controllers/user.controller';
+import { getUserContestHistory, getUserContestDetails, getAllUsers, getUserProfile, updateUser, toggleUserStatus, deleteUser } from '../controllers/user.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/roleCheck.middleware';
 
@@ -14,5 +14,11 @@ router.get('/profile/contests/:contestId', getUserContestDetails);
 
 // Admin only: Update user role/status
 router.put('/:id', requireRole(['admin', 'super_admin']), updateUser);
+
+// Admin only: Toggle user status (active/banned)
+router.patch('/:id/toggle-status', requireRole(['admin', 'super_admin']), toggleUserStatus);
+
+// Admin only: Delete user
+router.delete('/:id', requireRole(['admin', 'super_admin']), deleteUser);
 
 export default router;

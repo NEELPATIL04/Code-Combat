@@ -4,11 +4,20 @@ import tailwindcss from '@tailwindcss/postcss'
 import autoprefixer from 'autoprefixer'
 
 // https://vite.dev/config/
-export default defineConfig(() => {
-  // Always proxy to local backend during development
-  const proxyTarget = 'http://localhost:5000'
+export default defineConfig(({ mode }) => {
+  // Load env file based on mode
+  const env = loadEnv(mode, process.cwd(), '')
 
-  console.log(`🔧 Vite Dev Proxy → ${proxyTarget}`)
+  // Determine backend URL based on VITE_BACKEND_MODE
+  const backendMode = env.VITE_BACKEND_MODE || 'local'
+  const backendUrl = backendMode === 'live'
+    ? (env.VITE_LIVE_BACKEND_URL || 'http://49.13.223.175:5000/api')
+    : (env.VITE_LOCAL_BACKEND_URL || 'http://localhost:5000/api')
+
+  // Remove /api suffix for proxy target
+  const proxyTarget = backendUrl.replace('/api', '')
+
+  console.log(`🔧 Vite Proxy: ${backendMode.toUpperCase()} mode → ${proxyTarget}`)
 
   return {
     plugins: [react()],

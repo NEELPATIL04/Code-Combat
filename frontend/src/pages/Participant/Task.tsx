@@ -1626,9 +1626,9 @@ const TaskPage: React.FC = () => {
                 }
             }
 
-            // Redirect to results after 3 seconds
+            // Redirect to results after 3 seconds (replace to avoid back navigation issues)
             setTimeout(() => {
-                navigate(`/participant/contest/${contestId}/results`);
+                navigate(`/contest/${contestId}/results`, { replace: true });
             }, 3000);
         };
 
@@ -1693,7 +1693,7 @@ const TaskPage: React.FC = () => {
                 }
 
                 setTimeout(() => {
-                    navigate(`/participant/contest/${contestId}/results`);
+                    navigate(`/contest/${contestId}/results`, { replace: true });
                 }, 3000);
             }
         };
@@ -2173,9 +2173,9 @@ const TaskPage: React.FC = () => {
                             setContestEnded(true);
                             setEndMessage('Contest has ended');
                             showToast('Contest has ended', 'error');
-                            // Redirect to results after showing message
+                            // Redirect to results after showing message (replace to avoid back navigation issues)
                             setTimeout(() => {
-                                navigate(`/participant/contest/${contestId}/results`);
+                                navigate(`/contest/${contestId}/results`, { replace: true });
                             }, 2000);
                         }
                     }
@@ -2716,8 +2716,8 @@ const TaskPage: React.FC = () => {
             try {
                 await contestAPI.completeContest(parseInt(contestId));
                 showToast('Contest completed successfully!', 'success');
-                // Navigate to results page instead of dashboard
-                navigate(`/contest/${contestId}/results`);
+                // Navigate to results page instead of dashboard (replace to avoid back navigation issues)
+                navigate(`/contest/${contestId}/results`, { replace: true });
             } catch (err: any) {
                 console.error('Failed to complete contest:', err);
                 showToast(`Failed to complete contest: ${err.message || 'Unknown error'}`, 'error');

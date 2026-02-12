@@ -202,6 +202,7 @@ export const contestSettings = pgTable('contest_settings', {
   fullScreenModeEnabled: boolean('full_screen_mode_enabled').default(true),
   allowCopyPaste: boolean('allow_copy_paste').default(false),
   enableActivityLogs: boolean('enable_activity_logs').default(true),
+  deleteActivityLogsAfterFetch: boolean('delete_activity_logs_after_fetch').default(false),
 
   // Media Monitoring
   requireCamera: boolean('require_camera').default(false),

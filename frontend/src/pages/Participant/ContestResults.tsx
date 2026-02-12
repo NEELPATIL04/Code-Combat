@@ -54,7 +54,7 @@ const ContestResults: React.FC = () => {
     const fetchResults = async () => {
       if (!contestId) {
         showToast('Invalid contest ID', 'error');
-        navigate('/participant/dashboard');
+        navigate('/player', { replace: true });
         return;
       }
 
@@ -124,6 +124,20 @@ const ContestResults: React.FC = () => {
 
     fetchResults();
   }, [contestId, navigate, showToast]);
+
+  // Prevent back navigation - redirect to dashboard instead
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      e.preventDefault();
+      navigate('/player', { replace: true });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [navigate]);
 
   const formatTime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -878,7 +892,7 @@ const ContestResults: React.FC = () => {
         {/* Action Button */}
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <button
-            onClick={() => navigate('/player')}
+            onClick={() => navigate('/player', { replace: true })}
             style={{
               display: 'flex',
               alignItems: 'center',

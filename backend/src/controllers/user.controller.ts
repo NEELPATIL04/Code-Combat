@@ -243,3 +243,85 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
     return next(error);
   }
 };
+
+/**
+ * Toggle user status between active and banned (admin only)
+ * PATCH /api/users/:id/toggle-status
+ */
+export const toggleUserStatus = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = parseInt(req.params.id as string);
+
+    if (!userId || isNaN(userId)) {
+      return res.status(400).json({ message: 'Valid user ID is required' });
+    }
+
+    // Get current user
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Toggle status
+    const newStatus = user.status === 'active' ? 'banned' : 'active';
+
+    const [updatedUser] = await db
+      .update(users)
+      .set({ status: newStatus })
+      .where(eq(users.id, userId))
+      .returning({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        role: users.role,
+        status: users.status,
+      });
+
+    return res.json({
+      success: true,
+      data: updatedUser,
+      message: `User ${newStatus === 'banned' ? 'banned' : 'activated'} successfully`
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * Delete user (admin only)
+ * DELETE /api/users/:id
+ */
+export const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = parseInt(req.params.id as string);
+
+    if (!userId || isNaN(userId)) {
+      return res.status(400).json({ message: 'Valid user ID is required' });
+    }
+
+    // Verify user exists
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Prevent deleting super_admin users
+    if (user.role === 'super_admin') {
+      return res.status(403).json({ message: 'Cannot delete super admin users' });
+    }
+
+    // Delete user (cascading will handle related records if configured)
+    await db.delete(users).where(eq(users.id, userId));
+
+    return res.json({
+      success: true,
+      message: 'User deleted successfully'
+    });
+  } catch (error) {
+    return next(error);
+  }
+};

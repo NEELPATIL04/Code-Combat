@@ -7,6 +7,7 @@ import { env } from './config/env';
 import { testDatabaseConnection, closeDatabaseConnection } from './config/database';
 import routes from './routes';
 import { errorHandler } from './middleware/errorHandler.middleware';
+import { cleanupOldAiUsageLogs } from './controllers/admin.controller';
 
 /**
  * Code Combat Backend Server
@@ -226,6 +227,27 @@ async function startServer() {
       console.log('✓ Server is ready to accept connections');
       console.log('');
     });
+
+    // Schedule AI usage logs cleanup
+    // Run cleanup every 6 hours to keep logs only for the last 2 days
+    const CLEANUP_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+
+    // Run cleanup on startup
+    console.log('🧹 Running initial AI usage logs cleanup...');
+    cleanupOldAiUsageLogs().catch(err => {
+      console.error('❌ Initial cleanup failed:', err);
+    });
+
+    // Schedule periodic cleanup
+    setInterval(() => {
+      console.log('🧹 Running scheduled AI usage logs cleanup...');
+      cleanupOldAiUsageLogs().catch(err => {
+        console.error('❌ Scheduled cleanup failed:', err);
+      });
+    }, CLEANUP_INTERVAL);
+
+    console.log(`📅 AI usage logs cleanup scheduled every ${CLEANUP_INTERVAL / 1000 / 60 / 60} hours`);
+    console.log('💾 AI logs will be retained for 2 days only\n');
 
     /**
      * Graceful Shutdown Handler

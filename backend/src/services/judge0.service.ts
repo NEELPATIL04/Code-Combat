@@ -471,16 +471,63 @@ class Judge0Service {
 
         // Format error message — only show for actual errors, not for successful runs
         const hasError = result.status.id >= 5 || (result.stderr && result.stderr.trim() !== '');
-        const formattedError = hasError
+        let formattedError = hasError
           ? formatErrorMessage(result.status.id, result.stderr, result.compile_output, params.language)
           : undefined;
+
+        // Handle "No output" case with detailed explanation
+        let outputToShow = actualResult;
+        if (executedSuccessfully && !actualResult) {
+          // Code ran successfully but produced no output
+          outputToShow = '';
+
+          // If there's no error already and no output, explain what might be wrong
+          if (!formattedError && !passed) {
+            formattedError = `⚠️ Missing Output\n\nYour code executed successfully but didn't return or print anything.\n\n💡 Common issues:\n• Missing return statement in your function\n• Not calling console.log() or print()\n• Function doesn't return the result\n• Logic doesn't reach the return statement\n\nExpected: ${expectedOutput}\nGot: (nothing)`;
+          }
+        } else if (executedSuccessfully && !passed && actualResult) {
+          // Code ran successfully, produced output, but it doesn't match expected
+          // Add helpful error message explaining the mismatch
+          if (!formattedError) {
+            // Check for common issues
+            const trimmedActual = actualResult.trim();
+            const trimmedExpected = expectedOutput.trim();
+
+            let mismatchReason = '';
+            if (trimmedActual === trimmedExpected) {
+              mismatchReason = '• Extra whitespace or newlines in your output';
+            } else if (actualResult.toLowerCase() === expectedOutput.toLowerCase()) {
+              mismatchReason = '• Case sensitivity issue (uppercase vs lowercase)';
+            } else if (JSON.stringify(actualResult) !== JSON.stringify(expectedOutput)) {
+              // Try to detect data type mismatches
+              try {
+                const actualParsed = JSON.parse(actualResult);
+                const expectedParsed = JSON.parse(expectedOutput);
+                if (Array.isArray(actualParsed) && Array.isArray(expectedParsed)) {
+                  mismatchReason = '• Array elements don\'t match the expected order or values';
+                } else if (typeof actualParsed !== typeof expectedParsed) {
+                  mismatchReason = `• Data type mismatch: returning ${typeof actualParsed} instead of ${typeof expectedParsed}`;
+                }
+              } catch {
+                // Not JSON - check for other common issues
+                if (actualResult.includes('\n') || expectedOutput.includes('\n')) {
+                  mismatchReason = '• Line break or formatting issue';
+                } else if (actualResult.length !== expectedOutput.length) {
+                  mismatchReason = `• Output length mismatch: got ${actualResult.length} characters, expected ${expectedOutput.length}`;
+                }
+              }
+            }
+
+            formattedError = `❌ Wrong Answer\n\nYour code executed successfully but the output doesn't match.\n\n${mismatchReason ? mismatchReason + '\n\n' : ''}Expected: ${expectedOutput}\nGot: ${actualResult}\n\n💡 Check your logic and make sure you're returning the exact format expected.`;
+          }
+        }
 
         return {
           passed,
           input: testCase.input,
           expectedOutput: testCase.expectedOutput,
           // actualOutput should only show program output, NOT error text
-          actualOutput: actualResult || (executedSuccessfully ? '' : 'No output'),
+          actualOutput: outputToShow,
           consoleOutput: consoleOutput || undefined,
           error: formattedError,
           executionTime: result.time ? parseFloat(result.time) * 1000 : undefined,

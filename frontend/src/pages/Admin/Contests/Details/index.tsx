@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     ChevronLeft,
     Users,
@@ -57,6 +57,7 @@ interface ContestDetailsData {
 const ContestDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [contest, setContest] = useState<ContestDetailsData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -612,6 +613,38 @@ const ContestDetails: React.FC = () => {
                                                     }}
                                                 >
                                                     <Eye size={13} />
+                                                </button>
+
+                                                <button
+                                                    onClick={() => {
+                                                        setActiveTab('activity');
+                                                        setSearchParams({ userId: p.userId.toString() });
+                                                    }}
+                                                    title="View Activity Logs"
+                                                    style={{
+                                                        background: 'transparent',
+                                                        border: '1px solid #27272a',
+                                                        borderRadius: '6px',
+                                                        color: '#a1a1aa',
+                                                        padding: '6px 8px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 500,
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.borderColor = '#8b5cf6';
+                                                        e.currentTarget.style.color = '#8b5cf6';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.borderColor = '#27272a';
+                                                        e.currentTarget.style.color = '#a1a1aa';
+                                                    }}
+                                                >
+                                                    <Activity size={13} />
                                                 </button>
 
                                                 {/* Pause/Resume user button */}

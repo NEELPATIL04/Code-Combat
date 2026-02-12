@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Activity, AlertTriangle, Info, RefreshCw, Filter, Users, Monitor } from 'lucide-react';
 import { useSocket } from '../../../../context/SocketContext';
+import { useSearchParams } from 'react-router-dom';
 import VideoFeed from '../../../../components/VideoFeed';
 
 interface ActivityLogsProps {
@@ -31,18 +32,36 @@ interface ActivityStats {
     activeUsers: number;
 }
 
+interface User {
+    userId: number;
+    username: string | null;
+    firstName: string | null;
+    lastName: string | null;
+}
+
 const ActivityLogs: React.FC<ActivityLogsProps> = ({ contestId }) => {
+    const [searchParams, setSearchParams] = useSearchParams();
     const [logs, setLogs] = useState<ActivityLog[]>([]);
     const [stats, setStats] = useState<ActivityStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [autoRefresh, setAutoRefresh] = useState(true);
     const [filterSeverity, setFilterSeverity] = useState<string>('all');
     const [filterType, setFilterType] = useState<string>('all');
+    const [filterUserId, setFilterUserId] = useState<string>('all');
+    const [availableUsers, setAvailableUsers] = useState<User[]>([]);
 
     // Live Monitoring
     const { socket } = useSocket();
     const [activeParticipants, setActiveParticipants] = useState<{ socketId: string, userId: string }[]>([]);
     const [viewMode, setViewMode] = useState<'logs' | 'monitor'>('logs');
+
+    // Initialize filter from URL params
+    useEffect(() => {
+        const userIdParam = searchParams.get('userId');
+        if (userIdParam && userIdParam !== 'all') {
+            setFilterUserId(userIdParam);
+        }
+    }, [searchParams]);
 
     useEffect(() => {
         if (!socket) return;
@@ -87,6 +106,7 @@ const ActivityLogs: React.FC<ActivityLogsProps> = ({ contestId }) => {
             const params = new URLSearchParams();
             if (filterSeverity !== 'all') params.append('severity', filterSeverity);
             if (filterType !== 'all') params.append('activityType', filterType);
+            if (filterUserId !== 'all') params.append('userId', filterUserId);
 
             const response = await fetch(`/api/contests/${contestId}/activity?${params.toString()}`, {
                 headers: {
@@ -99,13 +119,27 @@ const ActivityLogs: React.FC<ActivityLogsProps> = ({ contestId }) => {
             const data = await response.json();
             if (data.success) {
                 setLogs(data.logs || []);
+
+                // Extract unique users from logs for filter dropdown
+                const uniqueUsersMap = new Map<number, User>();
+                data.logs.forEach((log: ActivityLog) => {
+                    if (!uniqueUsersMap.has(log.userId)) {
+                        uniqueUsersMap.set(log.userId, {
+                            userId: log.userId,
+                            username: log.username,
+                            firstName: log.firstName,
+                            lastName: log.lastName
+                        });
+                    }
+                });
+                setAvailableUsers(Array.from(uniqueUsersMap.values()));
             }
         } catch (error) {
             console.error('Failed to load activity logs:', error);
         } finally {
             setLoading(false);
         }
-    }, [contestId, filterSeverity, filterType]);
+    }, [contestId, filterSeverity, filterType, filterUserId]);
 
     const loadStats = useCallback(async () => {
         try {
@@ -370,6 +404,41 @@ const ActivityLogs: React.FC<ActivityLogsProps> = ({ contestId }) => {
                     {viewMode === 'logs' && (
                         <>
                             <Filter size={16} color="#71717a" />
+
+                            <select
+                                value={filterUserId}
+                                onChange={(e) => {
+                                    setFilterUserId(e.target.value);
+                                    if (e.target.value === 'all') {
+                                        searchParams.delete('userId');
+                                        setSearchParams(searchParams);
+                                    }
+                                }}
+                                style={{
+                                    background: '#18181b',
+                                    border: '1px solid #27272a',
+                                    borderRadius: '6px',
+                                    color: '#fafafa',
+                                    padding: '8px 12px',
+                                    fontSize: '0.875rem',
+                                    outline: 'none',
+                                    cursor: 'pointer',
+                                    minWidth: '150px'
+                                }}
+                            >
+                                <option value="all">All Users</option>
+                                {availableUsers.map(user => {
+                                    const displayName = user.firstName && user.lastName
+                                        ? `${user.firstName} ${user.lastName}`
+                                        : user.username || `User ${user.userId}`;
+                                    return (
+                                        <option key={user.userId} value={user.userId}>
+                                            {displayName}
+                                        </option>
+                                    );
+                                })}
+                            </select>
+
                             <select
                                 value={filterSeverity}
                                 onChange={(e) => setFilterSeverity(e.target.value)}

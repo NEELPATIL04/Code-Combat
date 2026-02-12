@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../config/database';
 import { activityLogs, users, contestSettings } from '../db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 
 /**
  * Activity Logs Controller
@@ -110,6 +110,25 @@ export const getContestActivityLogs = async (req: Request, res: Response, next: 
       .where(and(...conditions))
       .orderBy(desc(activityLogs.timestamp))
       .limit(parseInt(limit as string));
+
+    // Check if auto-delete is enabled for this contest
+    const [settings] = await db
+      .select({ deleteActivityLogsAfterFetch: contestSettings.deleteActivityLogsAfterFetch })
+      .from(contestSettings)
+      .where(eq(contestSettings.contestId, contestId))
+      .limit(1);
+
+    // Delete logs after fetch if setting is enabled
+    if (settings && settings.deleteActivityLogsAfterFetch === true && logs.length > 0) {
+      const logIds = logs.map(log => log.id);
+
+      // Delete the fetched logs using IN array
+      await db
+        .delete(activityLogs)
+        .where(inArray(activityLogs.id, logIds));
+
+      console.log(`✅ Auto-deleted ${logs.length} activity logs for contest ${contestId} after fetch`);
+    }
 
     return res.status(200).json({
       success: true,
