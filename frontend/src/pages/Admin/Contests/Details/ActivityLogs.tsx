@@ -49,6 +49,7 @@ const ActivityLogs: React.FC<ActivityLogsProps> = ({ contestId }) => {
     const [filterType, setFilterType] = useState<string>('all');
     const [filterUserId, setFilterUserId] = useState<string>('all');
     const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+    const [allActivityTypes, setAllActivityTypes] = useState<string[]>([]);
 
     // Live Monitoring
     const { socket } = useSocket();
@@ -100,6 +101,38 @@ const ActivityLogs: React.FC<ActivityLogsProps> = ({ contestId }) => {
         };
     }, [socket, contestId]);
 
+    // Load all users and activity types (unfiltered) for dropdown options
+    const loadFilterOptions = useCallback(async () => {
+        try {
+            const token = sessionStorage.getItem('token');
+            const response = await fetch(`/api/contests/${contestId}/activity?limit=500`, {
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            if (!response.ok) return;
+            const data = await response.json();
+            if (data.success && data.logs) {
+                // Extract unique users
+                const uniqueUsersMap = new Map<number, User>();
+                const typesSet = new Set<string>();
+                data.logs.forEach((log: ActivityLog) => {
+                    if (!uniqueUsersMap.has(log.userId)) {
+                        uniqueUsersMap.set(log.userId, {
+                            userId: log.userId,
+                            username: log.username,
+                            firstName: log.firstName,
+                            lastName: log.lastName
+                        });
+                    }
+                    typesSet.add(log.activityType);
+                });
+                setAvailableUsers(Array.from(uniqueUsersMap.values()));
+                setAllActivityTypes(Array.from(typesSet));
+            }
+        } catch (error) {
+            console.error('Failed to load filter options:', error);
+        }
+    }, [contestId]);
+
     const loadLogs = useCallback(async () => {
         try {
             const token = sessionStorage.getItem('token');
@@ -119,20 +152,6 @@ const ActivityLogs: React.FC<ActivityLogsProps> = ({ contestId }) => {
             const data = await response.json();
             if (data.success) {
                 setLogs(data.logs || []);
-
-                // Extract unique users from logs for filter dropdown
-                const uniqueUsersMap = new Map<number, User>();
-                data.logs.forEach((log: ActivityLog) => {
-                    if (!uniqueUsersMap.has(log.userId)) {
-                        uniqueUsersMap.set(log.userId, {
-                            userId: log.userId,
-                            username: log.username,
-                            firstName: log.firstName,
-                            lastName: log.lastName
-                        });
-                    }
-                });
-                setAvailableUsers(Array.from(uniqueUsersMap.values()));
             }
         } catch (error) {
             console.error('Failed to load activity logs:', error);
@@ -162,6 +181,10 @@ const ActivityLogs: React.FC<ActivityLogsProps> = ({ contestId }) => {
     }, [contestId]);
 
     useEffect(() => {
+        loadFilterOptions();
+    }, [loadFilterOptions]);
+
+    useEffect(() => {
         loadLogs();
         loadStats();
     }, [loadLogs, loadStats]);
@@ -172,10 +195,11 @@ const ActivityLogs: React.FC<ActivityLogsProps> = ({ contestId }) => {
         const interval = setInterval(() => {
             loadLogs();
             loadStats();
+            loadFilterOptions();
         }, 5000); // Refresh every 5 seconds
 
         return () => clearInterval(interval);
-    }, [autoRefresh, loadLogs, loadStats]);
+    }, [autoRefresh, loadLogs, loadStats, loadFilterOptions]);
 
     const getSeverityColor = (severity: string) => {
         switch (severity) {
@@ -215,7 +239,7 @@ const ActivityLogs: React.FC<ActivityLogsProps> = ({ contestId }) => {
         return date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
-    const uniqueTypes = Array.from(new Set(logs.map(log => log.activityType)));
+    const uniqueTypes = allActivityTypes;
 
     if (loading) {
         return (

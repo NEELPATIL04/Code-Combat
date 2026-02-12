@@ -437,10 +437,30 @@ const Submissions: React.FC = () => {
                     {
                         label: 'Contest Logs',
                         value: `${activityLogCounts.alert} / ${activityLogCounts.warning}`,
-                        tooltip: 'Alerts / Warnings'
+                        tooltip: 'Alerts / Warnings',
+                        clickable: true
                     }
                 ].map((stat, i) => (
-                    <div key={i} style={{ textAlign: 'center', padding: '12px 20px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', flex: 1 }}>
+                    <div
+                        key={i}
+                        onClick={() => {
+                            if ((stat as any).clickable && contestId) {
+                                navigate(`/admin/contests/${contestId}?userId=${id}`, { state: { tab: 'activity' } });
+                            }
+                        }}
+                        style={{
+                            textAlign: 'center',
+                            padding: '12px 20px',
+                            background: '#09090b',
+                            border: '1px solid #27272a',
+                            borderRadius: '8px',
+                            flex: 1,
+                            cursor: (stat as any).clickable ? 'pointer' : 'default',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => { if ((stat as any).clickable) e.currentTarget.style.borderColor = '#3b82f6'; }}
+                        onMouseLeave={(e) => { if ((stat as any).clickable) e.currentTarget.style.borderColor = '#27272a'; }}
+                    >
                         <span style={{
                             fontSize: stat.label === 'Contest Logs' ? '1rem' : '1.25rem',
                             fontWeight: 700,

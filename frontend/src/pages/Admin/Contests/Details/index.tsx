@@ -67,6 +67,14 @@ const ContestDetails: React.FC = () => {
     const [userPausedMap, setUserPausedMap] = useState<Record<number, boolean>>({});
     const [actionLoading, setActionLoading] = useState<number | null>(null);
 
+    // Auto-switch to activity tab if userId param is present (e.g. navigated from Submissions page)
+    useEffect(() => {
+        const userIdParam = searchParams.get('userId');
+        if (userIdParam) {
+            setActiveTab('activity');
+        }
+    }, []);
+
     useEffect(() => {
         loadContestDetails();
     }, [id]);
@@ -554,7 +562,16 @@ const ContestDetails: React.FC = () => {
                                             })()}
                                         </td>
                                         <td style={tdStyle}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem' }}>
+                                            <div
+                                                onClick={() => {
+                                                    setActiveTab('activity');
+                                                    setSearchParams({ userId: p.userId.toString() });
+                                                }}
+                                                title="View Activity Logs"
+                                                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', cursor: 'pointer', borderRadius: '6px', padding: '4px 6px', transition: 'all 0.2s' }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                            >
                                                 <span style={{
                                                     display: 'inline-flex',
                                                     alignItems: 'center',
@@ -613,38 +630,6 @@ const ContestDetails: React.FC = () => {
                                                     }}
                                                 >
                                                     <Eye size={13} />
-                                                </button>
-
-                                                <button
-                                                    onClick={() => {
-                                                        setActiveTab('activity');
-                                                        setSearchParams({ userId: p.userId.toString() });
-                                                    }}
-                                                    title="View Activity Logs"
-                                                    style={{
-                                                        background: 'transparent',
-                                                        border: '1px solid #27272a',
-                                                        borderRadius: '6px',
-                                                        color: '#a1a1aa',
-                                                        padding: '6px 8px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '4px',
-                                                        fontSize: '0.75rem',
-                                                        fontWeight: 500,
-                                                        cursor: 'pointer',
-                                                        transition: 'all 0.2s'
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        e.currentTarget.style.borderColor = '#8b5cf6';
-                                                        e.currentTarget.style.color = '#8b5cf6';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        e.currentTarget.style.borderColor = '#27272a';
-                                                        e.currentTarget.style.color = '#a1a1aa';
-                                                    }}
-                                                >
-                                                    <Activity size={13} />
                                                 </button>
 
                                                 {/* Pause/Resume user button */}

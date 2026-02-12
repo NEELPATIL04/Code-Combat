@@ -27,6 +27,15 @@ export const logActivity = async (req: Request, res: Response, next: NextFunctio
       return res.status(400).json({ message: 'Activity type is required' });
     }
 
+    // Skip logging for admin/super_admin users - only track player activity
+    const userRole = (req as any).user?.role;
+    if (userRole === 'admin' || userRole === 'super_admin') {
+      return res.status(200).json({
+        success: true,
+        message: 'Activity logging skipped for admin users',
+      });
+    }
+
     // Check if activity logging is enabled for this contest
     const [settings] = await db
       .select()
@@ -160,10 +169,19 @@ export const getUserActivityLogs = async (req: Request, res: Response, next: Nex
       )
       .orderBy(desc(activityLogs.timestamp));
 
+    // Calculate severity counts
+    const severityCounts = { alert: 0, warning: 0, normal: 0 };
+    logs.forEach(log => {
+      if (log.severity === 'alert') severityCounts.alert++;
+      else if (log.severity === 'warning') severityCounts.warning++;
+      else severityCounts.normal++;
+    });
+
     return res.status(200).json({
       success: true,
       count: logs.length,
       logs,
+      severityCounts,
     });
   } catch (error) {
     next(error);
