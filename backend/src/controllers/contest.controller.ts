@@ -76,7 +76,8 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
           functionName: task.functionName,
           boilerplateCode: task.boilerplateCode,
           testRunnerTemplate: task.testRunnerTemplate, // This maps to wrapperCode from frontend
-          aiConfig: task.aiConfig
+          aiConfig: task.aiConfig,
+          aiEvalConfig: task.aiEvalConfig
         }).returning();
 
         // Insert test cases if provided
@@ -328,6 +329,7 @@ export const updateContest = async (req: Request, res: Response, next: NextFunct
           boilerplateCode: task.boilerplateCode,
           testRunnerTemplate: task.testRunnerTemplate,
           aiConfig: task.aiConfig,
+          aiEvalConfig: task.aiEvalConfig,
         }).where(eq(tasks.id, task.id));
 
         // Replace test cases for this task
@@ -360,6 +362,7 @@ export const updateContest = async (req: Request, res: Response, next: NextFunct
           boilerplateCode: task.boilerplateCode,
           testRunnerTemplate: task.testRunnerTemplate,
           aiConfig: task.aiConfig,
+          aiEvalConfig: task.aiEvalConfig,
         }).returning();
 
         if (task.testCases && Array.isArray(task.testCases) && task.testCases.length > 0) {
