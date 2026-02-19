@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { io } from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
 
 interface SocketContextType {
     socket: Socket | null;
@@ -15,12 +16,18 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [isConnected, setIsConnected] = useState(false);
 
     useEffect(() => {
-        // Auto-detect environment: if running on localhost, use local backend; otherwise use same origin (nginx proxies /socket.io/)
-        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const localBackend = import.meta.env.VITE_LOCAL_BACKEND_URL?.replace('/api', '') || 'http://localhost:5000';
-        const socketUrl = isLocal ? localBackend : window.location.origin;
+        // Determine backend based on VITE_BACKEND_MODE (respects .env configuration)
+        const backendMode = import.meta.env.VITE_BACKEND_MODE || 'local';
+        const isLocalMode = backendMode === 'local';
 
-        console.log(`🔌 Socket connecting to: ${socketUrl} (${isLocal ? 'local' : 'production'})`);
+        // Get backend URLs from environment variables
+        const localBackend = import.meta.env.VITE_LOCAL_BACKEND_URL?.replace('/api', '') || 'http://localhost:5000';
+        const liveBackend = import.meta.env.VITE_LIVE_BACKEND_URL?.replace('/api', '') || 'http://49.13.223.175:5000';
+
+        // Use the appropriate backend based on mode
+        const socketUrl = isLocalMode ? localBackend : liveBackend;
+
+        console.log(`🔌 Socket connecting to: ${socketUrl} (${backendMode.toUpperCase()} mode)`);
 
         const socketInstance = io(socketUrl, {
             withCredentials: true,

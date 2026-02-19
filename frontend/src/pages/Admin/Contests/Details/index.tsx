@@ -13,13 +13,15 @@ import {
     Clock,
     BarChart3,
     Eye,
+    Edit2,
     Settings as SettingsIcon,
     LayoutDashboard,
     Pause,
+    Play,
     PlayCircle,
     RotateCcw,
     StopCircle,
-    MoreVertical,
+    Trash2,
 } from 'lucide-react';
 import { contestAPI } from '../../../../utils/api';
 import ContestSettings from './ContestSettings';
@@ -66,6 +68,7 @@ const ContestDetails: React.FC = () => {
     const [openActionMenu, setOpenActionMenu] = useState<number | null>(null);
     const [userPausedMap, setUserPausedMap] = useState<Record<number, boolean>>({});
     const [actionLoading, setActionLoading] = useState<number | null>(null);
+    const [contestActionLoading, setContestActionLoading] = useState(false);
 
     // Auto-switch to activity tab if userId param is present (e.g. navigated from Submissions page)
     useEffect(() => {
@@ -79,6 +82,76 @@ const ContestDetails: React.FC = () => {
         loadContestDetails();
     }, [id]);
 
+    const handleStartContest = async () => {
+        if (!contest) return;
+        if (!window.confirm('Are you sure you want to start this contest? This will make it active for all participants.')) return;
+        setContestActionLoading(true);
+        try {
+            await contestAPI.start(contest.id);
+            await loadContestDetails();
+        } catch (err) {
+            console.error('Failed to start contest:', err);
+        } finally {
+            setContestActionLoading(false);
+        }
+    };
+
+    const handlePauseContest = async () => {
+        if (!contest) return;
+        if (!window.confirm('Are you sure you want to pause this contest? Participants will not be able to continue until you resume.')) return;
+        setContestActionLoading(true);
+        try {
+            await contestAPI.pause(contest.id);
+            await loadContestDetails();
+        } catch (err) {
+            console.error('Failed to pause contest:', err);
+        } finally {
+            setContestActionLoading(false);
+        }
+    };
+
+    const handleResumeContest = async () => {
+        if (!contest) return;
+        if (!window.confirm('Are you sure you want to resume this contest? Participants will be able to continue working.')) return;
+        setContestActionLoading(true);
+        try {
+            await contestAPI.resume(contest.id);
+            await loadContestDetails();
+        } catch (err) {
+            console.error('Failed to resume contest:', err);
+        } finally {
+            setContestActionLoading(false);
+        }
+    };
+
+    const handleEndContest = async () => {
+        if (!contest) return;
+        if (!window.confirm("\u26a0\ufe0f Are you sure you want to END this contest? This action cannot be undone. All participants' current work will be auto-submitted.")) return;
+        setContestActionLoading(true);
+        try {
+            await contestAPI.end(contest.id);
+            await loadContestDetails();
+        } catch (err) {
+            console.error('Failed to end contest:', err);
+        } finally {
+            setContestActionLoading(false);
+        }
+    };
+
+    const handleResetContest = async () => {
+        if (!contest) return;
+        if (!window.confirm('\u26a0\ufe0f Are you sure you want to RESET this contest?\n\nThis will:\n\u2022 Clear ALL submissions\n\u2022 Clear ALL participant progress\n\u2022 Clear ALL results\n\u2022 Reset contest to "upcoming" status\n\nThis action cannot be undone!')) return;
+        setContestActionLoading(true);
+        try {
+            await contestAPI.reset(contest.id);
+            await loadContestDetails();
+        } catch (err) {
+            console.error('Failed to reset contest:', err);
+        } finally {
+            setContestActionLoading(false);
+        }
+    };
+
     const loadContestDetails = async () => {
         if (!id) return;
         try {
@@ -91,6 +164,20 @@ const ContestDetails: React.FC = () => {
             setError(err.message || 'Failed to load contest details. It may have been deleted.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDeleteContest = async () => {
+        if (!contest) return;
+        if (!window.confirm('Are you sure you want to delete this contest? This action cannot be undone.')) return;
+        setContestActionLoading(true);
+        try {
+            await contestAPI.delete(contest.id);
+            navigate('/admin/contests');
+        } catch (err) {
+            console.error('Failed to delete contest:', err);
+        } finally {
+            setContestActionLoading(false);
         }
     };
 
@@ -274,447 +361,667 @@ const ContestDetails: React.FC = () => {
             {/* Tab Content */}
             {activeTab === 'overview' && (
                 <>
-            {/* Bento Grid */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
-                gap: '20px',
-                marginBottom: '40px'
-            }}>
-                {/* Main Contest Info (2x1) */}
-                <div style={{
-                    gridColumn: 'span 2',
-                    background: '#09090b',
-                    border: '1px solid #27272a',
-                    borderRadius: '16px',
-                    padding: '24px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    position: 'relative',
-                    overflow: 'hidden'
-                }}>
-                    <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                            <h1 style={{
-                                fontSize: '1.75rem',
-                                fontWeight: 600,
-                                margin: 0,
-                                color: '#fafafa',
-                                letterSpacing: '-0.025em'
-                            }}>
-                                {contest.title}
-                            </h1>
-                            <span style={{
-                                padding: '4px 12px',
-                                borderRadius: '9999px',
-                                fontSize: '0.75rem',
-                                fontWeight: 600,
-                                textTransform: 'uppercase',
-                                background: contest.status === 'active' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(113, 113, 122, 0.1)',
-                                color: contest.status === 'active' ? '#22c55e' : '#71717a',
-                                border: `1px solid ${contest.status === 'active' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(113, 113, 122, 0.2)'}`
-                            }}>
-                                {contest.status}
-                            </span>
-                        </div>
-                        <div style={{ display: 'flex', gap: '24px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#a1a1aa' }}>
-                                <BarChart3 size={16} />
-                                <span style={{ fontSize: '0.9375rem' }}>{contest.difficulty}</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#a1a1aa' }}>
-                                <Clock size={16} />
-                                <span style={{ fontSize: '0.9375rem' }}>{contest.duration} mins</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#a1a1aa' }}>
-                                <Activity size={16} />
-                                <span style={{ fontSize: '0.9375rem' }}>{contest.tasks?.length || 0} Tasks</span>
-                            </div>
-                        </div>
-                    </div>
-                    {/* Decorative Background Icon */}
-                    <Trophy size={120} style={{
-                        position: 'absolute',
-                        right: '-20px',
-                        bottom: '-20px',
-                        opacity: 0.03,
-                        color: '#fafafa',
-                        transform: 'rotate(-15deg)'
-                    }} />
-                </div>
-
-                {/* Total Participants (1x1) */}
-                <StatCard
-                    icon={<Users size={20} color="#3b82f6" />}
-                    label="Total Participants"
-                    value={contest.participants.length}
-                />
-
-                {/* Started (1x1) */}
-                <StatCard
-                    icon={<CheckCircle2 size={20} color="#22c55e" />}
-                    label="Active Players"
-                    value={contest.participants.filter(p => p.hasStarted).length}
-                />
-
-                {/* Description (2x1) */}
-                <div style={{
-                    gridColumn: 'span 2',
-                    background: '#09090b',
-                    border: '1px solid #27272a',
-                    borderRadius: '16px',
-                    padding: '24px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#71717a', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        <Info size={14} /> Description
-                    </div>
-                    <p style={{
-                        color: '#a1a1aa',
-                        margin: 0,
-                        lineHeight: 1.6,
-                        fontSize: '0.9375rem',
-                        overflow: 'hidden',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: 'vertical'
+                    {/* Bento Grid */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(4, 1fr)',
+                        gap: '20px',
+                        marginBottom: '40px'
                     }}>
-                        {contest.description || 'No description provided for this contest.'}
-                    </p>
-                </div>
+                        {/* Main Contest Info (2x1) */}
+                        <div style={{
+                            gridColumn: 'span 2',
+                            background: '#09090b',
+                            border: '1px solid #27272a',
+                            borderRadius: '16px',
+                            padding: '24px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            position: 'relative',
+                            overflow: 'hidden'
+                        }}>
+                            <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                                    <h1 style={{
+                                        fontSize: '1.75rem',
+                                        fontWeight: 600,
+                                        margin: 0,
+                                        color: '#fafafa',
+                                        letterSpacing: '-0.025em'
+                                    }}>
+                                        {contest.title}
+                                    </h1>
+                                    <span style={{
+                                        padding: '4px 12px',
+                                        borderRadius: '9999px',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 600,
+                                        textTransform: 'uppercase',
+                                        background: contest.status === 'active' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(113, 113, 122, 0.1)',
+                                        color: contest.status === 'active' ? '#22c55e' : '#71717a',
+                                        border: `1px solid ${contest.status === 'active' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(113, 113, 122, 0.2)'}`
+                                    }}>
+                                        {contest.status}
+                                    </span>
+                                </div>
+                                <div style={{ display: 'flex', gap: '24px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#a1a1aa' }}>
+                                        <BarChart3 size={16} />
+                                        <span style={{ fontSize: '0.9375rem' }}>{contest.difficulty}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#a1a1aa' }}>
+                                        <Clock size={16} />
+                                        <span style={{ fontSize: '0.9375rem' }}>{contest.duration} mins</span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#a1a1aa' }}>
+                                        <Activity size={16} />
+                                        <span style={{ fontSize: '0.9375rem' }}>{contest.tasks?.length || 0} Tasks</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Contest Action Buttons */}
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '20px', flexWrap: 'wrap' }}>
+                                {/* Start Button - Only for upcoming contests */}
+                                {!contest.isStarted && contest.status === 'upcoming' && (
+                                    <button
+                                        onClick={handleStartContest}
+                                        disabled={contestActionLoading}
+                                        title="Start Contest"
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            padding: '8px 14px',
+                                            background: 'transparent',
+                                            border: '1px solid #27272a',
+                                            borderRadius: '6px',
+                                            color: '#22c55e',
+                                            fontSize: '0.8125rem',
+                                            fontWeight: 500,
+                                            cursor: contestActionLoading ? 'wait' : 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            opacity: contestActionLoading ? 0.5 : 1,
+                                        }}
+                                        onMouseOver={(e) => { e.currentTarget.style.background = '#18181b'; }}
+                                        onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                    >
+                                        <Play size={14} /> Start
+                                    </button>
+                                )}
 
-                {/* Average Score (1x1) */}
-                <StatCard
-                    icon={<Trophy size={20} color="#eab308" />}
-                    label="Average Score"
-                    value={contest.participants.length > 0
-                        ? (contest.participants.reduce((acc, p) => acc + p.score, 0) / contest.participants.length).toFixed(1)
-                        : '0'}
-                />
+                                {/* Pause Button - For running active contests */}
+                                {contest.status === 'active' && ((contest as any).contestState === 'running' || !(contest as any).contestState) && (
+                                    <button
+                                        onClick={handlePauseContest}
+                                        disabled={contestActionLoading}
+                                        title="Pause Contest"
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            padding: '8px 14px',
+                                            background: 'transparent',
+                                            border: '1px solid #27272a',
+                                            borderRadius: '6px',
+                                            color: '#eab308',
+                                            fontSize: '0.8125rem',
+                                            fontWeight: 500,
+                                            cursor: contestActionLoading ? 'wait' : 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            opacity: contestActionLoading ? 0.5 : 1,
+                                        }}
+                                        onMouseOver={(e) => { e.currentTarget.style.background = '#18181b'; }}
+                                        onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                    >
+                                        <Pause size={14} /> Pause
+                                    </button>
+                                )}
 
-                {/* Created On (1x1) */}
-                <StatCard
-                    icon={<Calendar size={20} color="#a1a1aa" />}
-                    label="Created On"
-                    value={createdOn}
-                    nowrap={true}
-                />
-            </div>
+                                {/* Resume Button - For paused contests */}
+                                {contest.status === 'active' && (contest as any).contestState === 'paused' && (
+                                    <button
+                                        onClick={handleResumeContest}
+                                        disabled={contestActionLoading}
+                                        title="Resume Contest"
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            padding: '8px 14px',
+                                            background: 'transparent',
+                                            border: '1px solid #27272a',
+                                            borderRadius: '6px',
+                                            color: '#22c55e',
+                                            fontSize: '0.8125rem',
+                                            fontWeight: 500,
+                                            cursor: contestActionLoading ? 'wait' : 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            opacity: contestActionLoading ? 0.5 : 1,
+                                        }}
+                                        onMouseOver={(e) => { e.currentTarget.style.background = '#18181b'; }}
+                                        onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                    >
+                                        <PlayCircle size={14} /> Resume
+                                    </button>
+                                )}
 
-            {/* Performance Table Section */}
-            <div style={{
-                background: '#09090b',
-                border: '1px solid #27272a',
-                borderRadius: '16px',
-                overflow: 'hidden'
-            }}>
-                <div style={{
-                    padding: '24px',
-                    borderBottom: '1px solid #27272a',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                }}>
-                    <h3 style={{ margin: 0, color: '#fafafa', fontSize: '1.125rem', fontWeight: 600 }}>Participant Performance</h3>
-                    <div style={{ position: 'relative' }}>
-                        <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#71717a' }} />
-                        <input
-                            type="text"
-                            placeholder="Filter participants..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            style={{
-                                background: '#18181b',
-                                border: '1px solid #27272a',
-                                borderRadius: '8px',
+                                {/* End Button - For active contests */}
+                                {contest.status === 'active' && (
+                                    <button
+                                        onClick={handleEndContest}
+                                        disabled={contestActionLoading}
+                                        title="End Contest"
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            padding: '8px 14px',
+                                            background: 'transparent',
+                                            border: '1px solid #27272a',
+                                            borderRadius: '6px',
+                                            color: '#ef4444',
+                                            fontSize: '0.8125rem',
+                                            fontWeight: 500,
+                                            cursor: contestActionLoading ? 'wait' : 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            opacity: contestActionLoading ? 0.5 : 1,
+                                        }}
+                                        onMouseOver={(e) => { e.currentTarget.style.background = '#18181b'; }}
+                                        onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                    >
+                                        <StopCircle size={14} /> End
+                                    </button>
+                                )}
+
+                                {/* Reset Button - Available for active and completed contests */}
+                                {(contest.status === 'active' || contest.status === 'completed') && (
+                                    <button
+                                        onClick={handleResetContest}
+                                        disabled={contestActionLoading}
+                                        title="Reset Contest"
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            padding: '8px 14px',
+                                            background: 'transparent',
+                                            border: '1px solid #27272a',
+                                            borderRadius: '6px',
+                                            color: '#f97316',
+                                            fontSize: '0.8125rem',
+                                            fontWeight: 500,
+                                            cursor: contestActionLoading ? 'wait' : 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            opacity: contestActionLoading ? 0.5 : 1,
+                                        }}
+                                        onMouseOver={(e) => { e.currentTarget.style.background = '#18181b'; }}
+                                        onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                    >
+                                        <RotateCcw size={14} /> Reset
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Management Buttons */}
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap', paddingTop: '12px', borderTop: '1px solid #27272a' }}>
+                                {/* Edit Button */}
+                                <button
+                                    onClick={() => setActiveTab('settings')}
+                                    title="Edit Contest"
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        padding: '8px 14px',
+                                        background: 'transparent',
+                                        border: '1px solid #27272a',
+                                        borderRadius: '6px',
+                                        color: '#a1a1aa',
+                                        fontSize: '0.8125rem',
+                                        fontWeight: 500,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                    }}
+                                    onMouseOver={(e) => { e.currentTarget.style.background = '#18181b'; e.currentTarget.style.color = '#fafafa'; }}
+                                    onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#a1a1aa'; }}
+                                >
+                                    <Edit2 size={14} /> Edit
+                                </button>
+
+                                {/* Manage Participants Button */}
+                                <button
+                                    onClick={() => setActiveTab('settings')}
+                                    title="Manage Participants"
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        padding: '8px 14px',
+                                        background: 'transparent',
+                                        border: '1px solid #27272a',
+                                        borderRadius: '6px',
+                                        color: '#3b82f6',
+                                        fontSize: '0.8125rem',
+                                        fontWeight: 500,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                    }}
+                                    onMouseOver={(e) => { e.currentTarget.style.background = '#18181b'; }}
+                                    onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                >
+                                    <Users size={14} /> Participants
+                                </button>
+
+                                {/* Delete Button */}
+                                <button
+                                    onClick={handleDeleteContest}
+                                    disabled={contestActionLoading}
+                                    title="Delete Contest"
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        padding: '8px 14px',
+                                        background: 'transparent',
+                                        border: '1px solid #27272a',
+                                        borderRadius: '6px',
+                                        color: '#ef4444',
+                                        fontSize: '0.8125rem',
+                                        fontWeight: 500,
+                                        cursor: contestActionLoading ? 'wait' : 'pointer',
+                                        transition: 'all 0.2s ease',
+                                        opacity: contestActionLoading ? 0.5 : 1,
+                                    }}
+                                    onMouseOver={(e) => { e.currentTarget.style.background = '#18181b'; }}
+                                    onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                >
+                                    <Trash2 size={14} /> Delete
+                                </button>
+                            </div>
+
+                            {/* Decorative Background Icon */}
+                            <Trophy size={120} style={{
+                                position: 'absolute',
+                                right: '-20px',
+                                bottom: '-20px',
+                                opacity: 0.03,
                                 color: '#fafafa',
-                                padding: '10px 12px 10px 38px',
-                                fontSize: '0.875rem',
-                                outline: 'none',
-                                width: '280px',
-                                transition: 'border-color 0.2s'
-                            }}
-                            onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                            onBlur={(e) => e.target.style.borderColor = '#27272a'}
+                                transform: 'rotate(-15deg)'
+                            }} />
+                        </div>
+
+                        {/* Total Participants (1x1) */}
+                        <StatCard
+                            icon={<Users size={20} color="#3b82f6" />}
+                            label="Total Participants"
+                            value={contest.participants.length}
+                        />
+
+                        {/* Started (1x1) */}
+                        <StatCard
+                            icon={<CheckCircle2 size={20} color="#22c55e" />}
+                            label="Active Players"
+                            value={contest.participants.filter(p => p.hasStarted).length}
+                        />
+
+                        {/* Description (2x1) */}
+                        <div style={{
+                            gridColumn: 'span 2',
+                            background: '#09090b',
+                            border: '1px solid #27272a',
+                            borderRadius: '16px',
+                            padding: '24px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '12px'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#71717a', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                <Info size={14} /> Description
+                            </div>
+                            <p style={{
+                                color: '#a1a1aa',
+                                margin: 0,
+                                lineHeight: 1.6,
+                                fontSize: '0.9375rem',
+                                overflow: 'hidden',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 3,
+                                WebkitBoxOrient: 'vertical'
+                            }}>
+                                {contest.description || 'No description provided for this contest.'}
+                            </p>
+                        </div>
+
+                        {/* Average Score (1x1) */}
+                        <StatCard
+                            icon={<Trophy size={20} color="#eab308" />}
+                            label="Average Score"
+                            value={contest.participants.length > 0
+                                ? (contest.participants.reduce((acc, p) => acc + p.score, 0) / contest.participants.length).toFixed(1)
+                                : '0'}
+                        />
+
+                        {/* Created On (1x1) */}
+                        <StatCard
+                            icon={<Calendar size={20} color="#a1a1aa" />}
+                            label="Created On"
+                            value={createdOn}
+                            nowrap={true}
                         />
                     </div>
-                </div>
 
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                        <thead>
-                            <tr style={{ background: '#0a0a0b', borderBottom: '1px solid #27272a' }}>
-                                <th style={thStyle}>Participant</th>
-                                <th style={thStyle}>Status</th>
-                                <th style={thStyle}>Started At</th>
-                                <th style={thStyle}>Score</th>
-                                <th style={thStyle}>Performance</th>
-                                <th style={thStyle}>Logs</th>
-                                <th style={thStyle}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {(() => {
-                                const totalMaxPoints = contest.tasks?.reduce((sum: number, t: any) => sum + (t.maxPoints || 100), 0) || 0;
-                                return filteredParticipants.length === 0 ? (
-                                <tr>
-                                    <td colSpan={7} style={{ padding: '60px', textAlign: 'center', color: '#71717a' }}>
-                                        No participants match your search.
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredParticipants.map((p, idx) => {
-                                    return (<tr key={p.id} style={{
-                                        borderBottom: idx === filteredParticipants.length - 1 ? 'none' : '1px solid #27272a',
-                                        transition: 'background 0.2s'
+                    {/* Performance Table Section */}
+                    <div style={{
+                        background: '#09090b',
+                        border: '1px solid #27272a',
+                        borderRadius: '16px',
+                        overflow: 'hidden'
+                    }}>
+                        <div style={{
+                            padding: '24px',
+                            borderBottom: '1px solid #27272a',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            <h3 style={{ margin: 0, color: '#fafafa', fontSize: '1.125rem', fontWeight: 600 }}>Participant Performance</h3>
+                            <div style={{ position: 'relative' }}>
+                                <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#71717a' }} />
+                                <input
+                                    type="text"
+                                    placeholder="Filter participants..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    style={{
+                                        background: '#18181b',
+                                        border: '1px solid #27272a',
+                                        borderRadius: '8px',
+                                        color: '#fafafa',
+                                        padding: '10px 12px 10px 38px',
+                                        fontSize: '0.875rem',
+                                        outline: 'none',
+                                        width: '280px',
+                                        transition: 'border-color 0.2s'
                                     }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                                    >
-                                        <td style={tdStyle}>
-                                            <div
-                                                style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
-                                                onClick={() => navigate(`/admin/participants/${p.userId}`)}
-                                                onMouseEnter={(e) => {
-                                                    const target = e.currentTarget.querySelector('.username-text') as HTMLElement;
-                                                    if (target) target.style.color = '#3b82f6';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    const target = e.currentTarget.querySelector('.username-text') as HTMLElement;
-                                                    if (target) target.style.color = '#fafafa';
-                                                }}
-                                            >
-                                                <div style={{
-                                                    width: '36px',
-                                                    height: '36px',
-                                                    borderRadius: '10px',
-                                                    background: '#18181b',
-                                                    border: '1px solid #27272a',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontSize: '0.875rem',
-                                                    fontWeight: 600,
-                                                    color: '#fafafa'
-                                                }}>
-                                                    {(p.username || '?').charAt(0).toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <div className="username-text" style={{ color: '#fafafa', fontWeight: 500, transition: 'color 0.2s' }}>
-                                                        {p.firstName && p.lastName ? `${p.firstName} ${p.lastName}` : (p.username || 'Deleted User')}
-                                                    </div>
-                                                    <div style={{ color: '#71717a', fontSize: '0.75rem' }}>{p.email || 'N/A'}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td style={tdStyle}>
-                                            <span style={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: '6px',
-                                                padding: '4px 10px',
-                                                borderRadius: '9999px',
-                                                fontSize: '0.75rem',
-                                                fontWeight: 500,
-                                                background: p.hasStarted ? 'rgba(34, 197, 94, 0.1)' : 'rgba(113, 113, 122, 0.1)',
-                                                color: p.hasStarted ? '#22c55e' : '#71717a'
-                                            }}>
-                                                <span style={{
-                                                    width: '6px',
-                                                    height: '6px',
-                                                    borderRadius: '50%',
-                                                    background: p.hasStarted ? '#22c55e' : '#71717a'
-                                                }}></span>
-                                                {p.hasStarted ? 'Active' : 'Not Started'}
-                                            </span>
-                                        </td>
-                                        <td style={tdStyle}>
-                                            <div style={{ color: '#a1a1aa', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
-                                                {formatDate(p.startedAt)}
-                                            </div>
-                                        </td>
-                                        <td style={tdStyle}>
-                                            <div style={{ color: '#fafafa', fontWeight: 600, fontSize: '1rem' }}>
-                                                {p.score} <span style={{ color: '#71717a', fontSize: '0.75rem', fontWeight: 400 }}>/ {totalMaxPoints} pts</span>
-                                            </div>
-                                        </td>
-                                        <td style={tdStyle}>
-                                            {(() => {
-                                                const pct = totalMaxPoints > 0 ? Math.min(100, Math.round((p.score / totalMaxPoints) * 100)) : 0;
-                                                const barColor = pct >= 80 ? '#22c55e' : pct >= 50 ? '#f59e0b' : pct >= 25 ? '#f97316' : '#ef4444';
-                                                return (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                        <div style={{ width: '120px', height: '6px', background: '#18181b', borderRadius: '4px', overflow: 'hidden', border: '1px solid #27272a' }}>
-                                                            <div style={{
-                                                                width: `${pct}%`,
-                                                                height: '100%',
-                                                                background: barColor,
-                                                                borderRadius: '4px',
-                                                                transition: 'width 0.5s ease-out'
-                                                            }}></div>
-                                                        </div>
-                                                        <span style={{ color: barColor, fontSize: '0.75rem', fontWeight: 600, minWidth: '36px' }}>{pct}%</span>
-                                                    </div>
-                                                );
-                                            })()}
-                                        </td>
-                                        <td style={tdStyle}>
-                                            <div
-                                                onClick={() => {
-                                                    setActiveTab('activity');
-                                                    setSearchParams({ userId: p.userId.toString() });
-                                                }}
-                                                title="View Activity Logs"
-                                                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', cursor: 'pointer', borderRadius: '6px', padding: '4px 6px', transition: 'all 0.2s' }}
-                                                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-                                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                                            >
-                                                <span style={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    gap: '4px',
-                                                    padding: '4px 8px',
-                                                    borderRadius: '6px',
-                                                    background: 'rgba(239, 68, 68, 0.1)',
-                                                    color: '#ef4444',
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: 600
-                                                }}>
-                                                    {p.alertCount || 0}
-                                                </span>
-                                                <span style={{ color: '#71717a', fontSize: '0.75rem' }}>/</span>
-                                                <span style={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    gap: '4px',
-                                                    padding: '4px 8px',
-                                                    borderRadius: '6px',
-                                                    background: 'rgba(234, 179, 8, 0.1)',
-                                                    color: '#eab308',
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: 600
-                                                }}>
-                                                    {p.warningCount || 0}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td style={tdStyle}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative' }}>
-                                                <button
-                                                    onClick={() => navigate(`/admin/participants/${p.userId}/contest/${contest.id}`, { state: { from: 'contest' } })}
-                                                    title="View Submissions"
-                                                    style={{
-                                                        background: 'transparent',
-                                                        border: '1px solid #27272a',
-                                                        borderRadius: '6px',
-                                                        color: '#a1a1aa',
-                                                        padding: '6px 8px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '4px',
-                                                        fontSize: '0.75rem',
-                                                        fontWeight: 500,
-                                                        cursor: 'pointer',
-                                                        transition: 'all 0.2s'
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        e.currentTarget.style.borderColor = '#3b82f6';
-                                                        e.currentTarget.style.color = '#3b82f6';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        e.currentTarget.style.borderColor = '#27272a';
-                                                        e.currentTarget.style.color = '#a1a1aa';
-                                                    }}
-                                                >
-                                                    <Eye size={13} />
-                                                </button>
+                                    onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                                    onBlur={(e) => e.target.style.borderColor = '#27272a'}
+                                />
+                            </div>
+                        </div>
 
-                                                {/* Pause/Resume user button */}
-                                                {contest.status === 'active' && p.hasStarted && (
-                                                    <button
-                                                        onClick={() => handlePauseUser(p.userId)}
-                                                        title={userPausedMap[p.userId] ? 'Resume for this user' : 'Pause for this user'}
-                                                        disabled={actionLoading === p.userId}
-                                                        style={{
-                                                            background: 'transparent',
-                                                            border: '1px solid #27272a',
-                                                            borderRadius: '6px',
-                                                            color: userPausedMap[p.userId] ? '#22c55e' : '#eab308',
-                                                            padding: '6px 8px',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            cursor: actionLoading === p.userId ? 'wait' : 'pointer',
-                                                            transition: 'all 0.2s',
-                                                            opacity: actionLoading === p.userId ? 0.5 : 1,
-                                                        }}
-                                                        onMouseEnter={(e) => { e.currentTarget.style.background = '#18181b'; }}
-                                                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                                                    >
-                                                        {userPausedMap[p.userId] ? <PlayCircle size={13} /> : <Pause size={13} />}
-                                                    </button>
-                                                )}
-
-                                                {/* Reset user button */}
-                                                <button
-                                                    onClick={() => handleResetUser(p.userId)}
-                                                    title="Reset contest for this user"
-                                                    disabled={actionLoading === p.userId}
-                                                    style={{
-                                                        background: 'transparent',
-                                                        border: '1px solid #27272a',
-                                                        borderRadius: '6px',
-                                                        color: '#f97316',
-                                                        padding: '6px 8px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        cursor: actionLoading === p.userId ? 'wait' : 'pointer',
-                                                        transition: 'all 0.2s',
-                                                        opacity: actionLoading === p.userId ? 0.5 : 1,
-                                                    }}
-                                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#18181b'; }}
-                                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                                                >
-                                                    <RotateCcw size={13} />
-                                                </button>
-
-                                                {/* End user contest button */}
-                                                {contest.status === 'active' && p.hasStarted && (
-                                                    <button
-                                                        onClick={() => handleEndUser(p.userId)}
-                                                        title="End contest for this user (auto-submit & redirect)"
-                                                        disabled={actionLoading === p.userId}
-                                                        style={{
-                                                            background: 'transparent',
-                                                            border: '1px solid #27272a',
-                                                            borderRadius: '6px',
-                                                            color: '#ef4444',
-                                                            padding: '6px 8px',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            cursor: actionLoading === p.userId ? 'wait' : 'pointer',
-                                                            transition: 'all 0.2s',
-                                                            opacity: actionLoading === p.userId ? 0.5 : 1,
-                                                        }}
-                                                        onMouseEnter={(e) => { e.currentTarget.style.background = '#18181b'; }}
-                                                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                                                    >
-                                                        <StopCircle size={13} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </td>
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                <thead>
+                                    <tr style={{ background: '#0a0a0b', borderBottom: '1px solid #27272a' }}>
+                                        <th style={thStyle}>Participant</th>
+                                        <th style={thStyle}>Status</th>
+                                        <th style={thStyle}>Started At</th>
+                                        <th style={thStyle}>Score</th>
+                                        <th style={thStyle}>Performance</th>
+                                        <th style={thStyle}>Logs</th>
+                                        <th style={thStyle}>Actions</th>
                                     </tr>
-                                );
-                                })
-                            );
-                            })()}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                                </thead>
+                                <tbody>
+                                    {(() => {
+                                        const totalMaxPoints = contest.tasks?.reduce((sum: number, t: any) => sum + (t.maxPoints || 100), 0) || 0;
+                                        return filteredParticipants.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={7} style={{ padding: '60px', textAlign: 'center', color: '#71717a' }}>
+                                                    No participants match your search.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            filteredParticipants.map((p, idx) => {
+                                                return (<tr key={p.id} style={{
+                                                    borderBottom: idx === filteredParticipants.length - 1 ? 'none' : '1px solid #27272a',
+                                                    transition: 'background 0.2s'
+                                                }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                                >
+                                                    <td style={tdStyle}>
+                                                        <div
+                                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+                                                            onClick={() => navigate(`/admin/participants/${p.userId}`)}
+                                                            onMouseEnter={(e) => {
+                                                                const target = e.currentTarget.querySelector('.username-text') as HTMLElement;
+                                                                if (target) target.style.color = '#3b82f6';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                const target = e.currentTarget.querySelector('.username-text') as HTMLElement;
+                                                                if (target) target.style.color = '#fafafa';
+                                                            }}
+                                                        >
+                                                            <div style={{
+                                                                width: '36px',
+                                                                height: '36px',
+                                                                borderRadius: '10px',
+                                                                background: '#18181b',
+                                                                border: '1px solid #27272a',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                fontSize: '0.875rem',
+                                                                fontWeight: 600,
+                                                                color: '#fafafa'
+                                                            }}>
+                                                                {(p.username || '?').charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <div className="username-text" style={{ color: '#fafafa', fontWeight: 500, transition: 'color 0.2s' }}>
+                                                                    {p.firstName && p.lastName ? `${p.firstName} ${p.lastName}` : (p.username || 'Deleted User')}
+                                                                </div>
+                                                                <div style={{ color: '#71717a', fontSize: '0.75rem' }}>{p.email || 'N/A'}</div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td style={tdStyle}>
+                                                        <span style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: '6px',
+                                                            padding: '4px 10px',
+                                                            borderRadius: '9999px',
+                                                            fontSize: '0.75rem',
+                                                            fontWeight: 500,
+                                                            background: p.hasStarted ? 'rgba(34, 197, 94, 0.1)' : 'rgba(113, 113, 122, 0.1)',
+                                                            color: p.hasStarted ? '#22c55e' : '#71717a'
+                                                        }}>
+                                                            <span style={{
+                                                                width: '6px',
+                                                                height: '6px',
+                                                                borderRadius: '50%',
+                                                                background: p.hasStarted ? '#22c55e' : '#71717a'
+                                                            }}></span>
+                                                            {p.hasStarted ? 'Active' : 'Not Started'}
+                                                        </span>
+                                                    </td>
+                                                    <td style={tdStyle}>
+                                                        <div style={{ color: '#a1a1aa', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                                                            {formatDate(p.startedAt)}
+                                                        </div>
+                                                    </td>
+                                                    <td style={tdStyle}>
+                                                        <div style={{ color: '#fafafa', fontWeight: 600, fontSize: '1rem' }}>
+                                                            {p.score} <span style={{ color: '#71717a', fontSize: '0.75rem', fontWeight: 400 }}>/ {totalMaxPoints} pts</span>
+                                                        </div>
+                                                    </td>
+                                                    <td style={tdStyle}>
+                                                        {(() => {
+                                                            const pct = totalMaxPoints > 0 ? Math.min(100, Math.round((p.score / totalMaxPoints) * 100)) : 0;
+                                                            const barColor = pct >= 80 ? '#22c55e' : pct >= 50 ? '#f59e0b' : pct >= 25 ? '#f97316' : '#ef4444';
+                                                            return (
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                                    <div style={{ width: '120px', height: '6px', background: '#18181b', borderRadius: '4px', overflow: 'hidden', border: '1px solid #27272a' }}>
+                                                                        <div style={{
+                                                                            width: `${pct}%`,
+                                                                            height: '100%',
+                                                                            background: barColor,
+                                                                            borderRadius: '4px',
+                                                                            transition: 'width 0.5s ease-out'
+                                                                        }}></div>
+                                                                    </div>
+                                                                    <span style={{ color: barColor, fontSize: '0.75rem', fontWeight: 600, minWidth: '36px' }}>{pct}%</span>
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                    </td>
+                                                    <td style={tdStyle}>
+                                                        <div
+                                                            onClick={() => {
+                                                                setActiveTab('activity');
+                                                                setSearchParams({ userId: p.userId.toString() });
+                                                            }}
+                                                            title="View Activity Logs"
+                                                            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', cursor: 'pointer', borderRadius: '6px', padding: '4px 6px', transition: 'all 0.2s' }}
+                                                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                                                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                                        >
+                                                            <span style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: '4px',
+                                                                padding: '4px 8px',
+                                                                borderRadius: '6px',
+                                                                background: 'rgba(239, 68, 68, 0.1)',
+                                                                color: '#ef4444',
+                                                                fontSize: '0.75rem',
+                                                                fontWeight: 600
+                                                            }}>
+                                                                {p.alertCount || 0}
+                                                            </span>
+                                                            <span style={{ color: '#71717a', fontSize: '0.75rem' }}>/</span>
+                                                            <span style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: '4px',
+                                                                padding: '4px 8px',
+                                                                borderRadius: '6px',
+                                                                background: 'rgba(234, 179, 8, 0.1)',
+                                                                color: '#eab308',
+                                                                fontSize: '0.75rem',
+                                                                fontWeight: 600
+                                                            }}>
+                                                                {p.warningCount || 0}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td style={tdStyle}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', position: 'relative' }}>
+                                                            <button
+                                                                onClick={() => navigate(`/admin/participants/${p.userId}/contest/${contest.id}`, { state: { from: 'contest' } })}
+                                                                title="View Submissions"
+                                                                style={{
+                                                                    background: 'transparent',
+                                                                    border: '1px solid #27272a',
+                                                                    borderRadius: '6px',
+                                                                    color: '#a1a1aa',
+                                                                    padding: '6px 8px',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '4px',
+                                                                    fontSize: '0.75rem',
+                                                                    fontWeight: 500,
+                                                                    cursor: 'pointer',
+                                                                    transition: 'all 0.2s'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.borderColor = '#3b82f6';
+                                                                    e.currentTarget.style.color = '#3b82f6';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    e.currentTarget.style.borderColor = '#27272a';
+                                                                    e.currentTarget.style.color = '#a1a1aa';
+                                                                }}
+                                                            >
+                                                                <Eye size={13} />
+                                                            </button>
+
+                                                            {/* Pause/Resume user button */}
+                                                            {contest.status === 'active' && p.hasStarted && (
+                                                                <button
+                                                                    onClick={() => handlePauseUser(p.userId)}
+                                                                    title={userPausedMap[p.userId] ? 'Resume for this user' : 'Pause for this user'}
+                                                                    disabled={actionLoading === p.userId}
+                                                                    style={{
+                                                                        background: 'transparent',
+                                                                        border: '1px solid #27272a',
+                                                                        borderRadius: '6px',
+                                                                        color: userPausedMap[p.userId] ? '#22c55e' : '#eab308',
+                                                                        padding: '6px 8px',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        cursor: actionLoading === p.userId ? 'wait' : 'pointer',
+                                                                        transition: 'all 0.2s',
+                                                                        opacity: actionLoading === p.userId ? 0.5 : 1,
+                                                                    }}
+                                                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#18181b'; }}
+                                                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                                                >
+                                                                    {userPausedMap[p.userId] ? <PlayCircle size={13} /> : <Pause size={13} />}
+                                                                </button>
+                                                            )}
+
+                                                            {/* Reset user button */}
+                                                            <button
+                                                                onClick={() => handleResetUser(p.userId)}
+                                                                title="Reset contest for this user"
+                                                                disabled={actionLoading === p.userId}
+                                                                style={{
+                                                                    background: 'transparent',
+                                                                    border: '1px solid #27272a',
+                                                                    borderRadius: '6px',
+                                                                    color: '#f97316',
+                                                                    padding: '6px 8px',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    cursor: actionLoading === p.userId ? 'wait' : 'pointer',
+                                                                    transition: 'all 0.2s',
+                                                                    opacity: actionLoading === p.userId ? 0.5 : 1,
+                                                                }}
+                                                                onMouseEnter={(e) => { e.currentTarget.style.background = '#18181b'; }}
+                                                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                                            >
+                                                                <RotateCcw size={13} />
+                                                            </button>
+
+                                                            {/* End user contest button */}
+                                                            {contest.status === 'active' && p.hasStarted && (
+                                                                <button
+                                                                    onClick={() => handleEndUser(p.userId)}
+                                                                    title="End contest for this user (auto-submit & redirect)"
+                                                                    disabled={actionLoading === p.userId}
+                                                                    style={{
+                                                                        background: 'transparent',
+                                                                        border: '1px solid #27272a',
+                                                                        borderRadius: '6px',
+                                                                        color: '#ef4444',
+                                                                        padding: '6px 8px',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        cursor: actionLoading === p.userId ? 'wait' : 'pointer',
+                                                                        transition: 'all 0.2s',
+                                                                        opacity: actionLoading === p.userId ? 0.5 : 1,
+                                                                    }}
+                                                                    onMouseEnter={(e) => { e.currentTarget.style.background = '#18181b'; }}
+                                                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                                                >
+                                                                    <StopCircle size={13} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                );
+                                            })
+                                        );
+                                    })()}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </>
             )}
 

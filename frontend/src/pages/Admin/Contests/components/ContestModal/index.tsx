@@ -49,20 +49,20 @@ const ContestModal: React.FC<ContestModalProps> = ({ isOpen, onClose, isEditing,
                 `}
             </style>
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 32px', borderBottom: '1px solid #27272a', flexShrink: 0, background: '#09090b' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', borderBottom: '1px solid #27272a', flexShrink: 0, background: '#09090b' }}>
                 <div>
-                    <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#fafafa' }}>{fetchingDetails ? 'Loading...' : isEditing ? 'Edit Contest' : 'Create New Contest'}</h2>
-                    <p style={{ margin: '4px 0 0', color: '#a1a1aa', fontSize: '0.875rem' }}>
+                    <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#fafafa' }}>{fetchingDetails ? 'Loading...' : isEditing ? 'Edit Contest' : 'Create New Contest'}</h2>
+                    <p style={{ margin: '2px 0 0', color: '#a1a1aa', fontSize: '0.8rem' }}>
                         {currentStep === 1 ? 'Step 1: Basic Information' : currentStep === 2 ? 'Step 2: Manage Tasks' : 'Step 3: Select Participants'}
                     </p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
 
                     {[1, 2, 3].map(step => (
                         <React.Fragment key={step}>
                             <div style={{
-                                width: '32px',
-                                height: '32px',
+                                width: '28px',
+                                height: '28px',
                                 borderRadius: '50%',
                                 background: currentStep === step ? '#fafafa' : currentStep > step ? '#22c55e' : '#27272a',
                                 color: currentStep === step ? '#09090b' : currentStep > step ? '#ffffff' : '#71717a',
@@ -70,17 +70,17 @@ const ContestModal: React.FC<ContestModalProps> = ({ isOpen, onClose, isEditing,
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontWeight: 600,
-                                fontSize: '0.875rem',
+                                fontSize: '0.8rem',
                                 transition: 'all 0.3s'
                             }}>{step}</div>
-                            {step < 3 && <div style={{ width: '40px', height: '2px', background: currentStep > step ? '#22c55e' : '#27272a' }}></div>}
+                            {step < 3 && <div style={{ width: '32px', height: '2px', background: currentStep > step ? '#22c55e' : '#27272a' }}></div>}
                         </React.Fragment>
                     ))}
                 </div>
             </div>
 
             {/* Content Body */}
-            <div style={{ flex: 1, overflow: 'hidden', padding: '24px 32px', display: 'flex', flexDirection: 'column', maxWidth: '1400px', width: '100%', margin: '0 auto' }}>
+            <div style={{ flex: 1, overflow: 'hidden', padding: '20px 24px', display: 'flex', flexDirection: 'column', maxWidth: '1400px', width: '100%', margin: '0 auto' }}>
                 {fetchingDetails ? (
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                         <div style={{ width: '48px', height: '48px', border: '3px solid #27272a', borderTopColor: '#fafafa', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
@@ -95,26 +95,26 @@ const ContestModal: React.FC<ContestModalProps> = ({ isOpen, onClose, isEditing,
             </div>
 
             {/* Footer */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', padding: '24px 32px', borderTop: '1px solid #27272a', flexShrink: 0, background: '#09090b' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', padding: '14px 24px', borderTop: '1px solid #27272a', flexShrink: 0, background: '#09090b' }}>
                 <div>
                     {currentStep > 1 && (
-                        <button onClick={goToPrevStep} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', background: 'transparent', border: '1px solid #27272a', borderRadius: '6px', color: '#fafafa', fontSize: '0.9rem', fontWeight: 500, cursor: 'pointer', transition: 'background 0.2s' }}>
-                            <ChevronLeft size={18} /> Back
+                        <button onClick={goToPrevStep} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 20px', background: 'transparent', border: '1px solid #27272a', borderRadius: '6px', color: '#fafafa', fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer', transition: 'background 0.2s' }}>
+                            <ChevronLeft size={16} /> Back
                         </button>
                     )}
                 </div>
-                <div style={{ display: 'flex', gap: '16px' }}>
-                    <button onClick={onClose} style={{ padding: '12px 24px', background: 'transparent', border: '1px solid #ef4444', borderRadius: '6px', color: '#ef4444', fontSize: '0.9rem', fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    <button onClick={onClose} style={{ padding: '10px 20px', background: 'transparent', border: '1px solid #ef4444', borderRadius: '6px', color: '#ef4444', fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
                     {currentStep === 1 ? (
-                        <button onClick={goToStep2} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 32px', background: '#fafafa', border: 'none', borderRadius: '6px', color: '#09090b', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer' }}>
-                            Next: Manage Tasks <ChevronRight size={18} />
+                        <button onClick={goToStep2} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 24px', background: '#fafafa', border: 'none', borderRadius: '6px', color: '#09090b', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
+                            Next: Manage Tasks <ChevronRight size={16} />
                         </button>
                     ) : currentStep === 2 ? (
-                        <button onClick={goToStep3} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 32px', background: '#fafafa', border: 'none', borderRadius: '6px', color: '#09090b', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer' }}>
-                            Next: Select Participants <ChevronRight size={18} />
+                        <button onClick={goToStep3} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 24px', background: '#fafafa', border: 'none', borderRadius: '6px', color: '#09090b', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
+                            Next: Select Participants <ChevronRight size={16} />
                         </button>
                     ) : (
-                        <button onClick={onSave} disabled={loading || fetchingDetails} style={{ padding: '12px 32px', background: '#fafafa', border: 'none', borderRadius: '6px', color: '#09090b', fontSize: '0.9rem', fontWeight: 600, cursor: loading || fetchingDetails ? 'not-allowed' : 'pointer', opacity: loading || fetchingDetails ? 0.5 : 1 }}>
+                        <button onClick={onSave} disabled={loading || fetchingDetails} style={{ padding: '10px 24px', background: '#fafafa', border: 'none', borderRadius: '6px', color: '#09090b', fontSize: '0.85rem', fontWeight: 600, cursor: loading || fetchingDetails ? 'not-allowed' : 'pointer', opacity: loading || fetchingDetails ? 0.5 : 1 }}>
                             {loading ? 'Saving...' : isEditing ? 'Update Contest' : 'Create Contest'}
                         </button>
                     )}
