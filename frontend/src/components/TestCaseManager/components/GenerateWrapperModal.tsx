@@ -7,7 +7,6 @@ interface GenerateWrapperModalProps {
     description: string;
     functionName: string;
     allowedLanguages: string[];
-    boilerplateCode: Record<string, string>;
     onWrapperGenerated: (lang: string, code: string) => void;
     onClose: () => void;
 }
@@ -16,7 +15,6 @@ const GenerateWrapperModal: React.FC<GenerateWrapperModalProps> = ({
     description,
     functionName,
     allowedLanguages,
-    boilerplateCode,
     onWrapperGenerated,
     onClose
 }) => {
@@ -57,24 +55,46 @@ const GenerateWrapperModal: React.FC<GenerateWrapperModalProps> = ({
 
         setIsGenerating(true);
         try {
-            const result = await aiAPI.generateWrapper({
-                description: editedDescription + (customInstructions ? `\n\nAdditional instructions: ${customInstructions}` : ''),
+            const fullDesc = editedDescription + (customInstructions ? `\n\nAdditional instructions: ${customInstructions}` : '');
+
+            console.log('🧪 Generating wrapper for:', selectedLangs, '| fn:', functionName);
+
+            const result = await aiAPI.generateCode({
+                description: fullDesc,
                 functionName,
                 languages: selectedLangs,
-                boilerplateCode,
-                customInstructions
+                inputFormat: customInstructions || undefined,
+                outputFormat: undefined
             });
 
+            console.log('📦 generateCode raw result:', result);
+
+            // Filter out non-language keys (like 'success', 'message', etc.)
+            const KNOWN_LANGS = ['javascript', 'typescript', 'python', 'python3', 'java', 'cpp', 'c', 'golang', 'rust', 'ruby', 'kotlin', 'swift', 'csharp'];
             const newGenerated: Record<string, string> = {};
+
             Object.entries(result).forEach(([lang, code]: [string, any]) => {
+                // Only process actual language keys
+                if (!KNOWN_LANGS.includes(lang.toLowerCase()) || typeof code !== 'object' || code === null) {
+                    console.log(`⏭️ Skipping key: "${lang}" (not a language entry)`);
+                    return;
+                }
                 const wrapperCode = code.driver || code.wrapper || code.testRunner || '';
                 if (wrapperCode) {
                     newGenerated[lang] = wrapperCode;
                     onWrapperGenerated(lang, wrapperCode);
+                    console.log(`✅ Applied wrapper for ${lang} (${wrapperCode.length} chars)`);
+                } else {
+                    console.warn(`⚠️ No driver/wrapper found for ${lang}:`, code);
                 }
             });
-            setGenerated(newGenerated);
-            toast.success(`✅ Generated wrapper for ${Object.keys(newGenerated).length} language(s)!`);
+
+            if (Object.keys(newGenerated).length === 0) {
+                toast.error('AI returned no wrapper code. Try again or add more details.');
+            } else {
+                setGenerated(newGenerated);
+                toast.success(`✅ Generated wrapper for: ${Object.keys(newGenerated).join(', ')}`);
+            }
         } catch (error: any) {
             console.error('Wrapper generation error:', error);
             toast.error(error.message || 'Failed to generate wrapper code');

@@ -151,7 +151,6 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
                     description={description}
                     functionName={functionName}
                     allowedLanguages={allowedLanguages}
-                    boilerplateCode={boilerplateCode}
                     onWrapperGenerated={handleWrapperGenerated}
                     onClose={() => setShowWrapperModal(false)}
                 />

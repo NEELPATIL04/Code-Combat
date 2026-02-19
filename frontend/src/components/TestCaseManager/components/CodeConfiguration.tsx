@@ -62,13 +62,24 @@ const CodeConfiguration: React.FC<CodeConfigurationProps> = ({
                 outputFormat
             });
 
+            console.log('📦 AI generateCode result:', result);
+
+            // Filter out non-language keys (e.g. 'success': true) before iterating
+            const KNOWN_LANGS = ['javascript', 'typescript', 'python', 'python3', 'java', 'cpp', 'c', 'golang', 'rust', 'ruby', 'kotlin', 'swift', 'csharp'];
+
             // Update boilerplate and wrapper code for all languages
             Object.entries(result).forEach(([lang, code]: [string, any]) => {
+                if (!KNOWN_LANGS.includes(lang.toLowerCase()) || typeof code !== 'object' || code === null) {
+                    console.log(`⏭️ Skipping key: "${lang}"`);
+                    return;
+                }
                 if (code.boilerplate) {
                     onBoilerplateChange(lang, code.boilerplate);
+                    console.log(`✅ Applied boilerplate for ${lang}`);
                 }
                 if (code.driver) {
                     onWrapperCodeChange(lang, code.driver);
+                    console.log(`✅ Applied wrapper/driver for ${lang}`);
                 }
             });
 
