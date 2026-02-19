@@ -22,10 +22,30 @@ const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
+// Auto-load .env from backend directory (one level up from scripts/)
+const envPath = path.join(__dirname, '..', '.env');
+if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    envContent.split('\n').forEach(line => {
+        const trimmed = line.trim();
+        if (trimmed && !trimmed.startsWith('#')) {
+            const eqIdx = trimmed.indexOf('=');
+            if (eqIdx > 0) {
+                const key = trimmed.substring(0, eqIdx).trim();
+                const val = trimmed.substring(eqIdx + 1).trim();
+                if (!process.env[key]) process.env[key] = val;
+            }
+        }
+    });
+    console.log('✅ Loaded .env from:', envPath);
+}
+
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
 
-// Path to your JSON file — adjust if needed
-const JSON_FILE_PATH = path.join(__dirname, 'merged_problems.json');
+// Path to your JSON file — looks in scripts/ folder first, then project root
+const JSON_FILE_PATH = fs.existsSync(path.join(__dirname, 'merged_problems.json'))
+    ? path.join(__dirname, 'merged_problems.json')
+    : path.join(__dirname, '..', '..', 'merged_problems.json');
 
 // Only seed these languages (must match your platform's SUPPORTED_LANGUAGES)
 const SUPPORTED_LANGUAGES = [
