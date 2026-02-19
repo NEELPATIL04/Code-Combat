@@ -37,7 +37,7 @@ const handleResponse = async (response: Response) => {
   // Check if response has content
   const contentType = response.headers.get('content-type');
   const hasJson = contentType && contentType.includes('application/json');
-  
+
   let data;
   try {
     // Only parse JSON if content-type indicates JSON
@@ -525,6 +525,29 @@ export const aiAPI = {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(params),
+    });
+    return handleResponse(response);
+  },
+
+  // Generate test cases
+  generateTestCases: async (params: { description: string, numberOfTestCases: number, functionName: string, language: string, boilerplateCode?: string, wrapperCode?: string }) => {
+    const response = await fetch(`${API_BASE_URL}/ai/generate-test-cases`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(params),
+    });
+    return handleResponse(response);
+  },
+
+  // Generate wrapper/test-runner code only (for Problems page dedicated button)
+  generateWrapper: async (params: { description: string, functionName: string, languages: string[], boilerplateCode: Record<string, string>, customInstructions?: string }) => {
+    const response = await fetch(`${API_BASE_URL}/ai/generate-code`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        ...params,
+        wrapperOnly: true
+      }),
     });
     return handleResponse(response);
   },

@@ -4,12 +4,24 @@ import { Sparkles, Wand2 } from 'lucide-react';
 interface AIGeneratorProps {
     onGenerate: (params: { description: string, count: number }) => Promise<void>;
     loading: boolean;
+    prefillDescription?: string;
 }
 
-const AIGenerator: React.FC<AIGeneratorProps> = ({ onGenerate, loading }) => {
-    const [description, setDescription] = useState('');
+const AIGenerator: React.FC<AIGeneratorProps> = ({ onGenerate, loading, prefillDescription }) => {
+    const [description, setDescription] = useState(prefillDescription ? (() => {
+        // Strip HTML tags from description for plain text
+        return prefillDescription.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    })() : '');
     const [count, setCount] = useState(5);
     const [isExpanded, setIsExpanded] = useState(false);
+
+    // Update when prefill changes
+    React.useEffect(() => {
+        if (prefillDescription && !description) {
+            const stripped = prefillDescription.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            setDescription(stripped);
+        }
+    }, [prefillDescription]);
 
     const handleGenerate = () => {
         if (!description.trim()) return;
