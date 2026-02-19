@@ -22,16 +22,22 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         // Detect if page is loaded over HTTPS
         const isHttps = window.location.protocol === 'https:';
-        const protocol = isHttps ? 'https' : 'http';
 
-        // Get backend URLs from environment variables
-        const localBackend = import.meta.env.VITE_LOCAL_BACKEND_URL?.replace('/api', '') || 'http://localhost:5000';
-        const liveBackend = import.meta.env.VITE_LIVE_BACKEND_URL?.replace('/api', '').replace('http://', `${protocol}://`) || `${protocol}://49.13.223.175:5000`;
+        // Get backend URLs
+        let socketUrl: string;
 
-        // Use the appropriate backend based on mode
-        const socketUrl = isLocalMode ? localBackend : liveBackend;
+        if (isLocalMode) {
+            // Local development mode - connect to localhost:5000
+            socketUrl = import.meta.env.VITE_LOCAL_BACKEND_URL?.replace('/api', '') || 'http://localhost:5000';
+        } else if (isHttps) {
+            // Production HTTPS - use same origin (nginx will proxy /socket.io/)
+            socketUrl = window.location.origin;
+        } else {
+            // Production HTTP - connect directly to port 5000
+            socketUrl = import.meta.env.VITE_LIVE_BACKEND_URL?.replace('/api', '') || 'http://49.13.223.175:5000';
+        }
 
-        console.log(`🔌 Socket connecting to: ${socketUrl} (${backendMode.toUpperCase()} mode, protocol: ${protocol})`);
+        console.log(`🔌 Socket connecting to: ${socketUrl} (${backendMode.toUpperCase()} mode, HTTPS: ${isHttps})`);
 
         const socketInstance = io(socketUrl, {
             withCredentials: true,
