@@ -80,7 +80,7 @@ const ContestModal: React.FC<ContestModalProps> = ({ isOpen, onClose, isEditing,
             </div>
 
             {/* Content Body */}
-            <div style={{ flex: 1, overflow: 'hidden', padding: '60px', display: 'flex', flexDirection: 'column', maxWidth: '1600px', width: '100%', margin: '0 auto' }}>
+            <div style={{ flex: 1, overflow: 'hidden', padding: '24px 32px', display: 'flex', flexDirection: 'column', maxWidth: '1400px', width: '100%', margin: '0 auto' }}>
                 {fetchingDetails ? (
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                         <div style={{ width: '48px', height: '48px', border: '3px solid #27272a', borderTopColor: '#fafafa', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>

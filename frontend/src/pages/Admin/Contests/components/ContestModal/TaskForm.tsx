@@ -33,12 +33,12 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, is
 
     return (
         <div>
-            <div style={{ marginBottom: '14px' }}>
+            <div style={{ marginBottom: '12px' }}>
                 <label style={labelStyle}>Task Title</label>
                 <input name="title" value={taskInput.title} onChange={handleTaskInputChange} placeholder="e.g. Two Sum" style={inputStyle} />
             </div>
 
-            <div style={{ marginBottom: '14px' }}>
+            <div style={{ marginBottom: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <label style={{ ...labelStyle, marginBottom: 0 }}>Description</label>
                     <div style={{ display: 'flex', background: '#18181b', borderRadius: '6px', padding: '2px' }}>
@@ -58,7 +58,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, is
                 )}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: '12px', marginBottom: '14px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: '12px', marginBottom: '12px' }}>
                 <select name="difficulty" value={taskInput.difficulty} onChange={handleTaskInputChange} style={{ ...inputStyle, cursor: 'pointer' }}>
                     <option value="Easy" style={{ background: '#09090b', color: '#fafafa' }}>Easy</option>
                     <option value="Medium" style={{ background: '#09090b', color: '#fafafa' }}>Medium</option>
@@ -67,7 +67,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, is
                 <input type="number" name="maxPoints" value={taskInput.maxPoints} onChange={handleTaskInputChange} placeholder="Points" min="1" style={inputStyle} />
             </div>
 
-            <div style={{ marginBottom: '16px' }}>
+            <div style={{ marginBottom: '12px' }}>
                 <label style={labelStyle}>Allowed Languages</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                     {SUPPORTED_LANGUAGES.map(lang => (
@@ -78,11 +78,11 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, is
 
             {/* Note: AI Configuration is now controlled from Contest Settings tab only */}
 
-            <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#fafafa', marginTop: '24px', marginBottom: '12px', paddingTop: '24px', borderTop: '1px solid #27272a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#fafafa', marginTop: '16px', marginBottom: '10px', paddingTop: '16px', borderTop: '1px solid #27272a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Sparkles size={16} color="#a855f7" /> AI Evaluation
             </h3>
 
-            <div style={{ background: 'rgba(168, 85, 247, 0.05)', border: '1px solid rgba(168, 85, 247, 0.15)', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
+            <div style={{ background: 'rgba(168, 85, 247, 0.05)', border: '1px solid rgba(168, 85, 247, 0.15)', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <label style={{ color: '#fafafa', fontSize: '0.9rem', fontWeight: 500 }}>Enable AI Evaluation</label>
@@ -108,7 +108,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, is
 
                 {taskInput.aiEvalConfig.enabled && (
                     <>
-                        <div style={{ marginBottom: '14px' }}>
+                        <div style={{ marginBottom: '12px' }}>
                             <label style={{ display: 'block', marginBottom: '6px', color: '#d4d4d8', fontSize: '0.85rem', fontWeight: 500 }}>AI Evaluation Weight (%)</label>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <input
@@ -141,9 +141,9 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, is
                 )}
             </div>
 
-            <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#fafafa', marginTop: '24px', marginBottom: '12px', paddingTop: '24px', borderTop: '1px solid #27272a' }}>Code & Test Cases</h3>
+            <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#fafafa', marginTop: '16px', marginBottom: '10px', paddingTop: '16px', borderTop: '1px solid #27272a' }}>Code & Test Cases</h3>
 
-            <div style={{ marginBottom: '16px' }}>
+            <div style={{ marginBottom: '12px' }}>
                 <label style={labelStyle}>Function Name</label>
                 <input type="text" name="functionName" value={taskInput.functionName} onChange={handleTaskInputChange} placeholder="e.g. solve, calculateSum" style={inputStyle} />
                 <p style={{ margin: '4px 0 0', fontSize: '0.7rem', color: '#71717a' }}>The name of the function users need to implement.</p>
@@ -151,7 +151,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ taskInput, setTaskInput, onSave, is
 
             <TestCaseManager description={taskInput.description} testCases={taskInput.testCases} onChange={(newTestCases: any[]) => setTaskInput(prev => ({ ...prev, testCases: newTestCases }))} allowedLanguages={taskInput.allowedLanguages} boilerplateCode={taskInput.boilerplateCode} wrapperCode={taskInput.testRunnerTemplate} onBoilerplateChange={(lang: string, code: string) => setTaskInput(prev => ({ ...prev, boilerplateCode: { ...prev.boilerplateCode, [lang]: code } }))} onWrapperCodeChange={(lang: string, code: string) => setTaskInput(prev => ({ ...prev, testRunnerTemplate: { ...prev.testRunnerTemplate, [lang]: code } }))} functionName={taskInput.functionName} />
 
-            <div style={{ marginTop: '24px' }}>
+            <div style={{ marginTop: '16px' }}>
                 <button type="button" onClick={onSave} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 16px', background: '#fafafa', border: 'none', borderRadius: '6px', color: '#09090b', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer' }}>
                     {isEditing ? <><Edit2 size={14} /> Update Task</> : <><Plus size={14} /> Add Task</>}
                 </button>
