@@ -98,13 +98,23 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
                     </h3>
                     {/* Generate Wrapper Button */}
                     {!readOnly && (
-                        <button
-                            type="button"
+                        <div
                             onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                console.log('🧪 Generate Wrapper button clicked!');
+                                console.log('🧪 Generate Wrapper DIV clicked!');
                                 setShowWrapperModal(true);
+                            }}
+                            onMouseDown={(e) => {
+                                console.log('🧪 Mouse down on wrapper button');
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    setShowWrapperModal(true);
+                                }
                             }}
                             style={{
                                 display: 'flex',
@@ -118,12 +128,15 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
                                 fontSize: '0.8rem',
                                 fontWeight: 600,
                                 cursor: 'pointer',
-                                whiteSpace: 'nowrap'
+                                whiteSpace: 'nowrap',
+                                userSelect: 'none',
+                                position: 'relative',
+                                zIndex: 100
                             }}
                         >
-                            <span style={{ fontSize: '14px' }}>🧪</span>
-                            Generate Test Wrapper (AI)
-                        </button>
+                            <span style={{ fontSize: '14px', pointerEvents: 'none' }}>🧪</span>
+                            <span style={{ pointerEvents: 'none' }}>Generate Test Wrapper (AI)</span>
+                        </div>
                     )}
                 </div>
                 <CodeConfiguration
