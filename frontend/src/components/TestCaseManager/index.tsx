@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { aiAPI } from '../../utils/api';
 import CodeConfiguration from './components/CodeConfiguration';
@@ -43,6 +43,10 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
 }) => {
     const [generating, setGenerating] = useState(false);
     const [showWrapperModal, setShowWrapperModal] = useState(false);
+
+    useEffect(() => {
+        console.log('🧪 showWrapperModal state changed:', showWrapperModal);
+    }, [showWrapperModal]);
 
     const handleGenerateAI = async ({ description: desc, count }: { description: string, count: number }) => {
         if (!functionName) {
@@ -96,7 +100,12 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
                     {!readOnly && (
                         <button
                             type="button"
-                            onClick={() => setShowWrapperModal(true)}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log('🧪 Generate Wrapper button clicked!');
+                                setShowWrapperModal(true);
+                            }}
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -152,7 +161,10 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
                     functionName={functionName}
                     allowedLanguages={allowedLanguages}
                     onWrapperGenerated={handleWrapperGenerated}
-                    onClose={() => setShowWrapperModal(false)}
+                    onClose={() => {
+                        console.log('🧪 Closing wrapper modal');
+                        setShowWrapperModal(false);
+                    }}
                 />
             )}
         </div>
