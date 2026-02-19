@@ -20,14 +20,18 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const backendMode = import.meta.env.VITE_BACKEND_MODE || 'local';
         const isLocalMode = backendMode === 'local';
 
+        // Detect if page is loaded over HTTPS
+        const isHttps = window.location.protocol === 'https:';
+        const protocol = isHttps ? 'https' : 'http';
+
         // Get backend URLs from environment variables
         const localBackend = import.meta.env.VITE_LOCAL_BACKEND_URL?.replace('/api', '') || 'http://localhost:5000';
-        const liveBackend = import.meta.env.VITE_LIVE_BACKEND_URL?.replace('/api', '') || 'http://49.13.223.175:5000';
+        const liveBackend = import.meta.env.VITE_LIVE_BACKEND_URL?.replace('/api', '').replace('http://', `${protocol}://`) || `${protocol}://49.13.223.175:5000`;
 
         // Use the appropriate backend based on mode
         const socketUrl = isLocalMode ? localBackend : liveBackend;
 
-        console.log(`🔌 Socket connecting to: ${socketUrl} (${backendMode.toUpperCase()} mode)`);
+        console.log(`🔌 Socket connecting to: ${socketUrl} (${backendMode.toUpperCase()} mode, protocol: ${protocol})`);
 
         const socketInstance = io(socketUrl, {
             withCredentials: true,
