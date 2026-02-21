@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Play, Send, XCircle, Clock, ChevronRight, Check, X, GripHorizontal, Minimize2, Lightbulb, Brain, Unlock, Lock, MessageSquare, CheckCircle2, Pause, StopCircle, RotateCcw, LogOut, AlertTriangle } from 'lucide-react';
+import { Play, Send, XCircle, Clock, ChevronRight, Check, X, GripHorizontal, Minimize2, Lightbulb, Brain, Unlock, Lock, MessageSquare, CheckCircle2, Pause, StopCircle, RotateCcw, LogOut, AlertTriangle, WrapText } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import MediaCheckHelper from '../../components/MediaCheckHelper';
 import TaskSidebar from '../../components/TaskSidebar';
@@ -135,6 +135,9 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
     onResetCode,
     codeVersion = 0,
 }) => {
+    // Editor ref for formatting
+    const editorRef = React.useRef<any>(null);
+
     // Reset confirmation popup state
     const [showResetConfirm, setShowResetConfirm] = React.useState(false);
 
@@ -197,20 +200,52 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
                         ))}
                     </select>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.4)', fontFamily: 'monospace' }}>
                         solution.{getFileExtension(language)}
                     </span>
+                    {/* Format Code Button */}
+                    {!readOnly && (
+                        <button
+                            onClick={() => {
+                                if (editorRef.current) {
+                                    editorRef.current.getAction('editor.action.formatDocument')?.run();
+                                }
+                            }}
+                            title="Format code"
+                            style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                padding: '4px 6px',
+                                background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: 5, color: 'rgba(255, 255, 255, 0.6)', cursor: 'pointer',
+                                transition: 'background 0.2s ease, border-color 0.2s ease, color 0.2s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'rgba(99, 102, 241, 0.15)';
+                                e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+                                e.currentTarget.style.color = '#818cf8';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)';
+                            }}
+                        >
+                            <WrapText size={13} />
+                        </button>
+                    )}
+                    {/* Reset Code Button (icon-only) */}
                     {!readOnly && onResetCode && (
                         <div style={{ position: 'relative' }}>
                             <button
                                 onClick={() => setShowResetConfirm(true)}
                                 title="Reset code to boilerplate"
                                 style={{
-                                    display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    padding: '4px 6px',
                                     background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)',
-                                    borderRadius: 5, color: 'rgba(255, 255, 255, 0.6)', fontSize: 11, cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
+                                    borderRadius: 5, color: 'rgba(255, 255, 255, 0.6)', cursor: 'pointer',
+                                    transition: 'background 0.2s ease, border-color 0.2s ease, color 0.2s ease',
                                 }}
                                 onMouseEnter={(e) => {
                                     e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
@@ -223,8 +258,7 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
                                     e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)';
                                 }}
                             >
-                                <RotateCcw size={12} />
-                                Reset
+                                <RotateCcw size={13} />
                             </button>
 
                             {/* Reset Confirmation Popup */}
@@ -280,6 +314,8 @@ const MemoizedCodeEditor = React.memo<MemoizedCodeEditorProps>(({
                     defaultValue={code}
                     onChange={onCodeChange}
                     onMount={(editor, monaco) => {
+                        // Store editor ref for formatting
+                        editorRef.current = editor;
                         // Force layout after a delay to ensure font widths are calculated correctly
                         setTimeout(() => editor.layout(), 100);
                         setTimeout(() => editor.layout(), 500); // Secondary check for slow font loads
