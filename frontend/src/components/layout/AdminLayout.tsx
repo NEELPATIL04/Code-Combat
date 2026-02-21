@@ -60,15 +60,14 @@ const AdminLayout: React.FC = () => {
                 left: 0,
                 top: 0,
                 bottom: 0,
-                width: '240px',
+                width: `${sidebarWidth}px`,
                 background: '#09090b',
                 borderRight: '1px solid #27272a',
                 display: 'flex',
                 flexDirection: 'column',
                 zIndex: 1000,
-                transform: collapsed ? 'translateX(-168px)' : 'translateX(0)',
-                transition: 'transform 0.2s ease',
-                willChange: 'transform',
+                transition: 'width 0.2s ease',
+                overflow: 'hidden',
             }}>
 
                 {/* Sidebar Header */}
@@ -238,15 +237,13 @@ const AdminLayout: React.FC = () => {
                 style={{
                     flex: 1,
                     minHeight: '100vh',
-                    paddingLeft: `${sidebarWidth}px`,
-                    paddingTop: '16px',
-                    paddingRight: '20px',
-                    paddingBottom: '16px',
-                    transition: 'padding-left 0.2s ease',
-                    contain: 'layout style',
+                    marginLeft: `${sidebarWidth}px`,
+                    padding: '16px 20px',
+                    transition: 'margin-left 0.2s ease',
+                    contain: 'style',
                 }}
             >
-                <div style={{ width: '100%', maxWidth: '1400px', marginLeft: '20px' }}>
+                <div style={{ width: '100%', maxWidth: '1400px' }}>
                     <Outlet />
                 </div>
             </main>
