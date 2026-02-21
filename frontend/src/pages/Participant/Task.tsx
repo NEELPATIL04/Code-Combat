@@ -1303,6 +1303,17 @@ const TaskPage: React.FC = () => {
     // Exit confirmation state
     const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
 
+    // Helper to exit fullscreen mode safely
+    const exitFullscreenMode = useCallback(() => {
+        if (document.fullscreenElement) {
+            document.exitFullscreen().catch(() => { });
+        }
+        // Unlock keyboard if API exists
+        if ('keyboard' in navigator && (navigator as any).keyboard?.unlock) {
+            (navigator as any).keyboard.unlock();
+        }
+    }, []);
+
     // Contest state (pause/end)
     const [contestPaused, setContestPaused] = useState<boolean>(false);
     const [contestEnded, setContestEnded] = useState<boolean>(false);
@@ -1384,7 +1395,7 @@ const TaskPage: React.FC = () => {
             peerConnections.current.forEach(pc => pc.close());
             peerConnections.current.clear();
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
@@ -1452,9 +1463,9 @@ const TaskPage: React.FC = () => {
     // Also re-join on socket reconnect (socket object ref is stable, but socket.id changes)
     useEffect(() => {
         if (!socket || !user?.id || !contestId || !mediaVerified) {
-            console.log('🚪 Not ready to join contest:', { 
-                socket: !!socket, 
-                userId: user?.id, 
+            console.log('🚪 Not ready to join contest:', {
+                socket: !!socket,
+                userId: user?.id,
                 contestId,
                 mediaVerified
             });
@@ -1485,7 +1496,7 @@ const TaskPage: React.FC = () => {
             socket.emit('leave-contest', { contestId, userId: userIdRef.current });
             socket.off('connect', joinContest);
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [socket, contestId, mediaVerified]);
 
     useEffect(() => {
@@ -1496,7 +1507,7 @@ const TaskPage: React.FC = () => {
         const handleOffer = async ({ sender, payload }: { sender: string, payload: RTCSessionDescriptionInit }) => {
             try {
                 console.log('📥 Received WebRTC offer from admin:', sender);
-                
+
                 // Close existing connection to this sender if any (re-offer scenario)
                 const existingPc = peerConnections.current.get(sender);
                 if (existingPc) {
@@ -1620,7 +1631,7 @@ const TaskPage: React.FC = () => {
             peerConnections.current.forEach(pc => pc.close());
             peerConnections.current.clear();
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [socket, contestId]);
 
     // Socket listeners for contest state changes (pause/resume/end)
@@ -1657,6 +1668,8 @@ const TaskPage: React.FC = () => {
 
             // Stop all media streams and peer connections
             stopAllMedia();
+            // Exit fullscreen
+            exitFullscreenMode();
 
             // Auto-submit current code if requested
             if (data.autoSubmit && task && contest) {
@@ -1664,7 +1677,7 @@ const TaskPage: React.FC = () => {
                     console.log('📤 Auto-submitting due to contest end');
                     // Submit current code immediately
                     const currentCode = codeRef.current;
-                    
+
                     // Only submit if there's actual code
                     if (currentCode && currentCode.trim()) {
                         await submissionAPI.submit({
@@ -1715,6 +1728,7 @@ const TaskPage: React.FC = () => {
             if (data.userId === currentUserId) {
                 console.log('🔄 User-specific reset event received:', data);
                 stopAllMedia();
+                exitFullscreenMode();
                 showToast('Your contest has been reset by the administrator. Redirecting...', 'error');
                 setTimeout(() => {
                     navigate('/participant/contests');
@@ -1731,6 +1745,8 @@ const TaskPage: React.FC = () => {
 
                 // Stop all media streams and peer connections
                 stopAllMedia();
+                // Exit fullscreen
+                exitFullscreenMode();
 
                 if (data.autoSubmit && task && contest) {
                     try {
@@ -1759,6 +1775,7 @@ const TaskPage: React.FC = () => {
         const handleContestReset = (data: { contestId: number, message: string }) => {
             console.log('🔄 Contest reset event received:', data);
             stopAllMedia();
+            exitFullscreenMode();
             showToast('Contest has been reset by the administrator. Redirecting...', 'error');
             setTimeout(() => {
                 navigate('/participant/contests');
@@ -1786,7 +1803,7 @@ const TaskPage: React.FC = () => {
             socket.off('user-contest-ended', handleUserContestEnded);
             console.log('🧹 Pause/resume/end listeners cleaned up');
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [socket, contestId, task, contest, navigate, showToast, language]);
 
     const handleGetHint = useCallback(async () => {
@@ -1795,7 +1812,7 @@ const TaskPage: React.FC = () => {
         // Check if hints are unlocked based on submissions
         const requiredSubmissions = contestSettings?.hintUnlockAfterSubmissions || 0;
         const currentSubmissionCount = submissions.length;
-        
+
         if (requiredSubmissions > 0 && currentSubmissionCount < requiredSubmissions) {
             showToast(`Hints will unlock after ${requiredSubmissions} submissions. You have ${currentSubmissionCount} submissions.`, 'warning');
             return;
@@ -1817,7 +1834,7 @@ const TaskPage: React.FC = () => {
                 setShowHintModal(true);
                 // Increment hints used counter
                 setHintsUsedCount(prev => prev + 1);
-                
+
                 // Show updated count
                 const newCount = hintsUsedCount + 1;
                 const maxHintsDisplay = maxHints > 0 ? maxHints : '∞';
@@ -1837,7 +1854,7 @@ const TaskPage: React.FC = () => {
         // Check if solution is unlocked based on submissions
         const requiredSubmissions = contestSettings?.solutionUnlockAfterSubmissions || 0;
         const currentSubmissionCount = submissions.length;
-        
+
         if (requiredSubmissions > 0 && currentSubmissionCount < requiredSubmissions) {
             showToast(`AI Solution will unlock after ${requiredSubmissions} submissions. You have ${currentSubmissionCount} submissions.`, 'warning');
             return;
@@ -2038,10 +2055,8 @@ const TaskPage: React.FC = () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             document.removeEventListener('contextmenu', handleContextMenu);
 
-            // Unlock keyboard if API exists
-            if ('keyboard' in navigator && (navigator as any).keyboard.unlock) {
-                (navigator as any).keyboard.unlock();
-            }
+            // Exit fullscreen on component unmount
+            exitFullscreenMode();
         };
     }, [requestFullscreen, contestSettings, logUserActivity]);
 
@@ -2231,6 +2246,7 @@ const TaskPage: React.FC = () => {
                             setContestEnded(true);
                             setEndMessage('Contest has ended');
                             showToast('Contest has ended', 'error');
+                            exitFullscreenMode();
                             // Redirect to results after showing message (replace to avoid back navigation issues)
                             setTimeout(() => {
                                 navigate(`/contest/${contestId}/results`, { replace: true });
@@ -2264,7 +2280,7 @@ const TaskPage: React.FC = () => {
         else { setError('No contest ID'); setLoading(false); }
 
         return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [contestId]);
 
     const handleTaskSwitch = (index: number) => {
@@ -2649,7 +2665,7 @@ const TaskPage: React.FC = () => {
         // Check submission limit
         const maxSubmissions = contestSettings?.maxSubmissionsAllowed || 0;
         const currentSubmissionCount = submissions.length;
-        
+
         if (maxSubmissions > 0 && currentSubmissionCount >= maxSubmissions) {
             showToast(`You have reached the submission limit (${maxSubmissions} submissions). No more submissions allowed for this task.`, 'error');
             return;
@@ -2735,7 +2751,7 @@ const TaskPage: React.FC = () => {
             }
         } catch (error: any) {
             console.error('❌ Submit error:', error);
-            
+
             // Show user-friendly error message
             const errorMessage = error?.message || 'Failed to submit code. Please try again.';
             showToast(errorMessage, 'error');
@@ -2768,9 +2784,7 @@ const TaskPage: React.FC = () => {
         hasExited.current = true;
         // Stop all media streams and peer connections
         stopAllMedia();
-        if (document.fullscreenElement) {
-            document.exitFullscreen().catch(() => { });
-        }
+        exitFullscreenMode();
         if (contestId) {
             try {
                 await contestAPI.completeContest(parseInt(contestId));
@@ -2784,7 +2798,7 @@ const TaskPage: React.FC = () => {
         } else {
             navigate('/player');
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [contestId, navigate]);
 
     const handleTestCaseTabChange = useCallback((index: number) => {
@@ -3052,103 +3066,103 @@ const TaskPage: React.FC = () => {
                         </>
                     ) : (
                         <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', background: 'rgba(253, 230, 138, 0.1)', border: '1px solid rgba(253, 230, 138, 0.2)', borderRadius: 6 }}>
-                        <Clock size={12} style={{ color: '#FDE68A' }} />
-                        <span style={{ fontSize: 12, fontWeight: 600, color: '#FDE68A', fontFamily: 'monospace' }}>{formatTime(time)}</span>
-                    </div>
-                    {currentTaskIndex !== tasks.length - 1 && (
-                        <button
-                            onClick={handleSubmit}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 6,
-                                padding: '6px 14px',
-                                background: 'rgba(34, 197, 94, 0.15)',
-                                border: '1px solid rgba(34, 197, 94, 0.4)',
-                                borderRadius: 6,
-                                color: '#86efac',
-                                fontSize: 12,
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                whiteSpace: 'nowrap'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'rgba(34, 197, 94, 0.25)';
-                                e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.6)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'rgba(34, 197, 94, 0.15)';
-                                e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.4)';
-                            }}
-                        >
-                            <CheckCircle2 size={14} />
-                            Finish Task
-                        </button>
-                    )}
-                    {currentTaskIndex === tasks.length - 1 && (
-                        <>
-                            <button
-                                onClick={handleSubmit}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 6,
-                                    padding: '6px 14px',
-                                    background: 'rgba(16, 185, 129, 0.15)',
-                                    border: '1px solid rgba(16, 185, 129, 0.4)',
-                                    borderRadius: 6,
-                                    color: '#34d399',
-                                    fontSize: 12,
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    whiteSpace: 'nowrap'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = 'rgba(16, 185, 129, 0.25)';
-                                    e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.6)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'rgba(16, 185, 129, 0.15)';
-                                    e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-                                }}
-                            >
-                                <Send size={14} />
-                                Submit Task
-                            </button>
-                            <button
-                                onClick={() => setShowExitConfirm(true)}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 6,
-                                    padding: '6px 14px',
-                                    background: 'rgba(239, 68, 68, 0.15)',
-                                    border: '1px solid rgba(239, 68, 68, 0.4)',
-                                    borderRadius: 6,
-                                    color: '#f87171',
-                                    fontSize: 12,
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    whiteSpace: 'nowrap'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.25)';
-                                    e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.6)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
-                                    e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.4)';
-                                }}
-                            >
-                                <XCircle size={14} />
-                                Finish and Exit
-                            </button>
-                        </>
-                    )}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', background: 'rgba(253, 230, 138, 0.1)', border: '1px solid rgba(253, 230, 138, 0.2)', borderRadius: 6 }}>
+                                <Clock size={12} style={{ color: '#FDE68A' }} />
+                                <span style={{ fontSize: 12, fontWeight: 600, color: '#FDE68A', fontFamily: 'monospace' }}>{formatTime(time)}</span>
+                            </div>
+                            {currentTaskIndex !== tasks.length - 1 && (
+                                <button
+                                    onClick={handleSubmit}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 6,
+                                        padding: '6px 14px',
+                                        background: 'rgba(34, 197, 94, 0.15)',
+                                        border: '1px solid rgba(34, 197, 94, 0.4)',
+                                        borderRadius: 6,
+                                        color: '#86efac',
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = 'rgba(34, 197, 94, 0.25)';
+                                        e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.6)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = 'rgba(34, 197, 94, 0.15)';
+                                        e.currentTarget.style.borderColor = 'rgba(34, 197, 94, 0.4)';
+                                    }}
+                                >
+                                    <CheckCircle2 size={14} />
+                                    Finish Task
+                                </button>
+                            )}
+                            {currentTaskIndex === tasks.length - 1 && (
+                                <>
+                                    <button
+                                        onClick={handleSubmit}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            padding: '6px 14px',
+                                            background: 'rgba(16, 185, 129, 0.15)',
+                                            border: '1px solid rgba(16, 185, 129, 0.4)',
+                                            borderRadius: 6,
+                                            color: '#34d399',
+                                            fontSize: 12,
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = 'rgba(16, 185, 129, 0.25)';
+                                            e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.6)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = 'rgba(16, 185, 129, 0.15)';
+                                            e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                                        }}
+                                    >
+                                        <Send size={14} />
+                                        Submit Task
+                                    </button>
+                                    <button
+                                        onClick={() => setShowExitConfirm(true)}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            padding: '6px 14px',
+                                            background: 'rgba(239, 68, 68, 0.15)',
+                                            border: '1px solid rgba(239, 68, 68, 0.4)',
+                                            borderRadius: 6,
+                                            color: '#f87171',
+                                            fontSize: 12,
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.25)';
+                                            e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.6)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
+                                            e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+                                        }}
+                                    >
+                                        <XCircle size={14} />
+                                        Finish and Exit
+                                    </button>
+                                </>
+                            )}
                         </>
                     )}
                 </div>
