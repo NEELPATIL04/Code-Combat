@@ -64,30 +64,53 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
             return;
         }
 
+        if (allowedLanguages.length === 0) {
+            toast.error('Please select at least one language first');
+            return;
+        }
+
         try {
             setGenerating(true);
             const targetLanguage = allowedLanguages[0] || 'javascript';
 
-            // Strip HTML tags and decode entities from description
+            // Use the AI Generator's description (already stripped by AIGenerator),
+            // falling back to the raw description prop (strip HTML from it)
             const rawDesc = desc || description || '';
             const cleanDesc = decodeHTMLEntities(
                 rawDesc.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
             );
 
+            // Get the boilerplate and wrapper code for the target language
+            const bp = boilerplateCode[targetLanguage] || '';
+            const wp = wrapperCode[targetLanguage] || '';
+
             console.log('🧪 Calling aiAPI.generateTestCases with:', {
                 descriptionLength: cleanDesc.length,
+                descriptionPreview: cleanDesc.substring(0, 100),
                 numberOfTestCases: count,
                 functionName,
                 language: targetLanguage,
+                boilerplateLength: bp.length,
+                wrapperLength: wp.length,
+                boilerplatePreview: bp.substring(0, 80),
+                wrapperPreview: wp.substring(0, 80),
             });
+
+            if (!bp && !wp) {
+                console.warn('⚠️ No boilerplate or wrapper code found for language:', targetLanguage);
+                toast('ℹ️ Generating without boilerplate/wrapper code — results may be less accurate', {
+                    icon: '⚠️',
+                    duration: 3000,
+                });
+            }
 
             const response = await aiAPI.generateTestCases({
                 description: cleanDesc,
                 numberOfTestCases: count,
                 functionName,
                 language: targetLanguage,
-                boilerplateCode: boilerplateCode[targetLanguage] || '',
-                wrapperCode: wrapperCode[targetLanguage] || ''
+                boilerplateCode: bp,
+                wrapperCode: wp
             });
 
             console.log('📦 generateTestCases response:', response);
@@ -99,7 +122,7 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
                     isHidden: false
                 }));
                 onChange([...testCases, ...newTestCases]);
-                toast.success(`Generated ${newTestCases.length} test cases!`);
+                toast.success(`Generated ${newTestCases.length} test cases for ${targetLanguage}!`);
                 console.log('✅ Added', newTestCases.length, 'test cases');
             } else if (response.testCases && response.testCases.length === 0) {
                 toast.error('AI returned zero test cases. Try a more detailed description.');
