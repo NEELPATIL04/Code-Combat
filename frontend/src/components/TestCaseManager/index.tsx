@@ -48,9 +48,19 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
         console.log('🧪 showWrapperModal state changed:', showWrapperModal);
     }, [showWrapperModal]);
 
+    // Helper: decode HTML entities
+    const decodeHTMLEntities = (html: string): string => {
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = html;
+        return textarea.value;
+    };
+
     const handleGenerateAI = async ({ description: desc, count }: { description: string, count: number }) => {
+        console.log('🧪 handleGenerateAI called with:', { desc: desc?.substring(0, 80), count, functionName });
+
         if (!functionName) {
-            toast.error('Please enter a function name first');
+            toast.error('Please enter a function name first (Step 3 → Function Name field)');
+            console.warn('⚠️ functionName is empty, aborting test case generation');
             return;
         }
 
@@ -58,8 +68,21 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
             setGenerating(true);
             const targetLanguage = allowedLanguages[0] || 'javascript';
 
+            // Strip HTML tags and decode entities from description
+            const rawDesc = desc || description || '';
+            const cleanDesc = decodeHTMLEntities(
+                rawDesc.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+            );
+
+            console.log('🧪 Calling aiAPI.generateTestCases with:', {
+                descriptionLength: cleanDesc.length,
+                numberOfTestCases: count,
+                functionName,
+                language: targetLanguage,
+            });
+
             const response = await aiAPI.generateTestCases({
-                description: desc || description || '',
+                description: cleanDesc,
                 numberOfTestCases: count,
                 functionName,
                 language: targetLanguage,
@@ -67,7 +90,9 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
                 wrapperCode: wrapperCode[targetLanguage] || ''
             });
 
-            if (response.success) {
+            console.log('📦 generateTestCases response:', response);
+
+            if (response.success && response.testCases && response.testCases.length > 0) {
                 const newTestCases = response.testCases.map((tc: any) => ({
                     input: tc.input,
                     expectedOutput: tc.expectedOutput,
@@ -75,9 +100,16 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
                 }));
                 onChange([...testCases, ...newTestCases]);
                 toast.success(`Generated ${newTestCases.length} test cases!`);
+                console.log('✅ Added', newTestCases.length, 'test cases');
+            } else if (response.testCases && response.testCases.length === 0) {
+                toast.error('AI returned zero test cases. Try a more detailed description.');
+                console.warn('⚠️ AI returned empty testCases array');
+            } else {
+                toast.error(response.message || 'Failed to generate test cases — try again');
+                console.warn('⚠️ Unexpected response:', response);
             }
         } catch (error: any) {
-            console.error('AI Generation failed:', error);
+            console.error('❌ AI Generation failed:', error);
             toast.error(error.message || 'Failed to generate test cases');
         } finally {
             setGenerating(false);
