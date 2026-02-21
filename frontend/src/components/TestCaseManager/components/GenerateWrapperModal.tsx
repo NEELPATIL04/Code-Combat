@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { X, FlaskConical, Wand2, CheckCircle2 } from 'lucide-react';
 import { aiAPI } from '../../../utils/api';
 import toast from 'react-hot-toast';
@@ -119,30 +120,41 @@ const GenerateWrapperModal: React.FC<GenerateWrapperModalProps> = ({
         csharp: '#178600',
     };
 
-    return (
-        <div style={{
-            position: 'fixed',
-            top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.85)',
-            backdropFilter: 'blur(6px)',
-            zIndex: 10000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px'
-        }}>
-            <div style={{
-                background: '#0f0f13',
-                border: '1px solid rgba(16,185,129,0.3)',
-                borderRadius: '16px',
-                width: '100%',
-                maxWidth: '620px',
-                maxHeight: '90vh',
-                overflow: 'hidden',
+    // Use React Portal to render directly on document.body
+    // This escapes the ProblemModal's overflow:hidden stacking context
+    const modalContent = (
+        <div
+            style={{
+                position: 'fixed',
+                top: 0, left: 0, right: 0, bottom: 0,
+                background: 'rgba(0,0,0,0.85)',
+                backdropFilter: 'blur(6px)',
+                zIndex: 99999,
                 display: 'flex',
-                flexDirection: 'column',
-                boxShadow: '0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(16,185,129,0.1)'
-            }}>
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '20px'
+            }}
+            onClick={(e) => {
+                // Close if clicking backdrop
+                if (e.target === e.currentTarget) onClose();
+            }}
+        >
+            <div
+                style={{
+                    background: '#0f0f13',
+                    border: '1px solid rgba(16,185,129,0.3)',
+                    borderRadius: '16px',
+                    width: '100%',
+                    maxWidth: '620px',
+                    maxHeight: '90vh',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxShadow: '0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(16,185,129,0.1)'
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
                 {/* Header */}
                 <div style={{
                     display: 'flex',
@@ -170,7 +182,7 @@ const GenerateWrapperModal: React.FC<GenerateWrapperModalProps> = ({
                             </p>
                         </div>
                     </div>
-                    <button onClick={onClose} style={{
+                    <button type="button" onClick={onClose} style={{
                         background: 'transparent', border: 'none',
                         color: '#71717a', cursor: 'pointer', padding: '4px'
                     }}>
@@ -321,6 +333,7 @@ const GenerateWrapperModal: React.FC<GenerateWrapperModalProps> = ({
                     gap: '12px'
                 }}>
                     <button
+                        type="button"
                         onClick={onClose}
                         style={{
                             padding: '10px 20px',
@@ -335,6 +348,7 @@ const GenerateWrapperModal: React.FC<GenerateWrapperModalProps> = ({
                         {Object.keys(generated).length > 0 ? 'Done' : 'Cancel'}
                     </button>
                     <button
+                        type="button"
                         onClick={handleGenerate}
                         disabled={isGenerating || !editedDescription.trim() || selectedLangs.length === 0}
                         style={{
@@ -371,6 +385,9 @@ const GenerateWrapperModal: React.FC<GenerateWrapperModalProps> = ({
             </div>
         </div>
     );
+
+    // Portal renders directly to document.body, escaping all parent overflow/z-index contexts
+    return ReactDOM.createPortal(modalContent, document.body);
 };
 
 export default GenerateWrapperModal;

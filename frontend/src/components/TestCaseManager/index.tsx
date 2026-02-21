@@ -105,15 +105,16 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
                     functionName={functionName}
                     readOnly={readOnly}
                 />
-                {/* Generate Wrapper Button - Moved below for better accessibility */}
+                {/* Generate Wrapper Button */}
                 {!readOnly && (
-                    <div
-                        onClick={() => {
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
                             console.log('🧪🧪🧪 WRAPPER BUTTON CLICKED! 🧪🧪🧪');
                             setShowWrapperModal(true);
                         }}
-                        onMouseEnter={() => console.log('🧪 Mouse entered wrapper button')}
-                        onMouseLeave={() => console.log('🧪 Mouse left wrapper button')}
                         style={{
                             marginTop: '16px',
                             display: 'inline-flex',
@@ -129,18 +130,13 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
                             cursor: 'pointer',
                             boxShadow: '0 4px 12px rgba(16,185,129,0.3)',
                             transition: 'all 0.2s',
-                            userSelect: 'none'
-                        }}
-                        onMouseDown={(e) => {
-                            e.currentTarget.style.transform = 'scale(0.98)';
-                        }}
-                        onMouseUp={(e) => {
-                            e.currentTarget.style.transform = 'scale(1)';
+                            position: 'relative',
+                            zIndex: 10
                         }}
                     >
                         <span style={{ fontSize: '18px' }}>🧪</span>
                         <span>Generate Test Wrapper with AI</span>
-                    </div>
+                    </button>
                 )}
             </div>
 
