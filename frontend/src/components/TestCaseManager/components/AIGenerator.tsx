@@ -8,9 +8,16 @@ interface AIGeneratorProps {
 }
 
 const AIGenerator: React.FC<AIGeneratorProps> = ({ onGenerate, loading, prefillDescription }) => {
+    // Helper: decode HTML entities like &lt; &gt; &amp; etc.
+    const decodeHTMLEntities = (html: string): string => {
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = html;
+        return textarea.value;
+    };
+
     const [description, setDescription] = useState(prefillDescription ? (() => {
-        // Strip HTML tags from description for plain text
-        return prefillDescription.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        // Strip HTML tags and decode HTML entities for plain text
+        return decodeHTMLEntities(prefillDescription.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
     })() : '');
     const [count, setCount] = useState(5);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -18,7 +25,7 @@ const AIGenerator: React.FC<AIGeneratorProps> = ({ onGenerate, loading, prefillD
     // Update when prefill changes
     React.useEffect(() => {
         if (prefillDescription && !description) {
-            const stripped = prefillDescription.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            const stripped = decodeHTMLEntities(prefillDescription.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
             setDescription(stripped);
         }
     }, [prefillDescription]);

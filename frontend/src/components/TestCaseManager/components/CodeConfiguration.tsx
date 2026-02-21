@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 import { Code, Wand2, MonitorPlay } from 'lucide-react';
 import { aiAPI } from '../../../utils/api';
 import toast from 'react-hot-toast';
@@ -32,11 +33,24 @@ const CodeConfiguration: React.FC<CodeConfigurationProps> = ({
     const [showGenerateModal, setShowGenerateModal] = useState(false);
     const [inputFormat, setInputFormat] = useState('');
     const [outputFormat, setOutputFormat] = useState('');
-    const [usageDescription, setUsageDescription] = useState(description || '');
+    // Helper: decode HTML entities
+    const decodeHTMLEntities = (html: string): string => {
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = html;
+        return textarea.value;
+    };
+
+    const [usageDescription, setUsageDescription] = useState(() => {
+        if (!description) return '';
+        return decodeHTMLEntities(description.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
+    });
 
     // Update usageDescription when prop changes
     React.useEffect(() => {
-        setUsageDescription(description || '');
+        if (description) {
+            const decoded = decodeHTMLEntities(description.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
+            setUsageDescription(decoded);
+        }
     }, [description]);
 
     // Debug log
@@ -266,8 +280,8 @@ const CodeConfiguration: React.FC<CodeConfigurationProps> = ({
                 </p>
             </div>
 
-            {/* AI Generation Modal */}
-            {showGenerateModal && (
+            {/* AI Generation Modal - rendered via Portal to escape overflow:hidden */}
+            {showGenerateModal && ReactDOM.createPortal(
                 <div style={{
                     position: 'fixed',
                     top: 0,
@@ -275,21 +289,26 @@ const CodeConfiguration: React.FC<CodeConfigurationProps> = ({
                     right: 0,
                     bottom: 0,
                     background: 'rgba(0, 0, 0, 0.8)',
-                    zIndex: 10000,
+                    zIndex: 99999,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     backdropFilter: 'blur(4px)'
-                }}>
-                    <div style={{
-                        background: '#111113',
-                        border: '1px solid rgba(139, 92, 246, 0.3)',
-                        borderRadius: '12px',
-                        padding: '24px',
-                        width: '90%',
-                        maxWidth: '500px',
-                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
-                    }}>
+                }}
+                    onClick={(e) => { if (e.target === e.currentTarget) setShowGenerateModal(false); }}
+                >
+                    <div
+                        style={{
+                            background: '#111113',
+                            border: '1px solid rgba(139, 92, 246, 0.3)',
+                            borderRadius: '12px',
+                            padding: '24px',
+                            width: '90%',
+                            maxWidth: '500px',
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
                             <div style={{
                                 width: 40, height: 40, borderRadius: 8,
@@ -320,7 +339,8 @@ const CodeConfiguration: React.FC<CodeConfigurationProps> = ({
                                     outline: 'none',
                                     minHeight: '80px',
                                     resize: 'vertical',
-                                    fontFamily: 'inherit'
+                                    fontFamily: 'inherit',
+                                    boxSizing: 'border-box'
                                 }}
                             />
                         </div>
@@ -334,7 +354,8 @@ const CodeConfiguration: React.FC<CodeConfigurationProps> = ({
                                 placeholder="e.g. First line: integer N. Second line: N integers."
                                 style={{
                                     width: '100%', padding: '10px', background: '#18181b',
-                                    border: '1px solid #3f3f46', borderRadius: '6px', color: '#fff', outline: 'none'
+                                    border: '1px solid #3f3f46', borderRadius: '6px', color: '#fff', outline: 'none',
+                                    boxSizing: 'border-box'
                                 }}
                             />
                         </div>
@@ -348,13 +369,15 @@ const CodeConfiguration: React.FC<CodeConfigurationProps> = ({
                                 placeholder="e.g. Print usage count on a single line."
                                 style={{
                                     width: '100%', padding: '10px', background: '#18181b',
-                                    border: '1px solid #3f3f46', borderRadius: '6px', color: '#fff', outline: 'none'
+                                    border: '1px solid #3f3f46', borderRadius: '6px', color: '#fff', outline: 'none',
+                                    boxSizing: 'border-box'
                                 }}
                             />
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                             <button
+                                type="button"
                                 onClick={() => setShowGenerateModal(false)}
                                 style={{
                                     padding: '10px 16px', background: 'transparent', color: '#a1a1aa',
@@ -364,6 +387,7 @@ const CodeConfiguration: React.FC<CodeConfigurationProps> = ({
                                 Cancel
                             </button>
                             <button
+                                type="button"
                                 onClick={handleGenerate}
                                 disabled={isGenerating}
                                 style={{
@@ -381,7 +405,8 @@ const CodeConfiguration: React.FC<CodeConfigurationProps> = ({
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
