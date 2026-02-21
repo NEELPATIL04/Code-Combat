@@ -21,16 +21,26 @@ const GenerateWrapperModal: React.FC<GenerateWrapperModalProps> = ({
 }) => {
     const [customInstructions, setCustomInstructions] = useState('');
     const [editedDescription, setEditedDescription] = useState('');
+    const [editedFunctionName, setEditedFunctionName] = useState(functionName || '');
     const [isGenerating, setIsGenerating] = useState(false);
     const [generated, setGenerated] = useState<Record<string, string>>({});
     const [selectedLangs, setSelectedLangs] = useState<string[]>(allowedLanguages);
 
-    // Strip HTML tags for a readable plain-text description
+    // Helper: decode HTML entities like &lt; &gt; &amp; &quot; etc.
+    const decodeHTMLEntities = (html: string): string => {
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = html;
+        return textarea.value;
+    };
+
+    // Strip HTML tags AND decode HTML entities for a readable plain-text description
     useEffect(() => {
-        const stripped = description
-            .replace(/<[^>]+>/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
+        const stripped = decodeHTMLEntities(
+            description
+                .replace(/<[^>]+>/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+        );
         setEditedDescription(stripped);
     }, [description]);
 
@@ -45,8 +55,8 @@ const GenerateWrapperModal: React.FC<GenerateWrapperModalProps> = ({
             toast.error('Description is required');
             return;
         }
-        if (!functionName) {
-            toast.error('Function name is required');
+        if (!editedFunctionName.trim()) {
+            toast.error('Function name is required — enter it above');
             return;
         }
         if (selectedLangs.length === 0) {
@@ -62,7 +72,7 @@ const GenerateWrapperModal: React.FC<GenerateWrapperModalProps> = ({
 
             const result = await aiAPI.generateCode({
                 description: fullDesc,
-                functionName,
+                functionName: editedFunctionName.trim(),
                 languages: selectedLangs,
                 inputFormat: customInstructions || undefined,
                 outputFormat: undefined
@@ -220,22 +230,30 @@ const GenerateWrapperModal: React.FC<GenerateWrapperModalProps> = ({
                         />
                     </div>
 
-                    {/* Function name (read-only display) */}
+                    {/* Function name - editable */}
                     <div>
                         <label style={{ display: 'block', fontSize: '0.8rem', color: '#a1a1aa', marginBottom: '8px', fontWeight: 500 }}>
-                            Function Name
+                            Function Name <span style={{ color: '#ef4444' }}>*</span>
+                            {!functionName && <span style={{ color: '#f59e0b', fontWeight: 400, marginLeft: '6px', fontSize: '0.75rem' }}>(not set in form — enter it here)</span>}
                         </label>
-                        <div style={{
-                            padding: '10px 12px',
-                            background: '#18181b',
-                            border: '1px solid #3f3f46',
-                            borderRadius: '8px',
-                            color: '#a78bfa',
-                            fontFamily: 'monospace',
-                            fontSize: '0.9rem'
-                        }}>
-                            {functionName || <span style={{ color: '#71717a', fontStyle: 'italic' }}>No function name set</span>}
-                        </div>
+                        <input
+                            type="text"
+                            value={editedFunctionName}
+                            onChange={e => setEditedFunctionName(e.target.value)}
+                            placeholder="e.g. twoSum, findMedian, isPalindrome"
+                            style={{
+                                width: '100%',
+                                padding: '10px 12px',
+                                background: '#18181b',
+                                border: editedFunctionName.trim() ? '1px solid #3f3f46' : '1px solid #f59e0b',
+                                borderRadius: '8px',
+                                color: '#a78bfa',
+                                fontFamily: 'monospace',
+                                fontSize: '0.9rem',
+                                outline: 'none',
+                                boxSizing: 'border-box'
+                            }}
+                        />
                     </div>
 
                     {/* Language selector */}
