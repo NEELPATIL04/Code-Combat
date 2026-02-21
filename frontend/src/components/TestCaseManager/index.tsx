@@ -92,53 +92,9 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
         <div>
             {/* 1. Code Configuration Section */}
             <div style={{ marginBottom: '24px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                    <h3 style={{ fontSize: '1rem', color: '#fff', fontWeight: 600, margin: 0 }}>
-                        Code Configuration
-                    </h3>
-                    {/* Generate Wrapper Button */}
-                    {!readOnly && (
-                        <div
-                            onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                console.log('🧪 Generate Wrapper DIV clicked!');
-                                setShowWrapperModal(true);
-                            }}
-                            onMouseDown={(e) => {
-                                console.log('🧪 Mouse down on wrapper button');
-                            }}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault();
-                                    setShowWrapperModal(true);
-                                }
-                            }}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '8px 14px',
-                                background: 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.2))',
-                                border: '1px solid rgba(16,185,129,0.4)',
-                                borderRadius: '8px',
-                                color: '#34d399',
-                                fontSize: '0.8rem',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                whiteSpace: 'nowrap',
-                                userSelect: 'none',
-                                position: 'relative',
-                                zIndex: 100
-                            }}
-                        >
-                            <span style={{ fontSize: '14px', pointerEvents: 'none' }}>🧪</span>
-                            <span style={{ pointerEvents: 'none' }}>Generate Test Wrapper (AI)</span>
-                        </div>
-                    )}
-                </div>
+                <h3 style={{ fontSize: '1rem', color: '#fff', fontWeight: 600, margin: 0, marginBottom: '12px' }}>
+                    Code Configuration
+                </h3>
                 <CodeConfiguration
                     allowedLanguages={allowedLanguages}
                     boilerplateCode={boilerplateCode}
@@ -149,6 +105,43 @@ const TestCaseManager: React.FC<TestCaseManagerProps> = ({
                     functionName={functionName}
                     readOnly={readOnly}
                 />
+                {/* Generate Wrapper Button - Moved below for better accessibility */}
+                {!readOnly && (
+                    <div
+                        onClick={() => {
+                            console.log('🧪🧪🧪 WRAPPER BUTTON CLICKED! 🧪🧪🧪');
+                            setShowWrapperModal(true);
+                        }}
+                        onMouseEnter={() => console.log('🧪 Mouse entered wrapper button')}
+                        onMouseLeave={() => console.log('🧪 Mouse left wrapper button')}
+                        style={{
+                            marginTop: '16px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '12px 20px',
+                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                            border: 'none',
+                            borderRadius: '8px',
+                            color: '#fff',
+                            fontSize: '0.9rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(16,185,129,0.3)',
+                            transition: 'all 0.2s',
+                            userSelect: 'none'
+                        }}
+                        onMouseDown={(e) => {
+                            e.currentTarget.style.transform = 'scale(0.98)';
+                        }}
+                        onMouseUp={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                    >
+                        <span style={{ fontSize: '18px' }}>🧪</span>
+                        <span>Generate Test Wrapper with AI</span>
+                    </div>
+                )}
             </div>
 
             {/* 2. AI Generator Section */}
