@@ -60,13 +60,15 @@ const AdminLayout: React.FC = () => {
                 left: 0,
                 top: 0,
                 bottom: 0,
-                width: `${sidebarWidth}px`,
+                width: '240px',
                 background: '#09090b',
                 borderRight: '1px solid #27272a',
                 display: 'flex',
                 flexDirection: 'column',
                 zIndex: 1000,
-                transition: 'width 0.2s ease'
+                transform: collapsed ? 'translateX(-168px)' : 'translateX(0)',
+                transition: 'transform 0.2s ease',
+                willChange: 'transform',
             }}>
 
                 {/* Sidebar Header */}
@@ -110,7 +112,7 @@ const AdminLayout: React.FC = () => {
                             color: '#71717a',
                             cursor: 'pointer',
                             flexShrink: 0,
-                            transition: 'all 0.2s ease'
+                            transition: 'background 0.2s ease, border-color 0.2s ease'
                         }}
                         onMouseOver={(e) => {
                             e.currentTarget.style.background = '#18181b';
@@ -169,7 +171,7 @@ const AdminLayout: React.FC = () => {
                                         cursor: 'pointer',
                                         width: '100%',
                                         textAlign: 'left',
-                                        transition: 'all 0.15s ease'
+                                        transition: 'background 0.15s ease, color 0.15s ease'
                                     }}
                                     onMouseOver={(e) => {
                                         if (!isActive(item.path)) {
@@ -216,7 +218,7 @@ const AdminLayout: React.FC = () => {
                             cursor: 'pointer',
                             width: '100%',
                             textAlign: 'left',
-                            transition: 'all 0.15s ease'
+                            transition: 'background 0.15s ease'
                         }}
                         onMouseOver={(e) => {
                             e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
@@ -236,12 +238,15 @@ const AdminLayout: React.FC = () => {
                 style={{
                     flex: 1,
                     minHeight: '100vh',
-                    marginLeft: `${sidebarWidth}px`,
-                    padding: '16px 20px',
-                    transition: 'margin-left 0.2s ease'
+                    paddingLeft: `${sidebarWidth}px`,
+                    paddingTop: '16px',
+                    paddingRight: '20px',
+                    paddingBottom: '16px',
+                    transition: 'padding-left 0.2s ease',
+                    contain: 'layout style',
                 }}
             >
-                <div style={{ width: '100%', maxWidth: '1400px' }}>
+                <div style={{ width: '100%', maxWidth: '1400px', marginLeft: '20px' }}>
                     <Outlet />
                 </div>
             </main>
